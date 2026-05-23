@@ -3,6 +3,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const path = require('path');
 const store = require('./backend/store');
 const routes = require('./backend/routes');
 
@@ -20,6 +21,11 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api', routes);
+
+// Companion web pages — served by the Node process, proxied via Apache
+app.get('/pair', (_req, res) => res.sendFile(path.join(__dirname, 'web/pair.html')));
+app.get('/pricing', (_req, res) => res.sendFile(path.join(__dirname, 'web/pricing.html')));
+app.get('/account', (_req, res) => res.sendFile(path.join(__dirname, 'web/account.html')));
 
 async function main() {
     await store.runMigrations();

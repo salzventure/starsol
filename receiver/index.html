@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" />
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <style>
 /* ========================================================================
    STARSOL — Design Tokens
@@ -830,8 +831,8 @@ body { animation: ss-pixel-shift 720s linear infinite; }
       <button class="guest-link focusable" data-action="guest" tabindex="0">Browse as guest &rarr;</button>
     </div>
     <div class="right">
-      <div class="qr-box">
-        <div class="qr-pattern"><div class="qr-corner"></div></div>
+      <div class="qr-box" style="background:#fbf3df;display:flex;align-items:center;justify-content:center;">
+        <canvas id="qr-canvas" width="360" height="360"></canvas>
       </div>
       <div class="qr-label"><span>starsol.app</span>&nbsp;/&nbsp;pair</div>
     </div>
@@ -1310,6 +1311,21 @@ function renderCode(code) {
   const boxes = document.querySelectorAll('#code-row .code-box');
   const chars = (code || '------').toUpperCase().padEnd(6, '-').split('');
   boxes.forEach((b, i) => { b.textContent = chars[i] || '-'; });
+
+  // Real QR code pointing to starsol.app/pair?code=XXXX
+  const canvas = document.getElementById('qr-canvas');
+  if (canvas && typeof QRious !== 'undefined' && code && !code.startsWith('mock')) {
+    try {
+      new QRious({
+        element: canvas,
+        value: 'https://starsol.app/pair?code=' + encodeURIComponent(code),
+        size: 360,
+        background: '#fbf3df',
+        foreground: '#050608',
+        level: 'M',
+      });
+    } catch(e) { console.warn('[qr] render failed', e); }
+  }
 }
 
 function updateCountdown() {

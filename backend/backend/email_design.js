@@ -5,21 +5,22 @@ const SITE         = process.env.APP_URL || 'https://starsol.app';
 const COMPANY_NAME = 'Salzventure Technologies LLC';
 const COMPANY_ADDR = 'PO Box 12393, Denver, CO 80212, USA';
 
-// StarSol brand tokens — deep space, star-gold accent
+// StarSol brand tokens — exact values from design handoff tokens.jsx
 const T = {
-    bg:        '#080C14',
-    surface:   '#0C1220',
-    card:      '#111827',
-    border:    'rgba(255,255,255,0.07)',
-    text:      '#F0EDE8',
-    textBody:  '#C8C2B8',
-    muted:     '#7A7268',
-    footer:    '#5A554E',
-    accent:    '#E2B96F',   // star-gold
-    accentDim: '#9E7F44',
+    bg:        '#0a0d12',  // space1 — primary background
+    card:      '#1a2029',  // space3 — elevated/cards
+    border:    '#232a36',  // space4 — hairline borders
+    text:      '#fbf3df',  // star100 — primary text (warm white)
+    textBody:  '#c8b886',  // star300 — secondary text
+    muted:     '#8c8773',  // text2
+    footer:    '#4f4a3e',  // text3
+    accent:    '#d4a44a',  // star500 — PRIMARY accent (buttons, focus, brand)
+    accentBg:  'rgba(212,164,74,0.12)',
+    ember:     '#c14a2a',  // LIVE indicator only
+    aurora:    '#5da888',  // ISS/visible-tonight only
     fontUi:    `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`,
     fontMono:  `'SFMono-Regular',Menlo,Consolas,'Liberation Mono',monospace`,
-    radiusBtn: 8,
+    radiusBtn: 6,
 };
 
 function escHtml(s) {

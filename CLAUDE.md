@@ -26,7 +26,45 @@ Premium astronomy streaming TV app. Roku-first, then Apple TV + Fire TV.
 - Free: limited library + ads
 - Explorer: $4.99/mo or $39.99/yr — full library, ambient mode, sky alerts
 - Observer: $7.99/mo or $64.99/yr — geolocated ISS/aurora alerts, early JWST drops
-- Institutional: custom $1,500–$5,000/yr — planetariums, K-12, museums
+- Institutional: custom $1,500–$5,000/yr
+
+## Design tokens (from handoff — do not deviate)
+- space0: `#050608` — void, ambient mode, splash only
+- space1: `#0a0d12` — primary background
+- space2: `#11151c` — surface
+- space3: `#1a2029` — elevated / cards
+- space4: `#232a36` — borders / hairlines
+- star100: `#fbf3df` — primary text (warm white)
+- star300: `#c8b886` — secondary accent text
+- star500: `#d4a44a` — PRIMARY brand accent: focus rings, buttons, brand only
+- star600: `#f0c668` — hover / highlight
+- ember: `#c14a2a` — LIVE indicator ONLY, nowhere else
+- aurora: `#5da888` — "visible tonight" / ISS pass ONLY, nowhere else
+- Fonts: Instrument Serif italic (display/headlines), Geist 300/400/500 (UI/body), JetBrains Mono (captions/data/credits)
+
+## Logo
+- Primary: Direction D — Asterism. Six-star constellation, thin connecting lines.
+  Brightest (lower-left) = Sol. Second brightest (upper-right) = Polaris.
+  Works from 40px app icon to 200px hero. SVG inline, no raster.
+
+## TV nav (left rail / SideBar)
+- 280px expanded, collapses to 96px (icon-only) when D-pad focus leaves the rail
+- Items: Tonight · Watch · Sky · Constellations · Gallery · Ambient · Search
+- Active item: 2px star-gold left border + rgba(212,164,74,0.06) background
+- Constellations is a first-class nav item — charts + mythology + history + "spot tonight"
+
+## Key screens
+- Splash: starfield CSS bg + logo + wordmark + thin gold progress bar (38% wide)
+- Welcome: full-bleed JWST Carina hero, "The sky is showing." at 132px serif italic
+  Two buttons: "Sign in with phone" (primary) + "Browse as guest" (secondary)
+- QR Pair: split — left has steps + 6-letter code in tall mono boxes; right has QR panel
+  Companion URL shown on TV: starsol.tv/pair (not starsol.app/pair)
+- Tonight (Home): full-bleed image + ISS/event hero at 124px italic + metadata card + sky row
+- Sky Calendar: table, 90 days ahead, geolocated
+
+## Companion web app
+- URL shown on TV: starsol.tv/pair — handles QR pairing + account + Stripe checkout
+- Google Pay handled natively on TV; everything else goes through companion web — planetariums, K-12, museums
 
 ## Google TV / Jetpack Compose for TV notes
 - Use `androidx.tv:tv-compose` and `androidx.tv:tv-foundation` — not plain Compose
