@@ -137,33 +137,48 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // Play Store TV-IT: BACK should close any open dialog/overlay first,
-        // navigate up the in-app hierarchy second, and only exit at the root.
-        //
-        // Intercept BOTH ACTION_DOWN and ACTION_UP. Without the DOWN intercept,
-        // the WebView receives the keydown event and its JS handlers fire.
-        // Consuming DOWN here prevents that entirely.
+        // BACK: intercept both UP and DOWN. On UP, call into JS first;
+        // if JS doesn't consume it, send app to background (TV convention).
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                return true  // consume so WebView JS never sees the keydown
-            }
+            if (event.action == KeyEvent.ACTION_DOWN) return true
             if (event.action == KeyEvent.ACTION_UP) {
                 webView.evaluateJavascript(
                     "(function(){try{return window.starsolBack&&window.starsolBack();}catch(e){return false;}})()"
                 ) { result ->
                     if (result != "true") {
-                        if (webView.canGoBack()) {
-                            webView.goBack()
-                        } else {
-                            // Send to background instead of finish() — pressing BACK
-                            // from the root on a TV should return to the launcher.
-                            moveTaskToBack(true)
-                        }
+                        if (webView.canGoBack()) webView.goBack()
+                        else moveTaskToBack(true)
                     }
                 }
                 return true
             }
         }
+
+        // D-PAD: Android TV WebViews sometimes consume DPAD events via the
+        // native View focus system before they reach the JS keydown handler,
+        // especially when loaded from file://. Intercept ACTION_DOWN here and
+        // inject the event directly into JS — this is the reliable pattern for
+        // fully custom D-pad navigation in a single-WebView TV app.
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val jsKey = when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP       -> "ArrowUp"
+                KeyEvent.KEYCODE_DPAD_DOWN     -> "ArrowDown"
+                KeyEvent.KEYCODE_DPAD_LEFT     -> "ArrowLeft"
+                KeyEvent.KEYCODE_DPAD_RIGHT    -> "ArrowRight"
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER  -> "Enter"
+                else                           -> null
+            }
+            if (jsKey != null) {
+                webView.evaluateJavascript(
+                    "document.dispatchEvent(new KeyboardEvent('keydown',{key:'$jsKey',bubbles:true,cancelable:true}));",
+                    null
+                )
+                return true
+            }
+        }
+
         return super.dispatchKeyEvent(event)
     }
 
