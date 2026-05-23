@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="starsol_void">#050608</color>
+    <color name="starsol_bg">#0a0d12</color>
+    <color name="starsol_accent">#d4a44a</color>
+    <color name="starsol_text">#fbf3df</color>
+</resources>

@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, initial-scale=1.0, user-scalable=no" />
+<title>StarSol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" />
+<style>
+/* ========================================================================
+   STARSOL — Design Tokens
+   ======================================================================== */
+:root {
+  --ss-space0: #050608;
+  --ss-space1: #0a0d12;
+  --ss-space2: #11151c;
+  --ss-space3: #1a2029;
+  --ss-space4: #232a36;
+  --ss-star100: #fbf3df;
+  --ss-star300: #c8b886;
+  --ss-star500: #d4a44a;
+  --ss-star600: #f0c668;
+  --ss-ember: #c14a2a;
+  --ss-aurora: #5da888;
+
+  --ff-serif: 'Instrument Serif', 'Times New Roman', serif;
+  --ff-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ff-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: var(--ss-space0);
+  color: var(--ss-star100);
+  font-family: var(--ff-sans);
+  font-weight: 300;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+button { background: none; border: none; cursor: pointer; color: inherit; font: inherit; }
+
+/* ========================================================================
+   Screen container — only one visible at a time
+   ======================================================================== */
+.screen { position: fixed; inset: 0; opacity: 0; pointer-events: none; transition: opacity 350ms ease; }
+.screen.active { opacity: 1; pointer-events: auto; }
+
+/* ========================================================================
+   Starfield background (CSS-only radial gradients)
+   ======================================================================== */
+.starfield {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(1px 1px at 10% 12%, #fbf3df 50%, transparent 100%),
+    radial-gradient(1px 1px at 22% 28%, #fbf3df 50%, transparent 100%),
+    radial-gradient(2px 2px at 38% 15%, #c8b886 50%, transparent 100%),
+    radial-gradient(1px 1px at 53% 41%, #fbf3df 50%, transparent 100%),
+    radial-gradient(1px 1px at 67% 19%, #fbf3df 50%, transparent 100%),
+    radial-gradient(2px 2px at 78% 36%, #c8b886 50%, transparent 100%),
+    radial-gradient(1px 1px at 88% 58%, #fbf3df 50%, transparent 100%),
+    radial-gradient(1px 1px at 14% 64%, #fbf3df 50%, transparent 100%),
+    radial-gradient(1px 1px at 31% 78%, #fbf3df 50%, transparent 100%),
+    radial-gradient(2px 2px at 47% 86%, #c8b886 50%, transparent 100%),
+    radial-gradient(1px 1px at 62% 71%, #fbf3df 50%, transparent 100%),
+    radial-gradient(1px 1px at 91% 89%, #fbf3df 50%, transparent 100%);
+  background-repeat: no-repeat;
+  opacity: 0.8;
+}
+.starfield.dim { opacity: 0.4; }
+
+/* OLED pixel-shift — every 180s the body translates ±3px so any pixel that
+   stays bright for too long migrates. CSS-only, near-zero cost. */
+@keyframes ss-pixel-shift {
+   0%   { transform: translate(0, 0); }
+  25%   { transform: translate(3px, 0); }
+  50%   { transform: translate(0, 3px); }
+  75%   { transform: translate(-3px, 0); }
+ 100%   { transform: translate(0, -3px); }
+}
+body { animation: ss-pixel-shift 720s linear infinite; }
+
+/* ========================================================================
+   Logomark — six-star asterism inline SVG defaults
+   ======================================================================== */
+.ss-logomark { display: inline-block; line-height: 0; }
+.ss-logomark svg { display: block; }
+
+.ss-wordmark {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  color: var(--ss-star100);
+  letter-spacing: -0.01em;
+}
+
+.ss-eyebrow {
+  font-family: var(--ff-mono);
+  font-weight: 400;
+  color: var(--ss-star500);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+/* ========================================================================
+   Focus ring — single source of truth
+   ======================================================================== */
+.focusable { outline: none; transition: box-shadow 200ms ease, transform 200ms ease; }
+.focusable.focused {
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 32px rgba(212, 164, 74, 0.4);
+}
+
+/* ========================================================================
+   Buttons
+   ======================================================================== */
+.btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  height: 72px; padding: 0 36px;
+  border-radius: 4px;
+  font-family: var(--ff-sans);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+}
+.btn-primary.focused { background: var(--ss-star600); }
+.btn-secondary {
+  background: rgba(17, 21, 28, 0.6);
+  color: var(--ss-star100);
+  border: 1px solid var(--ss-space4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ========================================================================
+   SCREEN 1: SPLASH
+   ======================================================================== */
+#splash {
+  background: var(--ss-space0);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+}
+#splash .starfield { opacity: 0.5; }
+#splash .splash-inner {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 28px;
+}
+#splash .ss-logomark svg { width: 200px; height: 200px; }
+#splash .ss-wordmark { font-size: 92px; line-height: 1; }
+#splash .ss-eyebrow { font-size: 13px; }
+#splash .progress {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  width: 240px; height: 1px; background: rgba(212, 164, 74, 0.15);
+  z-index: 2;
+}
+#splash .progress::before {
+  content: ''; position: absolute; inset: 0;
+  width: 38%; background: var(--ss-star500);
+  animation: ss-splash-progress 2.5s linear forwards;
+}
+@keyframes ss-splash-progress {
+  0%   { width: 0%; }
+  100% { width: 100%; }
+}
+
+/* ========================================================================
+   SCREEN 2: WELCOME
+   ======================================================================== */
+#welcome { background: var(--ss-space0); }
+#welcome .bg {
+  position: absolute; inset: 0;
+  background-image: url('https://esawebb.org/media/archives/images/screen/weic2205a.jpg');
+  background-size: cover;
+  background-position: center;
+}
+#welcome .bg-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(5,6,8,0.92) 0%,
+    rgba(5,6,8,0.85) 30%,
+    rgba(5,6,8,0.6) 55%,
+    rgba(5,6,8,0.2) 85%,
+    transparent 100%
+  );
+}
+#welcome .top-brand {
+  position: absolute; top: 56px; left: 64px;
+  display: flex; align-items: center; gap: 18px; z-index: 2;
+}
+#welcome .top-brand svg { width: 48px; height: 48px; }
+#welcome .top-brand .ss-wordmark { font-size: 36px; }
+#welcome .content {
+  position: absolute; top: 50%; left: 64px;
+  transform: translateY(-50%);
+  z-index: 2; max-width: 720px;
+}
+#welcome .ss-eyebrow { font-size: 13px; margin-bottom: 28px; }
+#welcome h1 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 132px;
+  line-height: 0.95;
+  color: var(--ss-star100);
+  font-weight: 400;
+  margin-bottom: 40px;
+  letter-spacing: -0.02em;
+}
+#welcome p.body {
+  font-family: var(--ff-sans);
+  font-weight: 300;
+  font-size: 26px;
+  line-height: 1.5;
+  color: var(--ss-star300);
+  max-width: 660px;
+  margin-bottom: 56px;
+}
+#welcome .btn-row { display: flex; gap: 20px; }
+
+#welcome .footer {
+  position: absolute; bottom: 56px; left: 64px;
+  display: flex; gap: 56px;
+  z-index: 2;
+}
+#welcome .footer-item {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+#welcome .footer-item span { color: var(--ss-star500); }
+
+/* ========================================================================
+   SCREEN 3: QR PAIR
+   ======================================================================== */
+#pair { background: var(--ss-space0); display: flex; }
+#pair .starfield { opacity: 0.4; }
+#pair .pair-content {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: 1fr 1fr;
+  width: 100%; height: 100%;
+  padding: 100px 96px;
+  gap: 80px;
+  align-items: center;
+}
+#pair .left { max-width: 700px; }
+#pair .left .ss-eyebrow { font-size: 12px; margin-bottom: 24px; }
+#pair .left h2 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 88px;
+  line-height: 1.0;
+  color: var(--ss-star100);
+  margin-bottom: 48px;
+  letter-spacing: -0.02em;
+}
+#pair .steps { margin-bottom: 56px; }
+#pair .step {
+  display: flex; gap: 20px;
+  font-family: var(--ff-sans);
+  font-size: 22px;
+  color: var(--ss-star300);
+  font-weight: 300;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+#pair .step .num {
+  font-family: var(--ff-mono);
+  font-size: 16px;
+  color: var(--ss-star500);
+  flex-shrink: 0;
+  width: 28px;
+  padding-top: 6px;
+}
+#pair .code-row {
+  display: flex; gap: 12px;
+  margin-bottom: 40px;
+}
+#pair .code-box {
+  width: 72px; height: 92px;
+  background: var(--ss-space0);
+  border: 1px solid var(--ss-space4);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-mono);
+  font-weight: 400;
+  font-size: 48px;
+  color: var(--ss-star500);
+  border-radius: 3px;
+}
+#pair .countdown {
+  font-family: var(--ff-mono);
+  font-size: 13px;
+  color: var(--ss-star300);
+  margin-bottom: 24px;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+#pair .guest-link {
+  font-family: var(--ff-mono);
+  font-size: 14px;
+  color: var(--ss-star300);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 16px 0;
+  text-decoration: underline;
+  text-underline-offset: 8px;
+}
+#pair .right {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+#pair .qr-box {
+  width: 400px; height: 400px;
+  background: #fbf3df;
+  border-radius: 8px;
+  position: relative;
+  margin-bottom: 24px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+#pair .qr-box .qr-pattern {
+  width: 100%; height: 100%;
+  /* Pseudo-QR via repeating gradient — placeholder until real QR lib */
+  background:
+    linear-gradient(45deg, #050608 25%, transparent 25%) 0 0,
+    linear-gradient(-45deg, #050608 25%, transparent 25%) 0 0,
+    linear-gradient(45deg, transparent 75%, #050608 75%),
+    linear-gradient(-45deg, transparent 75%, #050608 75%);
+  background-size: 20px 20px;
+  background-color: #fbf3df;
+  position: relative;
+}
+#pair .qr-box .qr-pattern::before,
+#pair .qr-box .qr-pattern::after {
+  content: ''; position: absolute;
+  width: 64px; height: 64px;
+  border: 12px solid #050608;
+  background: #fbf3df;
+}
+#pair .qr-box .qr-pattern::before { top: 12px; left: 12px; }
+#pair .qr-box .qr-pattern::after { top: 12px; right: 12px; }
+#pair .qr-box .qr-pattern .qr-corner {
+  position: absolute; bottom: 12px; left: 12px;
+  width: 64px; height: 64px;
+  border: 12px solid #050608;
+  background: #fbf3df;
+}
+#pair .qr-label {
+  font-family: var(--ff-mono);
+  font-size: 14px;
+  color: var(--ss-star300);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+#pair .qr-label span { color: var(--ss-star500); }
+
+#pair .paired-toast {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(93, 168, 136, 0.95);
+  color: var(--ss-space0);
+  padding: 24px 48px;
+  border-radius: 6px;
+  font-family: var(--ff-sans);
+  font-size: 22px;
+  font-weight: 500;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+#pair .paired-toast.show { opacity: 1; }
+
+/* ========================================================================
+   SCREEN 4: TONIGHT (the home screen)
+   ======================================================================== */
+#tonight { background: var(--ss-space0); }
+#tonight .bg-image {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  transition: opacity 1.5s ease;
+  opacity: 0;
+}
+#tonight .bg-image.active { opacity: 1; }
+#tonight .bg-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(5,6,8,0.96) 0%,
+    rgba(5,6,8,0.55) 38%,
+    rgba(5,6,8,0.45) 65%,
+    rgba(5,6,8,0.92) 100%
+  );
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 280px;
+  background: linear-gradient(
+    to right,
+    rgba(5,6,8,0.96) 0%,
+    rgba(5,6,8,0.85) 85%,
+    rgba(5,6,8,0) 100%
+  );
+  border-right: 1px solid rgba(35,42,54,0.6);
+  padding: 40px 0;
+  z-index: 5;
+  display: flex; flex-direction: column;
+  transition: width 200ms ease;
+}
+.sidebar.collapsed { width: 96px; }
+.sidebar .brand {
+  padding: 0 32px 36px 32px;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid rgba(35,42,54,0.4);
+  margin-bottom: 28px;
+}
+.sidebar .brand svg { width: 36px; height: 36px; flex-shrink: 0; }
+.sidebar .brand-label {
+  display: flex; flex-direction: column;
+  transition: opacity 150ms ease;
+}
+.sidebar.collapsed .brand-label { opacity: 0; pointer-events: none; }
+.sidebar .brand-label .ss-wordmark { font-size: 26px; line-height: 1; }
+.sidebar .brand-label .ss-eyebrow {
+  font-size: 9px; margin-top: 4px;
+  letter-spacing: 0.22em;
+}
+.sidebar .nav { flex: 1; display: flex; flex-direction: column; }
+.sidebar .nav-item {
+  display: flex; align-items: center; gap: 18px;
+  padding: 16px 32px;
+  font-family: var(--ff-sans);
+  font-size: 17px;
+  color: var(--ss-star300);
+  font-weight: 400;
+  border-left: 2px solid transparent;
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+  position: relative;
+}
+.sidebar .nav-item:hover,
+.sidebar .nav-item.focused {
+  background: rgba(212, 164, 74, 0.08);
+  color: var(--ss-star100);
+}
+.sidebar .nav-item.focused {
+  box-shadow: none;
+  outline: none;
+}
+.sidebar .nav-item.focused::after {
+  content: '';
+  position: absolute; right: 0; top: 8px; bottom: 8px;
+  width: 3px; background: var(--ss-star500);
+}
+.sidebar .nav-item.active {
+  border-left-color: var(--ss-star500);
+  background: rgba(212, 164, 74, 0.06);
+  color: var(--ss-star100);
+}
+.sidebar .nav-item .icon {
+  width: 22px; height: 22px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+.sidebar .nav-item .label { transition: opacity 150ms ease; white-space: nowrap; }
+.sidebar.collapsed .nav-item .label { opacity: 0; pointer-events: none; }
+.sidebar .footer {
+  padding: 28px 32px;
+  border-top: 1px solid rgba(35,42,54,0.4);
+  display: flex; align-items: center; gap: 14px;
+}
+.sidebar .avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--ss-space3);
+  border: 1px solid var(--ss-space4);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ss-star500);
+  font-family: var(--ff-mono);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.sidebar .footer-text { display: flex; flex-direction: column; transition: opacity 150ms ease; }
+.sidebar.collapsed .footer-text { opacity: 0; pointer-events: none; }
+.sidebar .footer-text .name { font-size: 14px; color: var(--ss-star100); font-weight: 500; }
+.sidebar .footer-text .plan {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--ss-star500);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.sidebar .clock {
+  margin-left: auto;
+  font-family: var(--ff-mono);
+  font-size: 13px;
+  color: var(--ss-star300);
+  transition: opacity 150ms ease;
+}
+.sidebar.collapsed .clock { opacity: 0; pointer-events: none; }
+
+/* ---------- Hero ---------- */
+#tonight .main {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 280px;
+  transition: left 200ms ease;
+  z-index: 4;
+}
+.sidebar.collapsed ~ .main { left: 96px; }
+
+#tonight .hero {
+  position: absolute;
+  top: 80px; left: 96px; right: 96px;
+  z-index: 3;
+}
+#tonight .hero .hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+#tonight .hero .hero-eyebrow .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--ss-aurora);
+  box-shadow: 0 0 12px rgba(93,168,136,0.6);
+  animation: ss-pulse 2s ease-in-out infinite;
+}
+@keyframes ss-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(0.9); }
+}
+#tonight .hero h2 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 100px;
+  line-height: 0.95;
+  color: var(--ss-star100);
+  letter-spacing: -0.02em;
+  margin-bottom: 36px;
+  max-width: 1200px;
+}
+#tonight .hero p.body {
+  font-family: var(--ff-sans);
+  font-weight: 300;
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--ss-star300);
+  max-width: 720px;
+  margin-bottom: 40px;
+}
+#tonight .hero p.body .accent { color: var(--ss-star500); font-weight: 500; }
+#tonight .hero .btn-row { display: flex; gap: 16px; margin-bottom: 56px; }
+#tonight .hero .btn { height: 60px; padding: 0 28px; font-size: 16px; }
+
+#tonight .meta-card {
+  display: inline-block;
+  background: rgba(17, 21, 28, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ss-space4);
+  border-radius: 6px;
+  padding: 24px 32px;
+}
+#tonight .meta-card .kv-row { display: flex; gap: 48px; }
+#tonight .meta-card .kv .k {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--ss-star300);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+#tonight .meta-card .kv .v {
+  font-family: var(--ff-sans);
+  font-size: 18px;
+  color: var(--ss-star100);
+  font-weight: 400;
+}
+#tonight .meta-card .kv .v.mono {
+  font-family: var(--ff-mono);
+  color: var(--ss-star500);
+}
+
+/* ---------- Bottom row: Also visible tonight ---------- */
+#tonight .also {
+  position: absolute;
+  bottom: 56px; left: 96px; right: 96px;
+  z-index: 3;
+}
+#tonight .also .section-label {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  opacity: 0.85;
+}
+#tonight .cards {
+  display: flex; gap: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#tonight .cards::-webkit-scrollbar { display: none; }
+.sky-card {
+  flex-shrink: 0;
+  width: 280px; min-height: 180px;
+  background: rgba(17, 21, 28, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ss-space4);
+  border-radius: 6px;
+  padding: 24px;
+  text-align: left;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+.sky-card.focused {
+  transform: translateY(-4px);
+  background: rgba(26, 32, 41, 0.85);
+}
+.sky-card .time {
+  font-family: var(--ff-mono);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ss-star500);
+}
+.sky-card.aurora .time { color: var(--ss-aurora); }
+.sky-card .name {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ss-star100);
+  line-height: 1.1;
+}
+.sky-card .sub {
+  font-family: var(--ff-sans);
+  font-weight: 300;
+  font-size: 13px;
+  color: var(--ss-star300);
+  line-height: 1.4;
+  margin-top: auto;
+}
+
+/* ---------- Exit toast ---------- */
+.exit-toast {
+  position: fixed;
+  bottom: 56px; left: 50%; transform: translateX(-50%);
+  background: rgba(17,21,28,0.95);
+  border: 1px solid var(--ss-space4);
+  color: var(--ss-star100);
+  padding: 18px 32px;
+  border-radius: 6px;
+  font-family: var(--ff-sans);
+  font-size: 16px;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.exit-toast.show { opacity: 1; }
+
+/* ---------- Lock screen ---------- */
+#lock { background: var(--ss-space0); display: flex; align-items: center; justify-content: center; text-align: center; }
+#lock .lock-inner { max-width: 720px; padding: 64px; z-index: 2; position: relative; }
+#lock .ss-eyebrow { font-size: 13px; margin-bottom: 24px; }
+#lock h2 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 88px;
+  line-height: 1;
+  color: var(--ss-star100);
+  margin-bottom: 28px;
+  letter-spacing: -0.02em;
+}
+#lock p {
+  font-family: var(--ff-sans); font-weight: 300;
+  font-size: 22px; color: var(--ss-star300); line-height: 1.5;
+  margin-bottom: 48px;
+}
+</style>
+</head>
+<body>
+
+<!-- ===============================================================
+     LOGOMARK TEMPLATE — six-star asterism with connecting lines.
+     Reused across all screens via <use href="#ss-mark">.
+     =============================================================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ss-mark" viewBox="0 0 100 100">
+    <!-- connecting constellation lines -->
+    <g stroke="#d4a44a" stroke-width="0.5" opacity="0.35" fill="none">
+      <line x1="28" y1="30" x2="56" y2="18" />
+      <line x1="56" y1="18" x2="80" y2="36" />
+      <line x1="80" y1="36" x2="54" y2="50" />
+      <line x1="54" y1="50" x2="72" y2="70" />
+      <line x1="54" y1="50" x2="38" y2="78" />
+      <line x1="72" y1="70" x2="38" y2="78" />
+    </g>
+    <!-- glows for brightest stars (r >= 4.5) -->
+    <circle cx="80" cy="36" r="12" fill="#d4a44a" opacity="0.10" />
+    <circle cx="38" cy="78" r="11" fill="#d4a44a" opacity="0.10" />
+    <!-- stars -->
+    <circle cx="28" cy="30" r="3.6" fill="#fbf3df" opacity="0.85" />
+    <circle cx="56" cy="18" r="3.0" fill="#fbf3df" opacity="0.7" />
+    <circle cx="80" cy="36" r="5.0" fill="#fbf3df" opacity="1.0" />
+    <circle cx="54" cy="50" r="2.6" fill="#fbf3df" opacity="0.6" />
+    <circle cx="72" cy="70" r="3.0" fill="#fbf3df" opacity="0.7" />
+    <circle cx="38" cy="78" r="4.6" fill="#fbf3df" opacity="1.0" />
+  </symbol>
+
+  <!-- nav icons -->
+  <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <circle cx="12" cy="12" r="3.5"/>
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+  </symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <rect x="3" y="5" width="18" height="16" rx="1.5"/>
+    <path d="M3 9h18M8 3v4M16 3v4"/>
+  </symbol>
+  <symbol id="ic-aster" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="6" cy="7" r="1.3"/><circle cx="13" cy="4" r="1.0"/><circle cx="19" cy="9" r="1.5"/>
+    <circle cx="13" cy="13" r="0.9"/><circle cx="18" cy="18" r="1.0"/><circle cx="9" cy="19" r="1.3"/>
+    <g stroke="currentColor" stroke-width="0.4" opacity="0.5" fill="none">
+      <line x1="6" y1="7" x2="13" y2="4"/><line x1="13" y1="4" x2="19" y2="9"/>
+      <line x1="19" y1="9" x2="13" y2="13"/><line x1="13" y1="13" x2="18" y2="18"/>
+      <line x1="13" y1="13" x2="9" y2="19"/><line x1="18" y1="18" x2="9" y2="19"/>
+    </g>
+  </symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+  </symbol>
+  <symbol id="ic-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <circle cx="12" cy="12" r="8"/>
+  </symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>
+  </symbol>
+</svg>
+
+<!-- =====================================================================
+     SCREEN 1: SPLASH
+     ===================================================================== -->
+<section class="screen active" id="splash">
+  <div class="starfield"></div>
+  <div class="splash-inner">
+    <span class="ss-logomark"><svg viewBox="0 0 100 100"><use href="#ss-mark"/></svg></span>
+    <div class="ss-wordmark">StarSol</div>
+    <div class="ss-eyebrow">A guide&nbsp;&middot;&nbsp;to the sky&nbsp;&middot;&nbsp;tonight</div>
+  </div>
+  <div class="progress"></div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 2: WELCOME
+     ===================================================================== -->
+<section class="screen" id="welcome">
+  <div class="bg"></div>
+  <div class="bg-overlay"></div>
+  <div class="top-brand">
+    <svg viewBox="0 0 100 100"><use href="#ss-mark"/></svg>
+    <span class="ss-wordmark">StarSol</span>
+  </div>
+  <div class="content">
+    <div class="ss-eyebrow">Welcome</div>
+    <h1>The sky is<br/>showing.</h1>
+    <p class="body">Cinematic astronomy, JWST releases as they happen, and an alert when the International Space Station passes overhead. Sign in on your phone to begin&nbsp;&mdash; no remote typing.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary focusable" id="welcome-signin" data-action="signin" tabindex="0">Sign in with phone</button>
+      <button class="btn btn-secondary focusable" id="welcome-guest" data-action="guest" tabindex="0">Browse as guest</button>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="footer-item"><span>Imagery&nbsp;/</span>&nbsp;NASA &middot; ESA &middot; CSA &middot; STScI</div>
+    <div class="footer-item"><span>Subject&nbsp;/</span>&nbsp;Cosmic Cliffs, Carina Nebula, 7,600&nbsp;ly</div>
+    <div class="footer-item"><span>Instrument&nbsp;/</span>&nbsp;JWST &middot; NIRCam + MIRI &middot; 2022</div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 3: QR PAIR
+     ===================================================================== -->
+<section class="screen" id="pair">
+  <div class="starfield dim"></div>
+  <div class="pair-content">
+    <div class="left">
+      <div class="ss-eyebrow">Pair your StarSol account</div>
+      <h2>Use your phone.<br/>It&rsquo;s easier.</h2>
+      <div class="steps">
+        <div class="step"><span class="num">1.</span><span>Open your camera and point it at the&nbsp;QR.</span></div>
+        <div class="step"><span class="num">2.</span><span>Or visit <span style="color:var(--ss-star500)">starsol.app/pair</span> in any browser.</span></div>
+        <div class="step"><span class="num">3.</span><span>Enter the six-letter code below.</span></div>
+      </div>
+      <div class="code-row" id="code-row">
+        <div class="code-box">&mdash;</div>
+        <div class="code-box">&mdash;</div>
+        <div class="code-box">&mdash;</div>
+        <div class="code-box">&mdash;</div>
+        <div class="code-box">&mdash;</div>
+        <div class="code-box">&mdash;</div>
+      </div>
+      <div class="countdown" id="pair-countdown">Code expires in 10:00</div>
+      <button class="guest-link focusable" data-action="guest" tabindex="0">Browse as guest &rarr;</button>
+    </div>
+    <div class="right">
+      <div class="qr-box">
+        <div class="qr-pattern"><div class="qr-corner"></div></div>
+      </div>
+      <div class="qr-label"><span>starsol.app</span>&nbsp;/&nbsp;pair</div>
+    </div>
+  </div>
+  <div class="paired-toast" id="paired-toast">Paired&nbsp;&mdash;&nbsp;welcome aboard.</div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 4: TONIGHT
+     ===================================================================== -->
+<section class="screen" id="tonight">
+  <!-- background image stack (cross-fade) -->
+  <div class="bg-image" data-src="https://esawebb.org/media/archives/images/screen/weic2316a.jpg"></div>
+  <div class="bg-image" data-src="https://esawebb.org/media/archives/images/screen/weic2205a.jpg"></div>
+  <div class="bg-image" data-src="https://esawebb.org/media/archives/images/screen/weic2208a.jpg"></div>
+  <div class="bg-image" data-src="https://esawebb.org/media/archives/images/screen/weic2310a.jpg"></div>
+  <div class="bg-image" data-src="https://esawebb.org/media/archives/images/screen/weic2218a.jpg"></div>
+  <div class="bg-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <svg viewBox="0 0 100 100"><use href="#ss-mark"/></svg>
+      <div class="brand-label">
+        <div class="ss-wordmark">StarSol</div>
+        <div class="ss-eyebrow">guide &middot; sky &middot; tonight</div>
+      </div>
+    </div>
+    <nav class="nav" id="sidebar-nav">
+      <button class="nav-item focusable active" data-nav="tonight" tabindex="0">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#ic-sun"/></svg>
+        <span class="label">Tonight</span>
+      </button>
+      <button class="nav-item focusable" data-nav="watch" tabindex="0">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#ic-play"/></svg>
+        <span class="label">Watch</span>
+      </button>
+      <button class="nav-item focusable" data-nav="sky" tabindex="0">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#ic-cal"/></svg>
+        <span class="label">Sky</span>
+      </button>
+      <button class="nav-item focusable" data-nav="constellations" tabindex="0">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#ic-aster"/></svg>
+        <span class="label">Constellations</span>
+      </button>
+      <button class="nav-item focusable" data-nav="gallery" tabindex="0">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#ic-grid"/></svg>
+        <span class="label">Gallery</span>
+      </button>
+      <button class="nav-item focusable" data-nav="ambient" tabindex="0">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#ic-circle"/></svg>
+        <span class="label">Ambient</span>
+      </button>
+      <button class="nav-item focusable" data-nav="search" tabindex="0">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
+        <span class="label">Search</span>
+      </button>
+    </nav>
+    <div class="footer">
+      <div class="avatar">G</div>
+      <div class="footer-text">
+        <div class="name" id="user-name">Guest</div>
+        <div class="plan" id="user-plan">Preview</div>
+      </div>
+      <div class="clock" id="sidebar-clock">--:--</div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="hero">
+      <div class="hero-eyebrow">
+        <span class="dot"></span>
+        <span id="tonight-date">Tonight &middot; loading</span>
+      </div>
+      <h2>The Station,<br/>passing south-west.</h2>
+      <p class="body">
+        The International Space Station crosses your sky at
+        <span class="accent" id="iss-time">8:42 PM</span>
+        &mdash; a bright, silent arc from west-south-west to east-north-east.
+        Visible for just under six minutes if the clouds hold.
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-primary focusable" data-action="watch-iss" tabindex="0">Watch live tracker</button>
+        <button class="btn btn-secondary focusable" data-action="details-iss" tabindex="0">View details</button>
+      </div>
+      <div class="meta-card">
+        <div class="kv-row">
+          <div class="kv"><div class="k">Pass</div><div class="v mono">5&nbsp;min&nbsp;52&nbsp;sec</div></div>
+          <div class="kv"><div class="k">Mag</div><div class="v mono">&minus;3.4</div></div>
+          <div class="kv"><div class="k">Max alt</div><div class="v mono">68&deg;</div></div>
+          <div class="kv"><div class="k">Direction</div><div class="v">WSW &rarr; ENE</div></div>
+          <div class="kv"><div class="k">Cloud cover</div><div class="v">12%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="also">
+      <div class="section-label">Also visible tonight</div>
+      <div class="cards" id="cards-row">
+        <button class="sky-card aurora focusable" tabindex="0">
+          <div class="time">8:42 PM</div>
+          <div class="name">ISS pass</div>
+          <div class="sub">WSW &rarr; ENE &middot; 5m52s &middot; mag &minus;3.4</div>
+        </button>
+        <button class="sky-card focusable" tabindex="0">
+          <div class="time">9:11 PM</div>
+          <div class="name">Jupiter rising</div>
+          <div class="sub">East &middot; 4 moons via binoculars</div>
+        </button>
+        <button class="sky-card focusable" tabindex="0">
+          <div class="time">9:48 PM</div>
+          <div class="name">Saturn, with rings</div>
+          <div class="sub">South-east &middot; 38&deg; altitude</div>
+        </button>
+        <button class="sky-card focusable" tabindex="0">
+          <div class="time">10:22 PM</div>
+          <div class="name">Andromeda</div>
+          <div class="sub">North-east &middot; M31 &middot; naked eye</div>
+        </button>
+        <button class="sky-card focusable" tabindex="0">
+          <div class="time">11:04 PM</div>
+          <div class="name">Pleiades cluster</div>
+          <div class="sub">East &middot; Seven Sisters &middot; M45</div>
+        </button>
+        <button class="sky-card focusable" tabindex="0">
+          <div class="time">12:18 AM</div>
+          <div class="name">Orion rising</div>
+          <div class="sub">South-east &middot; sword, belt &amp; nebula</div>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     LOCK SCREEN (free-window expired)
+     ===================================================================== -->
+<section class="screen" id="lock">
+  <div class="starfield dim"></div>
+  <div class="lock-inner">
+    <div class="ss-eyebrow">Preview ended</div>
+    <h2>Two nights, no charge.<br/>Make it forever.</h2>
+    <p>Your free window has ended. Create a free account to keep watching JWST releases, ISS passes, and ambient sessions.</p>
+    <button class="btn btn-primary focusable" data-action="signin" tabindex="0">Sign in with phone</button>
+  </div>
+</section>
+
+<!-- Exit toast -->
+<div class="exit-toast" id="exit-toast">Press BACK again to exit</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   APP STATE
+   ============================================================ */
+const APP = {
+  token: localStorage.getItem('ss-token'),
+  guest: localStorage.getItem('ss-guest') === 'true',
+  firstSeen: parseInt(localStorage.getItem('ss-first-seen') || Date.now()),
+  currentScreen: 'splash',
+  pairingCode: null,
+  pairingDeviceId: null,
+  pairingPollInterval: null,
+  pairingExpiry: null,
+  pairingCountdownInterval: null,
+  exitArmed: false,
+  exitTimer: null,
+  navDebounce: false,
+  bgRotateInterval: null,
+  clockInterval: null,
+};
+
+if (!localStorage.getItem('ss-first-seen')) {
+  localStorage.setItem('ss-first-seen', String(APP.firstSeen));
+}
+
+/* ============================================================
+   API CLIENT
+   ============================================================ */
+const API = {
+  base: 'https://starsol.app',
+  async get(path) {
+    try {
+      const res = await fetch(this.base + path, {
+        headers: { 'Authorization': APP.token ? 'Bearer ' + APP.token : '', 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } catch (e) {
+      console.warn('[API.get] failed', path, e);
+      return null;
+    }
+  },
+  async post(path, body) {
+    try {
+      const res = await fetch(this.base + path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': APP.token ? 'Bearer ' + APP.token : ''
+        },
+        body: JSON.stringify(body || {})
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } catch (e) {
+      console.warn('[API.post] failed', path, e);
+      return null;
+    }
+  }
+};
+
+/* ============================================================
+   SCREEN ROUTER
+   ============================================================ */
+function navigate(name) {
+  console.log('[nav]', APP.currentScreen, '->', name);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(name);
+  if (!el) {
+    console.error('[nav] no such screen:', name);
+    return;
+  }
+  el.classList.add('active');
+  APP.currentScreen = name;
+
+  // Reset exit-armed flag on screen change.
+  APP.exitArmed = false;
+  hideExitToast();
+
+  // Per-screen hooks
+  if (name === 'pair') startPairing();
+  if (name !== 'pair') stopPairing();
+  if (name === 'tonight') initTonight();
+  if (name !== 'tonight') {
+    if (APP.bgRotateInterval) { clearInterval(APP.bgRotateInterval); APP.bgRotateInterval = null; }
+    if (APP.clockInterval) { clearInterval(APP.clockInterval); APP.clockInterval = null; }
+  }
+
+  // Focus first focusable on the new screen.
+  setTimeout(() => {
+    const first = el.querySelector('.focusable');
+    if (first) focusEl(first);
+  }, 50);
+}
+
+/* ============================================================
+   FOCUS MANAGEMENT
+   ============================================================ */
+let focused = null;
+function focusEl(el) {
+  if (!el) return;
+  if (focused && focused !== el) focused.classList.remove('focused');
+  el.classList.add('focused');
+  focused = el;
+  // sidebar collapse logic — if focus moves out of sidebar, collapse it.
+  updateSidebarCollapse();
+  // ensure scroll into view for card row
+  try { el.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); } catch (e) {}
+}
+function focusables() {
+  const screen = document.getElementById(APP.currentScreen);
+  if (!screen) return [];
+  return Array.from(screen.querySelectorAll('.focusable')).filter(el => {
+    if (el.offsetParent === null) return false;
+    return true;
+  });
+}
+
+/* ============================================================
+   D-PAD NAV (spatial — by geometry, not order)
+   ============================================================ */
+function moveFocus(dir) {
+  if (APP.navDebounce) return;
+  APP.navDebounce = true;
+  setTimeout(() => { APP.navDebounce = false; }, 150);
+
+  const all = focusables();
+  if (!focused || !all.includes(focused)) {
+    if (all[0]) focusEl(all[0]);
+    return;
+  }
+  const fRect = focused.getBoundingClientRect();
+  const fcx = fRect.left + fRect.width/2;
+  const fcy = fRect.top + fRect.height/2;
+
+  let best = null;
+  let bestScore = Infinity;
+  for (const el of all) {
+    if (el === focused) continue;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
+    const dx = cx - fcx;
+    const dy = cy - fcy;
+
+    // gate by direction
+    if (dir === 'up'    && dy >= -8) continue;
+    if (dir === 'down'  && dy <= 8) continue;
+    if (dir === 'left'  && dx >= -8) continue;
+    if (dir === 'right' && dx <= 8) continue;
+
+    // primary axis penalty
+    let primary, secondary;
+    if (dir === 'up' || dir === 'down')   { primary = Math.abs(dy); secondary = Math.abs(dx); }
+    else                                   { primary = Math.abs(dx); secondary = Math.abs(dy); }
+    // weight secondary heavier so we don't jump to far-off rows
+    const score = primary + secondary * 2.2;
+    if (score < bestScore) { bestScore = score; best = el; }
+  }
+  if (best) focusEl(best);
+}
+
+function activateFocused() {
+  if (!focused) return;
+  const action = focused.dataset.action;
+  const nav = focused.dataset.nav;
+  if (nav) {
+    // sidebar nav click — just mark active. Most routes are not implemented yet.
+    document.querySelectorAll('#sidebar-nav .nav-item').forEach(n => n.classList.remove('active'));
+    focused.classList.add('active');
+    console.log('[sidebar] selected', nav);
+    return;
+  }
+  if (action) {
+    handleAction(action);
+  } else {
+    // generic card click — animate
+    focused.animate(
+      [{ transform: 'translateY(-4px) scale(0.98)' }, { transform: 'translateY(-4px) scale(1)' }],
+      { duration: 180, easing: 'ease-out' }
+    );
+  }
+}
+
+function handleAction(action) {
+  switch (action) {
+    case 'signin':
+      navigate('pair');
+      break;
+    case 'guest':
+      localStorage.setItem('ss-guest', 'true');
+      APP.guest = true;
+      navigate('tonight');
+      break;
+    case 'watch-iss':
+    case 'details-iss':
+      console.log('[action]', action, '— routed (mock)');
+      break;
+  }
+}
+
+/* ============================================================
+   SIDEBAR collapse — only expanded while focus is inside
+   ============================================================ */
+function updateSidebarCollapse() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  if (APP.currentScreen !== 'tonight') return;
+  if (focused && sidebar.contains(focused)) {
+    sidebar.classList.remove('collapsed');
+  } else {
+    sidebar.classList.add('collapsed');
+  }
+}
+
+/* ============================================================
+   EXIT TOAST (BACK from Tonight)
+   ============================================================ */
+function showExitToast() {
+  const t = document.getElementById('exit-toast');
+  if (!t) return;
+  t.classList.add('show');
+  APP.exitArmed = true;
+  if (APP.exitTimer) clearTimeout(APP.exitTimer);
+  APP.exitTimer = setTimeout(() => {
+    APP.exitArmed = false;
+    hideExitToast();
+  }, 3000);
+}
+function hideExitToast() {
+  const t = document.getElementById('exit-toast');
+  if (t) t.classList.remove('show');
+}
+
+/* ============================================================
+   BACK button bridge (called from Android shell)
+   ============================================================ */
+window.starsolBack = function () {
+  if (APP.currentScreen === 'tonight') {
+    if (APP.exitArmed) {
+      // Let the Android shell take it from here (return false to exit).
+      return false;
+    }
+    showExitToast();
+    return true; // consumed
+  }
+  if (APP.currentScreen === 'pair' || APP.currentScreen === 'lock') {
+    navigate('welcome');
+    return true;
+  }
+  if (APP.currentScreen === 'welcome') {
+    return false; // root — let shell background the app
+  }
+  return false;
+};
+
+/* ============================================================
+   KEY HANDLER
+   ============================================================ */
+document.addEventListener('keydown', (e) => {
+  const k = e.keyCode;
+  // 461 = TV BACK, 27 = ESC
+  if (k === 461 || k === 27 || k === 8) {
+    e.preventDefault();
+    const consumed = window.starsolBack();
+    if (!consumed && window.history.length > 1) {
+      // no-op — in WebView shell, the shell handles exit.
+    }
+    return;
+  }
+  if (k === 37) { e.preventDefault(); moveFocus('left'); }
+  else if (k === 38) { e.preventDefault(); moveFocus('up'); }
+  else if (k === 39) { e.preventDefault(); moveFocus('right'); }
+  else if (k === 40) { e.preventDefault(); moveFocus('down'); }
+  else if (k === 13 || k === 32) { e.preventDefault(); activateFocused(); }
+});
+
+/* ============================================================
+   PAIRING (mocked — graceful fallback when API is down)
+   ============================================================ */
+async function startPairing() {
+  // 1. Register a new device pairing code.
+  const res = await API.post('/api/devices/register', { client: 'starsol-androidtv', version: '0.1.0' });
+  let code, deviceId, expiresAt;
+  if (res && res.code) {
+    code = res.code;
+    deviceId = res.deviceId || res.id;
+    expiresAt = res.expiresAt ? new Date(res.expiresAt).getTime() : Date.now() + 10 * 60_000;
+  } else {
+    // Fallback: synthesize a code so the screen looks real during dev.
+    code = randomCode();
+    deviceId = 'mock-' + code;
+    expiresAt = Date.now() + 10 * 60_000;
+    console.warn('[pair] backend unavailable — using mock code', code);
+  }
+  APP.pairingCode = code;
+  APP.pairingDeviceId = deviceId;
+  APP.pairingExpiry = expiresAt;
+  renderCode(code);
+
+  // 2. Countdown timer.
+  if (APP.pairingCountdownInterval) clearInterval(APP.pairingCountdownInterval);
+  APP.pairingCountdownInterval = setInterval(updateCountdown, 1000);
+  updateCountdown();
+
+  // 3. Poll for pair status every 3s.
+  if (APP.pairingPollInterval) clearInterval(APP.pairingPollInterval);
+  APP.pairingPollInterval = setInterval(async () => {
+    const status = await API.get('/api/devices/pair/status?code=' + encodeURIComponent(code));
+    if (status && status.paired && status.token) {
+      onPaired(status.token, status.user);
+    }
+  }, 3000);
+}
+
+function stopPairing() {
+  if (APP.pairingPollInterval) { clearInterval(APP.pairingPollInterval); APP.pairingPollInterval = null; }
+  if (APP.pairingCountdownInterval) { clearInterval(APP.pairingCountdownInterval); APP.pairingCountdownInterval = null; }
+}
+
+function renderCode(code) {
+  const boxes = document.querySelectorAll('#code-row .code-box');
+  const chars = (code || '------').toUpperCase().padEnd(6, '-').split('');
+  boxes.forEach((b, i) => { b.textContent = chars[i] || '-'; });
+}
+
+function updateCountdown() {
+  const el = document.getElementById('pair-countdown');
+  if (!el || !APP.pairingExpiry) return;
+  const ms = APP.pairingExpiry - Date.now();
+  if (ms <= 0) {
+    el.textContent = 'Refreshing code…';
+    stopPairing();
+    startPairing();
+    return;
+  }
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  el.textContent = 'Code expires in ' + m + ':' + (s < 10 ? '0' + s : s);
+}
+
+function onPaired(token, user) {
+  APP.token = token;
+  localStorage.setItem('ss-token', token);
+  localStorage.removeItem('ss-guest');
+  APP.guest = false;
+  stopPairing();
+  const toast = document.getElementById('paired-toast');
+  if (toast) {
+    toast.textContent = 'Paired — welcome' + (user && user.name ? ', ' + user.name : '') + '.';
+    toast.classList.add('show');
+  }
+  setTimeout(() => { navigate('tonight'); }, 1200);
+}
+
+function randomCode() {
+  const alphabet = 'BCDFGHJKMNPQRSTVWXYZ';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return s;
+}
+
+/* ============================================================
+   TONIGHT — background rotation, clock, dynamic copy
+   ============================================================ */
+function initTonight() {
+  // Preload + cycle backgrounds (60s)
+  const imgs = Array.from(document.querySelectorAll('#tonight .bg-image'));
+  imgs.forEach(el => {
+    const src = el.dataset.src;
+    if (src && !el.style.backgroundImage) el.style.backgroundImage = "url('" + src + "')";
+  });
+  let idx = 0;
+  imgs.forEach((el, i) => el.classList.toggle('active', i === idx));
+  if (APP.bgRotateInterval) clearInterval(APP.bgRotateInterval);
+  APP.bgRotateInterval = setInterval(() => {
+    imgs[idx].classList.remove('active');
+    idx = (idx + 1) % imgs.length;
+    imgs[idx].classList.add('active');
+  }, 60_000);
+
+  // Clock
+  function tickClock() {
+    const clk = document.getElementById('sidebar-clock');
+    if (!clk) return;
+    const d = new Date();
+    let h = d.getHours();
+    const mi = d.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    clk.textContent = h + ':' + (mi < 10 ? '0' + mi : mi) + ' ' + ampm;
+  }
+  tickClock();
+  if (APP.clockInterval) clearInterval(APP.clockInterval);
+  APP.clockInterval = setInterval(tickClock, 30_000);
+
+  // Date eyebrow
+  const dateEl = document.getElementById('tonight-date');
+  if (dateEl) {
+    const d = new Date();
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    dateEl.textContent = 'Tonight · ' + months[d.getMonth()] + ' ' + d.getDate();
+  }
+
+  // User state — show real name if signed in
+  const userName = document.getElementById('user-name');
+  const userPlan = document.getElementById('user-plan');
+  if (APP.token && !APP.guest) {
+    if (userName) userName.textContent = 'You';
+    if (userPlan) userPlan.textContent = 'StarSol';
+  } else {
+    if (userName) userName.textContent = 'Guest';
+    if (userPlan) userPlan.textContent = 'Preview';
+  }
+}
+
+/* ============================================================
+   FREE WINDOW LOCK
+   ============================================================ */
+const FREE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
+function checkFreeWindow() {
+  if (APP.token) return false; // signed-in: never lock
+  if (!APP.guest) return false;  // not yet committed to guest
+  return (Date.now() - APP.firstSeen) > FREE_WINDOW_MS;
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+function boot() {
+  console.log('[starsol] boot — token?', !!APP.token, 'guest?', APP.guest);
+
+  // After splash (2.5s) decide what to show.
+  setTimeout(() => {
+    if (checkFreeWindow()) {
+      navigate('lock');
+    } else if (APP.token) {
+      navigate('tonight');
+    } else if (APP.guest) {
+      navigate('tonight');
+    } else {
+      navigate('welcome');
+    }
+  }, 2500);
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
