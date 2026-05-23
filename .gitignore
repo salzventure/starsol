@@ -1,10 +1,8 @@
-.DS_Store
 node_modules/
 .env
-.env.local
-.env*.local
-*.log
 .next/
+*.tar.gz
 dist/
-out/
-.vercel/
+android-tv/.gradle/
+android-tv/build/
+*.keystore
