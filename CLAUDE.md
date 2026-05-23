@@ -53,14 +53,20 @@ Premium astronomy streaming TV app. Roku-first, then Apple TV + Fire TV.
 - Active item: 2px star-gold left border + rgba(212,164,74,0.06) background
 - Constellations is a first-class nav item — charts + mythology + history + "spot tonight"
 
-## Key screens
+## Key screens (all live in receiver/index.html)
 - Splash: starfield CSS bg + logo + wordmark + thin gold progress bar (38% wide)
 - Welcome: full-bleed JWST Carina hero, "The sky is showing." at 132px serif italic
   Two buttons: "Sign in with phone" (primary) + "Browse as guest" (secondary)
-- QR Pair: split — left has steps + 6-letter code in tall mono boxes; right has QR panel
-  Companion URL shown on TV: starsol.tv/pair (not starsol.app/pair)
-- Tonight (Home): full-bleed image + ISS/event hero at 124px italic + metadata card + sky row
-- Sky Calendar: table, 90 days ahead, geolocated
+- QR Pair: split — left has steps + 6-letter code in tall mono boxes; right has real QR panel
+- Tonight (Home): full-bleed image + ISS/event hero + meta card + SkyCards row + sidebar
+- Browse (Watch): featured hero (Deep Field Y4) + 3 horizontal media-tile rows
+- Sky Calendar: table of 9 events, 90 days, visibility/access pills, ENTER opens detail overlay
+- Constellations: 4×3 grid of cards with mythology + season + visible-tonight aurora pill, detail overlay
+- Gallery: 5-tile mosaic (1 large + 4 small), ENTER opens full-screen image viewer with credit
+- Ambient: bg cycle every 30s, clock + caption + credit, any-key opens settings overlay
+- Pricing: Explorer (primary, $39.99/yr) + Observer ($7.99/mo) cards with CTA → Stripe checkout
+- Search: overlay placeholder
+- Lock: free-window expired
 
 ## Companion web app
 - URL shown on TV: starsol.tv/pair — handles QR pairing + account + Stripe checkout
