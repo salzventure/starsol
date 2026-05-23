@@ -1076,10 +1076,15 @@ function navigate(name) {
   }
 
   // Focus first focusable on the new screen.
+  // For Tonight, default to the primary hero button (not sidebar) so sidebar starts collapsed.
   setTimeout(() => {
-    const first = el.querySelector('.focusable');
+    let first;
+    if (name === 'tonight') {
+      first = el.querySelector('.hero-buttons .focusable, .btn-primary.focusable');
+    }
+    if (!first) first = el.querySelector('.focusable');
     if (first) focusEl(first);
-  }, 50);
+  }, 80);
 }
 
 /* ============================================================
@@ -1091,6 +1096,8 @@ function focusEl(el) {
   if (focused && focused !== el) focused.classList.remove('focused');
   el.classList.add('focused');
   focused = el;
+  // Actually move DOM focus so document.activeElement is correct (needed for CDP + a11y)
+  try { el.focus({ preventScroll: true }); } catch (_) {}
   // sidebar collapse logic — if focus moves out of sidebar, collapse it.
   updateSidebarCollapse();
   // ensure scroll into view for card row
@@ -1247,21 +1254,25 @@ window.starsolBack = function () {
    KEY HANDLER
    ============================================================ */
 document.addEventListener('keydown', (e) => {
-  const k = e.keyCode;
-  // 461 = TV BACK, 27 = ESC
-  if (k === 461 || k === 27 || k === 8) {
+  const k = e.keyCode || e.which;
+  const key = e.key;
+  // 461 = TV BACK, 27/Escape = ESC, 8 = Backspace
+  const isBack = k === 461 || k === 27 || k === 8 || key === 'Escape' || key === 'GoBack';
+  if (isBack) {
     e.preventDefault();
-    const consumed = window.starsolBack();
-    if (!consumed && window.history.length > 1) {
-      // no-op — in WebView shell, the shell handles exit.
-    }
+    window.starsolBack();
     return;
   }
-  if (k === 37) { e.preventDefault(); moveFocus('left'); }
-  else if (k === 38) { e.preventDefault(); moveFocus('up'); }
-  else if (k === 39) { e.preventDefault(); moveFocus('right'); }
-  else if (k === 40) { e.preventDefault(); moveFocus('down'); }
-  else if (k === 13 || k === 32) { e.preventDefault(); activateFocused(); }
+  const isLeft  = k === 37 || key === 'ArrowLeft';
+  const isUp    = k === 38 || key === 'ArrowUp';
+  const isRight = k === 39 || key === 'ArrowRight';
+  const isDown  = k === 40 || key === 'ArrowDown';
+  const isEnter = k === 13 || k === 32 || key === 'Enter' || key === ' ';
+  if (isLeft)  { e.preventDefault(); moveFocus('left'); }
+  else if (isUp)    { e.preventDefault(); moveFocus('up'); }
+  else if (isRight) { e.preventDefault(); moveFocus('right'); }
+  else if (isDown)  { e.preventDefault(); moveFocus('down'); }
+  else if (isEnter) { e.preventDefault(); activateFocused(); }
 });
 
 /* ============================================================
