@@ -22,8 +22,9 @@ COPYFILE_DISABLE=1 tar \
   --exclude='.DS_Store' \
   --exclude='node_modules' \
   --exclude='.env' \
-  --exclude='.next' \
   --exclude='.git' \
+  --exclude='android-tv' \
+  --exclude='website' \
   -czf /tmp/starsol-stage.tar.gz \
   backend/
 

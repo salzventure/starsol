@@ -16,14 +16,13 @@ echo "[step3-remote] Extracting tarball..."
 mkdir -p /opt/starsol-api /tmp/starsol-stage
 tar -xzf /tmp/starsol-stage.tar.gz -C /tmp/starsol-stage
 
-echo "[step3-remote] Syncing backend/ to $APP_DIR (preserving .env)..."
+echo "[step3-remote] Syncing to $APP_DIR (preserving .env)..."
 if [ -f "$APP_DIR/.env" ]; then
   cp "$APP_DIR/.env" /tmp/starsol-env.bak
 fi
 
 rsync -av --delete \
   --exclude='.env' \
-  --exclude='.next/' \
   /tmp/starsol-stage/backend/ /opt/starsol-api/
 
 if [ -f /tmp/starsol-env.bak ]; then
@@ -34,14 +33,11 @@ echo "[step3-remote] Installing dependencies..."
 cd /opt/starsol-api
 npm ci --omit=dev
 
-echo "[step3-remote] Building Next.js (this takes ~60s)..."
-npm run build
-
 echo "[step3-remote] Restarting PM2..."
 if pm2 show starsol-api > /dev/null 2>&1; then
   pm2 restart starsol-api --update-env
 else
-  pm2 start npm --name starsol-api -- start
+  pm2 start server.js --name starsol-api
 fi
 
 pm2 save
