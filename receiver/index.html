@@ -685,6 +685,925 @@ body { animation: ss-pixel-shift 720s linear infinite; }
 }
 .exit-toast.show { opacity: 1; }
 
+/* ========================================================================
+   COMMON: pills (used across new screens)
+   ======================================================================== */
+.ss-pill {
+  display: inline-flex; align-items: center;
+  height: 28px; padding: 0 14px;
+  border-radius: 100px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: rgba(35, 42, 54, 0.6);
+  color: var(--ss-star300);
+  border: 1px solid var(--ss-space4);
+  white-space: nowrap;
+}
+.ss-pill.gold {
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+  border-color: var(--ss-star500);
+}
+.ss-pill.aurora {
+  background: rgba(93, 168, 136, 0.16);
+  color: var(--ss-aurora);
+  border-color: rgba(93, 168, 136, 0.4);
+}
+.ss-pill.ember {
+  background: rgba(193, 74, 42, 0.16);
+  color: var(--ss-ember);
+  border-color: rgba(193, 74, 42, 0.4);
+}
+.ss-caps {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+/* ========================================================================
+   BROWSE SCREEN
+   ======================================================================== */
+#browse { background: var(--ss-space1); }
+#browse .bg-image {
+  position: absolute; top: 0; left: 0; right: 0; height: 600px;
+  background-size: cover; background-position: center;
+}
+#browse .bg-overlay {
+  position: absolute; top: 0; left: 0; right: 0; height: 600px;
+  background:
+    linear-gradient(to right, rgba(5,6,8,0.95) 5%, rgba(5,6,8,0.4) 50%, transparent 80%),
+    linear-gradient(to bottom, transparent 55%, var(--ss-space1) 100%);
+}
+#browse .main {
+  position: absolute; inset: 0 0 0 280px;
+  transition: left 200ms ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+#browse .main::-webkit-scrollbar { display: none; }
+.sidebar.collapsed ~ #browse-main { left: 96px; }
+
+#browse .featured {
+  position: relative;
+  padding: 80px 80px 56px 40px;
+  height: 600px;
+  z-index: 3;
+}
+#browse .featured .ss-pill { margin-bottom: 24px; }
+#browse .featured h1 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 84px;
+  line-height: 1;
+  color: var(--ss-star100);
+  margin-bottom: 16px;
+  max-width: 720px;
+}
+#browse .featured .meta {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+#browse .featured p {
+  font-family: var(--ff-sans);
+  font-size: 18px;
+  color: var(--ss-star300);
+  font-weight: 300;
+  line-height: 1.5;
+  max-width: 560px;
+  margin-bottom: 32px;
+}
+#browse .featured .btn-row { display: flex; gap: 14px; }
+#browse .featured .btn { height: 56px; padding: 0 28px; font-size: 16px; }
+
+#browse .rows {
+  position: relative;
+  padding: 40px 80px 80px 40px;
+  display: flex; flex-direction: column;
+  gap: 40px;
+  z-index: 3;
+}
+.media-row .row-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 16px;
+}
+.media-row .row-label {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.media-row .row-count {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--ss-space4);
+  letter-spacing: 0.16em;
+}
+.media-row .row-tiles {
+  display: flex; gap: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 6px 0;
+}
+.media-row .row-tiles::-webkit-scrollbar { display: none; }
+.media-tile {
+  flex-shrink: 0;
+  width: 320px;
+  text-align: left;
+  display: flex; flex-direction: column; gap: 12px;
+  cursor: pointer;
+  background: transparent;
+}
+.media-tile .tile-img {
+  width: 320px; height: 180px;
+  background-size: cover; background-position: center;
+  background-color: var(--ss-space3);
+  border: 1px solid var(--ss-space4);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.media-tile.focused .tile-img {
+  border-color: var(--ss-star500);
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 32px rgba(212, 164, 74, 0.4);
+}
+.media-tile .tile-title {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ss-star100);
+  line-height: 1.15;
+}
+.media-tile .tile-meta {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--ss-star300);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.media-tile .badge {
+  position: absolute; top: 10px; left: 10px;
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+  font-family: var(--ff-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+
+/* ========================================================================
+   SKY CALENDAR SCREEN
+   ======================================================================== */
+#sky { background: var(--ss-space0); }
+#sky .bg-image {
+  position: absolute; inset: 0;
+  background-image: url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');
+  background-size: cover; background-position: center;
+  opacity: 0.35;
+}
+#sky .bg-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom,
+    rgba(5,6,8,0.85) 0%, rgba(5,6,8,0.65) 40%, rgba(5,6,8,0.95) 100%);
+}
+#sky .main {
+  position: absolute; inset: 0 0 0 280px;
+  transition: left 200ms ease;
+  padding: 56px 80px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+#sky .main::-webkit-scrollbar { display: none; }
+.sidebar.collapsed ~ #sky-main { left: 96px; }
+#sky .sky-header {
+  display: flex; justify-content: space-between; align-items: end;
+  margin-bottom: 40px;
+}
+#sky .sky-header h1 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 92px;
+  line-height: 0.95;
+  color: var(--ss-star100);
+  letter-spacing: -0.02em;
+}
+#sky .sky-pills { display: flex; gap: 10px; }
+#sky .sky-eyebrow {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star500);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+#sky table.events {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ff-sans);
+}
+#sky table.events thead th {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--ss-space4);
+  font-weight: 400;
+}
+#sky table.events tbody tr {
+  cursor: pointer;
+  border-bottom: 1px solid rgba(35, 42, 54, 0.5);
+  border-left: 2px solid transparent;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+#sky table.events tbody tr.upcoming {
+  border-left-color: var(--ss-star500);
+  background: rgba(212, 164, 74, 0.06);
+}
+#sky table.events tbody tr.focusable.focused {
+  background: rgba(212, 164, 74, 0.14);
+  border-left-color: var(--ss-star500);
+  box-shadow: none;
+  outline: none;
+}
+#sky table.events td {
+  padding: 18px;
+  color: var(--ss-star100);
+  font-size: 16px;
+  font-weight: 300;
+  vertical-align: middle;
+}
+#sky table.events td.date {
+  font-family: var(--ff-mono);
+  font-size: 13px;
+  color: var(--ss-star500);
+  letter-spacing: 0.08em;
+  width: 130px;
+}
+#sky table.events td.time {
+  font-family: var(--ff-mono);
+  font-size: 13px;
+  color: var(--ss-star300);
+  width: 110px;
+}
+#sky table.events td.event {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 22px;
+}
+#sky table.events td.vis, #sky table.events td.access { width: 160px; }
+
+/* Event detail overlay */
+.detail-overlay {
+  position: fixed; inset: 0;
+  background: rgba(5, 6, 8, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 200;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 80px;
+}
+.detail-overlay.show { display: flex; }
+.detail-overlay .panel {
+  background: var(--ss-space2);
+  border: 1px solid var(--ss-space4);
+  border-radius: 8px;
+  padding: 56px;
+  max-width: 720px;
+  width: 100%;
+}
+.detail-overlay .panel .eyebrow {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star500);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.detail-overlay .panel h2 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 56px;
+  color: var(--ss-star100);
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.detail-overlay .panel p {
+  font-family: var(--ff-sans);
+  font-weight: 300;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--ss-star300);
+  margin-bottom: 24px;
+}
+.detail-overlay .panel .kv {
+  display: flex; justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--ss-space4);
+  font-family: var(--ff-mono);
+  font-size: 13px;
+}
+.detail-overlay .panel .kv .k {
+  color: var(--ss-star300);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.detail-overlay .panel .kv .v { color: var(--ss-star500); }
+.detail-overlay .hint {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 28px;
+  text-align: center;
+}
+
+/* ========================================================================
+   CONSTELLATIONS SCREEN
+   ======================================================================== */
+#constellations { background: var(--ss-space1); }
+#constellations .bg-image {
+  position: absolute; inset: 0;
+  background-image: url('https://cdn.eso.org/images/screen/eso0932a.jpg');
+  background-size: cover; background-position: center;
+  opacity: 0.25;
+}
+#constellations .bg-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to right,
+    rgba(5,6,8,0.95) 0%, rgba(5,6,8,0.75) 30%, rgba(5,6,8,0.92) 100%);
+}
+#constellations .main {
+  position: absolute; inset: 0 0 0 280px;
+  transition: left 200ms ease;
+  padding: 56px 80px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+#constellations .main::-webkit-scrollbar { display: none; }
+.sidebar.collapsed ~ #constellations-main { left: 96px; }
+#constellations .const-header {
+  display: flex; justify-content: space-between; align-items: end;
+  margin-bottom: 40px;
+}
+#constellations .const-header h1 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 92px;
+  line-height: 0.95;
+  color: var(--ss-star100);
+  letter-spacing: -0.02em;
+}
+#constellations .const-eyebrow {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star500);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.const-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.const-card {
+  width: 100%;
+  min-height: 220px;
+  background: rgba(5, 6, 8, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--ss-space4);
+  border-radius: 6px;
+  padding: 24px;
+  text-align: left;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.const-card.focused {
+  transform: scale(1.02);
+  border-color: var(--ss-star500);
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 32px rgba(212, 164, 74, 0.4);
+}
+.const-card .season-badge {
+  position: absolute; top: 16px; right: 16px;
+  font-family: var(--ff-mono);
+  font-size: 9px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.const-card .const-name {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 28px;
+  color: var(--ss-star100);
+  line-height: 1;
+}
+.const-card .const-latin {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.const-card .const-myth {
+  font-family: var(--ff-sans);
+  font-weight: 300;
+  font-size: 13px;
+  color: var(--ss-star300);
+  line-height: 1.45;
+  margin-top: 4px;
+  flex: 1;
+}
+.const-card .visible-pill {
+  display: inline-block;
+  align-self: flex-start;
+  background: rgba(93, 168, 136, 0.16);
+  color: var(--ss-aurora);
+  border: 1px solid rgba(93, 168, 136, 0.4);
+  font-family: var(--ff-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-top: 8px;
+}
+
+/* ========================================================================
+   GALLERY SCREEN
+   ======================================================================== */
+#gallery { background: var(--ss-space1); }
+#gallery .bg-image {
+  position: absolute; inset: 0;
+  background-image: url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');
+  background-size: cover; background-position: center;
+  opacity: 0.35;
+}
+#gallery .bg-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom,
+    rgba(5,6,8,0.7) 0%, rgba(5,6,8,0.55) 40%, rgba(5,6,8,0.92) 100%);
+}
+#gallery .main {
+  position: absolute; inset: 0 0 0 280px;
+  transition: left 200ms ease;
+  padding: 56px 80px;
+  display: flex; flex-direction: column;
+}
+.sidebar.collapsed ~ #gallery-main { left: 96px; }
+#gallery .gal-header {
+  display: flex; justify-content: space-between; align-items: end;
+  margin-bottom: 32px;
+}
+#gallery .gal-header h1 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 92px;
+  line-height: 0.95;
+  color: var(--ss-star100);
+  letter-spacing: -0.02em;
+}
+#gallery .count-badge {
+  font-family: var(--ff-mono);
+  font-size: 12px;
+  color: var(--ss-star500);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border: 1px solid rgba(212,164,74,0.4);
+  border-radius: 100px;
+  background: rgba(212,164,74,0.06);
+}
+.gallery-mosaic {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+  flex: 1;
+  height: 720px;
+}
+.gal-tile {
+  position: relative;
+  border: 1px solid var(--ss-space4);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  background-size: cover; background-position: center;
+  background-color: var(--ss-space2);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.gal-tile.large { grid-row: span 2; }
+.gal-tile.focused {
+  border-color: var(--ss-star500);
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 32px rgba(212, 164, 74, 0.4);
+}
+.gal-tile .overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(5,6,8,0.92) 0%, rgba(5,6,8,0) 50%);
+}
+.gal-tile .caption {
+  position: absolute; left: 20px; right: 20px; bottom: 16px;
+}
+.gal-tile .caption .title {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ss-star100);
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+.gal-tile.large .caption .title { font-size: 32px; }
+.gal-tile .caption .credit {
+  font-family: var(--ff-mono);
+  font-size: 9px;
+  color: rgba(251,243,223,0.6);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.gal-tile.large .caption .credit { font-size: 11px; }
+
+/* Image viewer (full-screen) */
+.image-viewer {
+  position: fixed; inset: 0;
+  background: var(--ss-space0);
+  z-index: 300;
+  display: none;
+  align-items: center; justify-content: center;
+}
+.image-viewer.show { display: flex; }
+.image-viewer .img-bg {
+  position: absolute; inset: 0;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.image-viewer .footer {
+  position: absolute; left: 80px; right: 80px; bottom: 64px;
+  display: flex; justify-content: space-between; align-items: end;
+  z-index: 2;
+}
+.image-viewer .footer .title {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 36px;
+  color: var(--ss-star100);
+  margin-bottom: 8px;
+}
+.image-viewer .footer .desc {
+  font-family: var(--ff-sans);
+  font-weight: 300;
+  font-size: 16px;
+  color: var(--ss-star300);
+  max-width: 720px;
+  line-height: 1.5;
+}
+.image-viewer .footer .credit {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ========================================================================
+   AMBIENT MODE
+   ======================================================================== */
+#ambient { background: var(--ss-space0); }
+#ambient .amb-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  transition: opacity 2s ease;
+  opacity: 0;
+}
+#ambient .amb-bg.active { opacity: 1; }
+#ambient .amb-clock {
+  position: absolute; bottom: 64px; left: 80px;
+  font-family: var(--ff-mono);
+  font-size: 48px;
+  color: rgba(251, 243, 223, 0.4);
+  letter-spacing: -0.02em;
+  z-index: 3;
+  transition: opacity 400ms ease;
+}
+#ambient .amb-caption {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  font-family: var(--ff-mono);
+  font-size: 14px;
+  color: rgba(251, 243, 223, 0.5);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  z-index: 3;
+  transition: opacity 400ms ease;
+}
+#ambient .amb-credit {
+  position: absolute; bottom: 64px; right: 80px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: rgba(251, 243, 223, 0.4);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  z-index: 3;
+  transition: opacity 400ms ease;
+}
+#ambient.with-settings .amb-clock,
+#ambient.with-settings .amb-caption,
+#ambient.with-settings .amb-credit { opacity: 0; }
+#ambient .amb-settings {
+  position: absolute; top: 0; left: 0; bottom: 0; width: 50%;
+  background: linear-gradient(to right, rgba(5,6,8,0.92) 0%, rgba(5,6,8,0.85) 70%, transparent 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 80px 56px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+  z-index: 10;
+}
+#ambient.with-settings .amb-settings {
+  opacity: 1;
+  pointer-events: auto;
+}
+#ambient .amb-settings .eyebrow {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star500);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+#ambient .amb-settings h1 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 56px;
+  color: var(--ss-star100);
+  line-height: 1;
+  margin-bottom: 36px;
+}
+#ambient .amb-settings .setting {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--ss-space4);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+#ambient .amb-settings .setting.focused {
+  background: rgba(212, 164, 74, 0.08);
+  border-left-color: var(--ss-star500);
+  box-shadow: none;
+  outline: none;
+}
+#ambient .amb-settings .setting .label {
+  font-family: var(--ff-sans);
+  font-size: 16px;
+  color: var(--ss-star100);
+}
+#ambient .amb-settings .setting .value {
+  font-family: var(--ff-mono);
+  font-size: 13px;
+  color: var(--ss-star500);
+}
+#ambient .amb-settings .exit-btn {
+  margin-top: 32px;
+  background: rgba(17,21,28,0.6);
+  color: var(--ss-star100);
+  border: 1px solid var(--ss-space4);
+  font-family: var(--ff-sans);
+  font-size: 15px;
+  padding: 14px 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#ambient .amb-settings .exit-btn.focused {
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+  border-color: var(--ss-star500);
+  box-shadow: 0 0 32px rgba(212, 164, 74, 0.4);
+}
+
+/* ========================================================================
+   PRICING SCREEN (in-app)
+   ======================================================================== */
+#pricing { background: var(--ss-space1); }
+#pricing .starfield-bg { opacity: 0.3; }
+#pricing .price-wrap {
+  position: absolute; inset: 0;
+  padding: 80px 120px;
+  display: flex; flex-direction: column; align-items: center;
+  z-index: 2;
+}
+#pricing .eyebrow {
+  font-family: var(--ff-mono);
+  font-size: 12px;
+  color: var(--ss-star500);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+#pricing h1 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 80px;
+  line-height: 0.95;
+  color: var(--ss-star100);
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin-bottom: 56px;
+}
+#pricing .plans {
+  display: flex; gap: 32px;
+  align-items: stretch;
+  margin-bottom: 32px;
+}
+.plan-card {
+  background: var(--ss-space2);
+  border: 1px solid var(--ss-space4);
+  border-radius: 8px;
+  padding: 40px 36px;
+  display: flex; flex-direction: column;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+.plan-card.primary {
+  width: 460px;
+  background: rgba(212, 164, 74, 0.06);
+  border-color: rgba(212, 164, 74, 0.5);
+}
+.plan-card.secondary { width: 380px; }
+.plan-card.focused {
+  border-color: var(--ss-star500);
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 32px rgba(212, 164, 74, 0.4);
+}
+.plan-card .primary-pill {
+  position: absolute; top: -14px; left: 36px;
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 100px;
+}
+.plan-card .plan-name {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  color: var(--ss-star100);
+  margin-bottom: 14px;
+}
+.plan-card.primary .plan-name { font-size: 56px; line-height: 1; }
+.plan-card.secondary .plan-name { font-size: 40px; line-height: 1; }
+.plan-card .price-main {
+  font-family: var(--ff-sans);
+  font-weight: 500;
+  font-size: 28px;
+  color: var(--ss-star100);
+  margin-bottom: 6px;
+}
+.plan-card .price-sub {
+  font-family: var(--ff-mono);
+  font-size: 12px;
+  color: var(--ss-star300);
+  letter-spacing: 0.1em;
+  margin-bottom: 28px;
+}
+.plan-card .features {
+  list-style: none;
+  flex: 1;
+  margin-bottom: 28px;
+}
+.plan-card .features li {
+  display: flex; gap: 12px;
+  padding: 8px 0;
+  font-family: var(--ff-sans);
+  font-size: 14px;
+  color: var(--ss-star300);
+  font-weight: 300;
+  line-height: 1.5;
+}
+.plan-card .features li::before {
+  content: '✦';
+  color: var(--ss-star500);
+  font-size: 12px;
+}
+.plan-card .cta {
+  background: rgba(17,21,28,0.6);
+  color: var(--ss-star100);
+  border: 1px solid var(--ss-space4);
+  font-family: var(--ff-sans);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 14px;
+  border-radius: 6px;
+  width: 100%;
+  cursor: pointer;
+}
+.plan-card.primary .cta {
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+  border-color: var(--ss-star500);
+}
+.plan-card.focused .cta {
+  background: var(--ss-star600);
+  color: var(--ss-space0);
+  border-color: var(--ss-star600);
+}
+#pricing .continue-free {
+  font-family: var(--ff-mono);
+  font-size: 12px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  padding: 14px 20px;
+  cursor: pointer;
+}
+#pricing .continue-free.focused {
+  color: var(--ss-star500);
+  box-shadow: none;
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+
+/* ========================================================================
+   SEARCH OVERLAY
+   ======================================================================== */
+.search-overlay {
+  position: fixed; inset: 0;
+  background: rgba(5, 6, 8, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 250;
+  display: none;
+  align-items: center; justify-content: center;
+}
+.search-overlay.show { display: flex; }
+.search-overlay .panel {
+  text-align: center;
+}
+.search-overlay .ss-eyebrow { font-size: 13px; margin-bottom: 20px; }
+.search-overlay h2 {
+  font-family: var(--ff-serif);
+  font-style: italic;
+  font-size: 72px;
+  color: var(--ss-star100);
+  margin-bottom: 18px;
+}
+.search-overlay p {
+  font-family: var(--ff-mono);
+  font-size: 12px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ========================================================================
+   Common: make sidebar appear for screens that have it
+   ======================================================================== */
+#browse .sidebar, #sky .sidebar, #constellations .sidebar,
+#gallery .sidebar, #ambient .sidebar { z-index: 5; }
+
 /* ---------- Lock screen ---------- */
 #lock { background: var(--ss-space0); display: flex; align-items: center; justify-content: center; text-align: center; }
 #lock .lock-inner { max-width: 720px; padding: 64px; z-index: 2; position: relative; }
@@ -866,7 +1785,7 @@ body { animation: ss-pixel-shift 720s linear infinite; }
         <svg class="icon" viewBox="0 0 24 24"><use href="#ic-sun"/></svg>
         <span class="label">Tonight</span>
       </button>
-      <button class="nav-item focusable" data-nav="watch" tabindex="0">
+      <button class="nav-item focusable" data-nav="browse" tabindex="0">
         <svg class="icon" viewBox="0 0 24 24"><use href="#ic-play"/></svg>
         <span class="label">Watch</span>
       </button>
@@ -969,6 +1888,298 @@ body { animation: ss-pixel-shift 720s linear infinite; }
 </section>
 
 <!-- =====================================================================
+     SCREEN 5: BROWSE (Watch)
+     ===================================================================== -->
+<section class="screen" id="browse">
+  <div class="bg-image" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
+  <div class="bg-overlay"></div>
+  <aside class="sidebar" data-sidebar="browse"></aside>
+  <div class="main" id="browse-main">
+    <div class="featured">
+      <span class="ss-pill gold">Featured · StarSol Original</span>
+      <h1>Deep Field<br/>— Year Four.</h1>
+      <div class="meta">Six episodes · 4K HDR · narrated by Janet McTeer</div>
+      <p>Four years into JWST's mission, the deepest single image ever taken is also the most populated — every smear of light is a galaxy. We walk through it, one redshift at a time.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary focusable" data-action="play-featured" tabindex="0">▶ Resume Ep. 3</button>
+        <button class="btn btn-secondary focusable" data-action="add-list" tabindex="0">+ My list</button>
+        <button class="btn btn-secondary focusable" data-action="details-featured" tabindex="0">Details</button>
+      </div>
+    </div>
+    <div class="rows">
+      <div class="media-row">
+        <div class="row-header">
+          <div class="row-label">JWST Gallery</div>
+          <div class="row-count">5 items ▶</div>
+        </div>
+        <div class="row-tiles">
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');"></div>
+            <div class="tile-title">The Pillars of Creation</div>
+            <div class="tile-meta">JWST · NIRCam · 2022</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2205a.jpg');"></div>
+            <div class="tile-title">Cosmic Cliffs · Carina</div>
+            <div class="tile-meta">JWST · NIRCam + MIRI · 2022</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
+            <div class="tile-title">Tarantula Nebula</div>
+            <div class="tile-meta">JWST · NIRCam · 2022</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310a.jpg');"></div>
+            <div class="tile-title">Stephan's Quintet</div>
+            <div class="tile-meta">JWST · NIRCam + MIRI · 2022</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');"></div>
+            <div class="tile-title">SMACS 0723 — First Deep Field</div>
+            <div class="tile-meta">JWST · NIRCam · 2022</div>
+          </button>
+        </div>
+      </div>
+      <div class="media-row">
+        <div class="row-header">
+          <div class="row-label">Series</div>
+          <div class="row-count">4 items ▶</div>
+        </div>
+        <div class="row-tiles">
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');">
+              <span class="badge">New</span>
+            </div>
+            <div class="tile-title">Deep Field — Year Four</div>
+            <div class="tile-meta">Series · 6 episodes</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');"></div>
+            <div class="tile-title">A History of the Telescope</div>
+            <div class="tile-meta">Series · 8 episodes</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://cdn.eso.org/images/screen/eso0932a.jpg');"></div>
+            <div class="tile-title">Cassini's Last Year</div>
+            <div class="tile-meta">Series · 5 episodes</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
+            <div class="tile-title">Voyagers — The Pioneers</div>
+            <div class="tile-meta">Series · 4 episodes</div>
+          </button>
+        </div>
+      </div>
+      <div class="media-row">
+        <div class="row-header">
+          <div class="row-label">Documentaries</div>
+          <div class="row-count">5 items ▶</div>
+        </div>
+        <div class="row-tiles">
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310a.jpg');"></div>
+            <div class="tile-title">Stephan's Quintet</div>
+            <div class="tile-meta">Documentary · 47 min</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310c.jpg');"></div>
+            <div class="tile-title">A Cartwheel, in Slow Motion</div>
+            <div class="tile-meta">32 min · ring galaxy</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');"></div>
+            <div class="tile-title">A Star's Last Breath</div>
+            <div class="tile-meta">18 min · Wolf-Rayet</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2205a.jpg');"></div>
+            <div class="tile-title">Hubble at 30</div>
+            <div class="tile-meta">Documentary · 88 min</div>
+          </button>
+          <button class="media-tile focusable" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');"></div>
+            <div class="tile-title">Earthrise — The Photograph</div>
+            <div class="tile-meta">Documentary · 52 min</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 6: SKY CALENDAR
+     ===================================================================== -->
+<section class="screen" id="sky">
+  <div class="bg-image"></div>
+  <div class="bg-overlay"></div>
+  <aside class="sidebar" data-sidebar="sky"></aside>
+  <div class="main" id="sky-main">
+    <div class="sky-eyebrow">90-day sky calendar · Brooklyn, NY · Bortle 8</div>
+    <div class="sky-header">
+      <h1>The sky calendar.</h1>
+      <div class="sky-pills">
+        <span class="ss-pill gold">All</span>
+        <span class="ss-pill">ISS passes</span>
+        <span class="ss-pill">Meteor showers</span>
+        <span class="ss-pill">Eclipses</span>
+        <span class="ss-pill">Launches</span>
+      </div>
+    </div>
+    <table class="events">
+      <thead><tr><th>Date</th><th>Time</th><th>Event</th><th>Visibility</th><th>Access</th></tr></thead>
+      <tbody id="sky-events-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 7: CONSTELLATIONS
+     ===================================================================== -->
+<section class="screen" id="constellations">
+  <div class="bg-image"></div>
+  <div class="bg-overlay"></div>
+  <aside class="sidebar" data-sidebar="constellations"></aside>
+  <div class="main" id="constellations-main">
+    <div class="const-eyebrow">Learn the sky · mythology · history · spot tonight</div>
+    <div class="const-header">
+      <h1>88 constellations.</h1>
+      <div class="sky-pills">
+        <span class="ss-pill gold">All</span>
+        <span class="ss-pill aurora">Visible tonight</span>
+        <span class="ss-pill">Circumpolar</span>
+        <span class="ss-pill">Northern</span>
+        <span class="ss-pill">Southern</span>
+      </div>
+    </div>
+    <div class="const-grid" id="const-grid"></div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 8: GALLERY
+     ===================================================================== -->
+<section class="screen" id="gallery">
+  <div class="bg-image"></div>
+  <div class="bg-overlay"></div>
+  <aside class="sidebar" data-sidebar="gallery"></aside>
+  <div class="main" id="gallery-main">
+    <div class="gal-header">
+      <div>
+        <div class="sky-eyebrow">JWST archive · curated · sorted by release</div>
+        <h1>JWST Gallery.</h1>
+      </div>
+      <div class="count-badge">1,247 images</div>
+    </div>
+    <div class="gallery-mosaic" id="gal-mosaic"></div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 9: AMBIENT MODE
+     ===================================================================== -->
+<section class="screen" id="ambient">
+  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2205a.jpg"></div>
+  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2316a.jpg"></div>
+  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2208a.jpg"></div>
+  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2310a.jpg"></div>
+  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2218a.jpg"></div>
+  <div class="amb-clock" id="amb-clock">21:51</div>
+  <div class="amb-caption" id="amb-caption">Cosmic Cliffs · JWST NIRCam + MIRI · 2022</div>
+  <div class="amb-credit">NASA · ESA · CSA · STScI</div>
+  <div class="amb-settings">
+    <div class="eyebrow">Ambient mode</div>
+    <h1>Settings</h1>
+    <button class="setting focusable" data-action="amb-collection" tabindex="0">
+      <span class="label">Collection</span>
+      <span class="value" id="amb-collection-value">JWST</span>
+    </button>
+    <button class="setting focusable" data-action="amb-delay" tabindex="0">
+      <span class="label">Idle delay</span>
+      <span class="value" id="amb-delay-value">10 min</span>
+    </button>
+    <button class="setting focusable" data-action="amb-shift" tabindex="0">
+      <span class="label">Burn-in shift</span>
+      <span class="value" id="amb-shift-value">On</span>
+    </button>
+    <button class="exit-btn focusable" data-action="amb-exit" tabindex="0">Exit ambient mode</button>
+  </div>
+</section>
+
+<!-- =====================================================================
+     SCREEN 10: PRICING
+     ===================================================================== -->
+<section class="screen" id="pricing">
+  <div class="starfield starfield-bg"></div>
+  <div class="price-wrap">
+    <div class="eyebrow">7 days free on any plan</div>
+    <h1>Choose your plan.</h1>
+    <div class="plans">
+      <div class="plan-card primary focusable" data-action="buy-explorer" tabindex="0">
+        <span class="primary-pill">Primary plan</span>
+        <div class="plan-name">Explorer</div>
+        <div class="price-main">$39.99 / yr</div>
+        <div class="price-sub">or $4.99 / mo</div>
+        <ul class="features">
+          <li>Full JWST + Hubble + ESO gallery</li>
+          <li>Complete documentary library</li>
+          <li>Ambient mode — full image collection</li>
+          <li>Sky event calendar — 365 days</li>
+          <li>Live events — launches, eclipses, JWST drops</li>
+        </ul>
+        <button class="cta">Start 7-day trial</button>
+      </div>
+      <div class="plan-card secondary focusable" data-action="buy-observer" tabindex="0">
+        <div class="plan-name">Observer</div>
+        <div class="price-main">$7.99 / mo</div>
+        <div class="price-sub">or $64.99 / yr</div>
+        <ul class="features">
+          <li>Everything in Explorer</li>
+          <li>Geolocated ISS pass alerts</li>
+          <li>Aurora alert when KP index spikes</li>
+          <li>Early JWST image drops</li>
+          <li>8K wallpaper downloads</li>
+        </ul>
+        <button class="cta">Start 7-day trial</button>
+      </div>
+    </div>
+    <button class="continue-free focusable" data-action="continue-free" tabindex="0">Continue free →</button>
+  </div>
+</section>
+
+<!-- =====================================================================
+     Detail overlay, image viewer, search overlay
+     ===================================================================== -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="panel">
+    <div class="eyebrow" id="detail-eyebrow"></div>
+    <h2 id="detail-title"></h2>
+    <p id="detail-desc"></p>
+    <div id="detail-kvs"></div>
+    <div class="hint">Press BACK to close</div>
+  </div>
+</div>
+
+<div class="image-viewer" id="image-viewer">
+  <div class="img-bg" id="viewer-img"></div>
+  <div class="footer">
+    <div>
+      <div class="title" id="viewer-title"></div>
+      <div class="desc" id="viewer-desc"></div>
+    </div>
+    <div class="credit" id="viewer-credit"></div>
+  </div>
+</div>
+
+<div class="search-overlay" id="search-overlay">
+  <div class="panel">
+    <div class="ss-eyebrow">Search</div>
+    <h2>Search coming soon.</h2>
+    <p>Press BACK to return</p>
+  </div>
+</div>
+
+<!-- =====================================================================
      LOCK SCREEN (free-window expired)
      ===================================================================== -->
 <section class="screen" id="lock">
@@ -995,6 +2206,7 @@ const APP = {
   guest: localStorage.getItem('ss-guest') === 'true',
   firstSeen: parseInt(localStorage.getItem('ss-first-seen') || Date.now()),
   currentScreen: 'splash',
+  prevScreen: null,
   pairingCode: null,
   pairingDeviceId: null,
   pairingPollInterval: null,
@@ -1005,6 +2217,11 @@ const APP = {
   navDebounce: false,
   bgRotateInterval: null,
   clockInterval: null,
+  ambBgIndex: 0,
+  ambBgInterval: null,
+  ambClockInterval: null,
+  ambSettingsOpen: false,
+  overlayOpen: null, // 'detail' | 'viewer' | 'search' | null
 };
 
 if (!localStorage.getItem('ss-first-seen')) {
@@ -1053,6 +2270,7 @@ const API = {
    ============================================================ */
 function navigate(name) {
   console.log('[nav]', APP.currentScreen, '->', name);
+  if (APP.currentScreen && APP.currentScreen !== name) APP.prevScreen = APP.currentScreen;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(name);
   if (!el) {
@@ -1074,6 +2292,11 @@ function navigate(name) {
     if (APP.bgRotateInterval) { clearInterval(APP.bgRotateInterval); APP.bgRotateInterval = null; }
     if (APP.clockInterval) { clearInterval(APP.clockInterval); APP.clockInterval = null; }
   }
+  if (name === 'sky') initSky();
+  if (name === 'constellations') initConstellations();
+  if (name === 'gallery') initGallery();
+  if (name === 'ambient') initAmbient();
+  if (name !== 'ambient') stopAmbient();
 
   // Focus first focusable on the new screen.
   // For Tonight, default to the primary hero button (not sidebar) so sidebar starts collapsed.
@@ -1081,8 +2304,21 @@ function navigate(name) {
     let first;
     if (name === 'tonight') {
       first = el.querySelector('.hero-buttons .focusable, .btn-primary.focusable');
+    } else if (name === 'browse') {
+      first = el.querySelector('.featured .btn-primary.focusable');
+    } else if (name === 'sky') {
+      first = el.querySelector('tbody tr.focusable');
+    } else if (name === 'constellations') {
+      first = el.querySelector('.const-card.focusable');
+    } else if (name === 'gallery') {
+      first = el.querySelector('.gal-tile.focusable');
+    } else if (name === 'ambient') {
+      // Ambient starts with no focus (idle); first key press shows settings.
+      first = null;
+    } else if (name === 'pricing') {
+      first = el.querySelector('.plan-card.primary.focusable');
     }
-    if (!first) first = el.querySelector('.focusable');
+    if (!first && name !== 'ambient') first = el.querySelector('.focusable');
     if (first) focusEl(first);
   }, 80);
 }
@@ -1161,14 +2397,22 @@ function activateFocused() {
   const action = focused.dataset.action;
   const nav = focused.dataset.nav;
   if (nav) {
-    // sidebar nav click — just mark active. Most routes are not implemented yet.
-    document.querySelectorAll('#sidebar-nav .nav-item').forEach(n => n.classList.remove('active'));
+    // Sidebar nav click — navigate to the target screen.
+    document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
     focused.classList.add('active');
     console.log('[sidebar] selected', nav);
+    if (nav === 'search') { openSearch(); return; }
+    navigate(nav);
     return;
   }
   if (action) {
     handleAction(action);
+  } else if (focused.dataset.const) {
+    openConstellationDetail(focused.dataset.const);
+  } else if (focused.dataset.gallery) {
+    openImageViewer(focused.dataset.gallery);
+  } else if (focused.dataset.sky) {
+    openSkyDetail(focused.dataset.sky);
   } else {
     // generic card click — animate
     focused.animate(
@@ -1189,8 +2433,35 @@ function handleAction(action) {
       navigate('tonight');
       break;
     case 'watch-iss':
+      // Demo: show pricing as paywall mock
+      navigate('pricing');
+      break;
     case 'details-iss':
-      console.log('[action]', action, '— routed (mock)');
+      openSkyDetail('iss-pass');
+      break;
+    case 'play-featured':
+    case 'add-list':
+    case 'details-featured':
+      console.log('[action]', action, '— (mock)');
+      break;
+    case 'buy-explorer':
+      API.post('/api/billing/checkout', { plan: 'explorer_annual' });
+      console.log('[buy] explorer_annual');
+      break;
+    case 'buy-observer':
+      API.post('/api/billing/checkout', { plan: 'observer_monthly' });
+      console.log('[buy] observer_monthly');
+      break;
+    case 'continue-free':
+      navigate('tonight');
+      break;
+    case 'amb-exit':
+      navigate('tonight');
+      break;
+    case 'amb-collection':
+    case 'amb-delay':
+    case 'amb-shift':
+      cycleAmbSetting(action);
       break;
   }
 }
@@ -1199,9 +2470,12 @@ function handleAction(action) {
    SIDEBAR collapse — only expanded while focus is inside
    ============================================================ */
 function updateSidebarCollapse() {
-  const sidebar = document.getElementById('sidebar');
+  const SCREENS_WITH_SIDEBAR = ['tonight', 'browse', 'sky', 'constellations', 'gallery', 'ambient'];
+  if (!SCREENS_WITH_SIDEBAR.includes(APP.currentScreen)) return;
+  const screen = document.getElementById(APP.currentScreen);
+  if (!screen) return;
+  const sidebar = screen.querySelector('.sidebar');
   if (!sidebar) return;
-  if (APP.currentScreen !== 'tonight') return;
   if (focused && sidebar.contains(focused)) {
     sidebar.classList.remove('collapsed');
   } else {
@@ -1232,6 +2506,16 @@ function hideExitToast() {
    BACK button bridge (called from Android shell)
    ============================================================ */
 window.starsolBack = function () {
+  // Overlays: close on BACK
+  if (APP.overlayOpen) {
+    closeOverlay();
+    return true;
+  }
+  // Ambient with settings open: close settings
+  if (APP.currentScreen === 'ambient' && APP.ambSettingsOpen) {
+    closeAmbSettings();
+    return true;
+  }
   if (APP.currentScreen === 'tonight') {
     if (APP.exitArmed) {
       // Let the Android shell take it from here (return false to exit).
@@ -1246,6 +2530,12 @@ window.starsolBack = function () {
   }
   if (APP.currentScreen === 'welcome') {
     return false; // root — let shell background the app
+  }
+  // For all other inner screens, go back to Tonight (hierarchy).
+  const innerScreens = ['browse', 'sky', 'constellations', 'gallery', 'ambient', 'pricing'];
+  if (innerScreens.includes(APP.currentScreen)) {
+    navigate('tonight');
+    return true;
   }
   return false;
 };
@@ -1263,6 +2553,21 @@ document.addEventListener('keydown', (e) => {
     window.starsolBack();
     return;
   }
+
+  // Ambient mode (idle): any key opens settings overlay
+  if (APP.currentScreen === 'ambient' && !APP.ambSettingsOpen) {
+    e.preventDefault();
+    openAmbSettings();
+    return;
+  }
+
+  // Overlays absorb input (only BACK closes; Enter/Back already handled)
+  if (APP.overlayOpen) {
+    const isEnterX = k === 13 || k === 32 || key === 'Enter' || key === ' ';
+    if (isEnterX) { e.preventDefault(); closeOverlay(); }
+    return;
+  }
+
   const isLeft  = k === 37 || key === 'ArrowLeft';
   const isUp    = k === 38 || key === 'ArrowUp';
   const isRight = k === 39 || key === 'ArrowRight';
@@ -1431,6 +2736,276 @@ function initTonight() {
 }
 
 /* ============================================================
+   SIDEBAR — build into each screen with sidebar
+   ============================================================ */
+const NAV_ITEMS = [
+  { id: 'tonight',        label: 'Tonight',        icon: 'ic-sun' },
+  { id: 'browse',         label: 'Watch',          icon: 'ic-play',   nav: 'browse' },
+  { id: 'sky',            label: 'Sky',            icon: 'ic-cal' },
+  { id: 'constellations', label: 'Constellations', icon: 'ic-aster' },
+  { id: 'gallery',        label: 'Gallery',        icon: 'ic-grid' },
+  { id: 'ambient',        label: 'Ambient',        icon: 'ic-circle' },
+  { id: 'search',         label: 'Search',         icon: 'ic-search' },
+];
+
+function buildSidebar(screen) {
+  const sidebar = screen.querySelector('aside.sidebar[data-sidebar]');
+  if (!sidebar) return;
+  if (sidebar.dataset.built === '1') return;
+  const activeId = sidebar.dataset.sidebar;
+  const html = `
+    <div class="brand">
+      <svg viewBox="0 0 100 100"><use href="#ss-mark"/></svg>
+      <div class="brand-label">
+        <div class="ss-wordmark">StarSol</div>
+        <div class="ss-eyebrow">guide &middot; sky &middot; tonight</div>
+      </div>
+    </div>
+    <nav class="nav">
+      ${NAV_ITEMS.map(n => `
+        <button class="nav-item focusable ${n.id === activeId ? 'active' : ''}" data-nav="${n.id}" tabindex="0">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#${n.icon}"/></svg>
+          <span class="label">${n.label}</span>
+        </button>`).join('')}
+    </nav>
+    <div class="footer">
+      <div class="avatar">G</div>
+      <div class="footer-text">
+        <div class="name">Guest</div>
+        <div class="plan">Preview</div>
+      </div>
+      <div class="clock">--:--</div>
+    </div>
+  `;
+  sidebar.innerHTML = html;
+  sidebar.classList.add('collapsed');
+  sidebar.dataset.built = '1';
+}
+
+function mountAllSidebars() {
+  document.querySelectorAll('aside.sidebar[data-sidebar]').forEach(s => buildSidebar(s.closest('.screen')));
+}
+
+/* ============================================================
+   SKY CALENDAR — data + rendering
+   ============================================================ */
+const SKY_EVENTS = [
+  { id: 'iss-pass',     date: 'Tonight',   time: '20:42 EDT', name: 'ISS pass',                 vis: 'aurora', access: 'free',     desc: 'A bright, silent arc from west-south-west to east-north-east. Magnitude −3.4, peak altitude 68°, visible for 5 min 52 sec.', kv: { Mag: '−3.4', Duration: '5m 52s', Direction: 'WSW → ENE' } },
+  { id: 'jupiter',      date: 'Tonight',   time: '21:11 EDT', name: 'Jupiter rising',           vis: 'aurora', access: 'free',     desc: 'Jupiter clears the eastern horizon — its four Galilean moons resolve in binoculars.', kv: { Mag: '−2.3', Altitude: '12°', Constellation: 'Aries' } },
+  { id: 'lyrids',       date: 'Apr 22',    time: '02:30 EDT', name: 'Lyrid meteor shower peak', vis: 'aurora', access: 'observer', desc: 'Up to 18 meteors per hour, radiant near Vega. Best after midnight when the radiant is high.', kv: { ZHR: '18/h', Radiant: 'Lyra', Moon: '23% waning' } },
+  { id: 'launch',       date: 'May 28',    time: '14:00 UTC', name: 'SpaceX · Starlink Group 8-23', vis: 'live',   access: 'observer', desc: 'Falcon 9 lifts a Starlink stack from LC-39A. Live stream with commentary from Dr. Phil Metzger.', kv: { Vehicle: 'Falcon 9', Pad: 'LC-39A', Window: '4 min' } },
+  { id: 'mercury',      date: 'Jun 04',    time: '05:48 EDT', name: 'Mercury · greatest elongation', vis: 'aurora', access: 'free',     desc: 'Mercury at its greatest western elongation — best morning visibility for the next 6 months.', kv: { Elongation: '24.9°', Mag: '+0.5', Constellation: 'Taurus' } },
+  { id: 'conjunction',  date: 'Jun 17',    time: '23:00 EDT', name: 'Saturn–Neptune conjunction',vis: 'aurora', access: 'free',     desc: 'Saturn passes 1.2° from Neptune in Aquarius. Use a 60mm scope to split them.', kv: { Separation: '1.2°', Constellation: 'Aquarius' } },
+  { id: 'solstice',     date: 'Jun 21',    time: '04:42 EDT', name: 'Summer solstice',          vis: 'none',   access: 'free',     desc: 'Longest day of the year in the northern hemisphere. The sun reaches its northernmost point.', kv: { 'Sun dec': '+23.44°' } },
+  { id: 'eclipse',      date: 'Aug 12',    time: '18:48 EDT', name: 'Partial lunar eclipse',    vis: 'live',   access: 'observer', desc: 'A 38% partial lunar eclipse visible across eastern North America. Live narration from Cerro Tololo.', kv: { Magnitude: '0.38', Duration: '2h 14m' } },
+  { id: 'perseids',     date: 'Aug 13',    time: '03:00 EDT', name: 'Perseid meteor shower peak', vis: 'aurora', access: 'free',     desc: 'The year’s most reliable meteor shower — up to 100 meteors per hour at peak from a dark site.', kv: { ZHR: '100/h', Radiant: 'Perseus', Moon: '52% waxing' } },
+];
+function renderSkyEvents() {
+  const tbody = document.getElementById('sky-events-body');
+  if (!tbody) return;
+  tbody.innerHTML = SKY_EVENTS.map((e, i) => {
+    const visCell = e.vis === 'aurora' ? '<span class="ss-pill aurora">Visible</span>'
+                  : e.vis === 'live'   ? '<span class="ss-pill ember">Live stream</span>'
+                  : '<span style="color:var(--ss-space4);font-family:var(--ff-mono);">—</span>';
+    const accCell = e.access === 'observer' ? '<span class="ss-pill gold">Observer</span>'
+                  : '<span class="ss-pill" style="background:transparent;border-color:var(--ss-space4);">Free</span>';
+    return `<tr class="focusable ${i === 0 ? 'upcoming' : ''}" data-sky="${e.id}" tabindex="0">
+      <td class="date">${e.date}</td>
+      <td class="time">${e.time}</td>
+      <td class="event">${e.name}</td>
+      <td class="vis">${visCell}</td>
+      <td class="access">${accCell}</td>
+    </tr>`;
+  }).join('');
+}
+function initSky() { renderSkyEvents(); }
+function openSkyDetail(id) {
+  const e = SKY_EVENTS.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('detail-eyebrow').textContent = e.date + ' · ' + e.time;
+  document.getElementById('detail-title').textContent = e.name;
+  document.getElementById('detail-desc').textContent = e.desc;
+  const kvBox = document.getElementById('detail-kvs');
+  kvBox.innerHTML = Object.entries(e.kv || {}).map(([k, v]) =>
+    `<div class="kv"><div class="k">${k}</div><div class="v">${v}</div></div>`
+  ).join('');
+  document.getElementById('detail-overlay').classList.add('show');
+  APP.overlayOpen = 'detail';
+}
+
+/* ============================================================
+   CONSTELLATIONS — data + rendering
+   ============================================================ */
+const CONSTELLATIONS_DATA = [
+  { id: 'orion',      name: 'Orion',       latin: 'Orionis',         season: 'Winter',      visible: true,  myth: 'The Hunter — a Greek warrior with belt and sword. The most recognizable winter constellation.' },
+  { id: 'ursa-major', name: 'Ursa Major',  latin: 'Ursae Majoris',   season: 'Year-round',  visible: true,  myth: 'The Great Bear. Contains the Big Dipper asterism that points to Polaris.' },
+  { id: 'cassiopeia', name: 'Cassiopeia',  latin: 'Cassiopeiae',     season: 'Year-round',  visible: true,  myth: 'The vain Queen, chained to her throne. A bright W-shape opposite the Big Dipper.' },
+  { id: 'leo',        name: 'Leo',         latin: 'Leonis',          season: 'Spring',      visible: false, myth: 'The Nemean Lion slain by Hercules. The Sickle forms the lion’s head.' },
+  { id: 'scorpius',   name: 'Scorpius',    latin: 'Scorpii',         season: 'Summer',      visible: false, myth: 'The Scorpion that killed Orion. Antares — "rival of Mars" — burns red at its heart.' },
+  { id: 'cygnus',     name: 'Cygnus',      latin: 'Cygni',           season: 'Summer',      visible: false, myth: 'The Swan flying south along the Milky Way. The Northern Cross.' },
+  { id: 'andromeda',  name: 'Andromeda',   latin: 'Andromedae',      season: 'Fall',        visible: true,  myth: 'The chained princess. Inside her, M31 — the furthest object the naked eye can see.' },
+  { id: 'gemini',     name: 'Gemini',      latin: 'Geminorum',       season: 'Winter',      visible: true,  myth: 'The Twins Castor and Pollux. Source of the December Geminid meteor shower.' },
+  { id: 'perseus',    name: 'Perseus',     latin: 'Persei',          season: 'Fall/Winter', visible: true,  myth: 'The hero who beheaded Medusa. Algol — the Demon Star — winks at us every 2.87 days.' },
+  { id: 'virgo',      name: 'Virgo',       latin: 'Virginis',        season: 'Spring',      visible: false, myth: 'The goddess of harvest. Home to the Virgo galaxy cluster — thousands of galaxies.' },
+  { id: 'aquarius',   name: 'Aquarius',    latin: 'Aquarii',         season: 'Fall',        visible: true,  myth: 'The water-bearer pouring out a stream. Faint but ancient — a zodiac constellation.' },
+  { id: 'lyra',       name: 'Lyra',        latin: 'Lyrae',           season: 'Summer',      visible: false, myth: 'The Lyre of Orpheus. Anchored by Vega — fifth-brightest star in the sky.' },
+];
+function renderConstellations() {
+  const grid = document.getElementById('const-grid');
+  if (!grid) return;
+  grid.innerHTML = CONSTELLATIONS_DATA.map(c => `
+    <button class="const-card focusable" data-const="${c.id}" tabindex="0">
+      <div class="season-badge">${c.season}</div>
+      <div class="const-name">${c.name}</div>
+      <div class="const-latin">${c.latin}</div>
+      <div class="const-myth">${c.myth}</div>
+      ${c.visible ? '<span class="visible-pill">Visible tonight</span>' : ''}
+    </button>
+  `).join('');
+}
+function initConstellations() { renderConstellations(); }
+function openConstellationDetail(id) {
+  const c = CONSTELLATIONS_DATA.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('detail-eyebrow').textContent = 'Constellation · ' + c.latin;
+  document.getElementById('detail-title').textContent = c.name;
+  document.getElementById('detail-desc').textContent = c.myth + ' Best viewed during ' + c.season + ' from mid-northern latitudes. Look for it after twilight, climbing in the east.';
+  const kvBox = document.getElementById('detail-kvs');
+  kvBox.innerHTML = `
+    <div class="kv"><div class="k">Best viewing</div><div class="v">${c.season}</div></div>
+    <div class="kv"><div class="k">Tonight</div><div class="v">${c.visible ? 'Visible from Brooklyn' : 'Below the horizon'}</div></div>
+    <div class="kv"><div class="k">Latin name</div><div class="v">${c.latin}</div></div>
+  `;
+  document.getElementById('detail-overlay').classList.add('show');
+  APP.overlayOpen = 'detail';
+}
+
+/* ============================================================
+   GALLERY — 5-tile mosaic
+   ============================================================ */
+const GALLERY_TILES = [
+  { id: 'pillars',    title: 'The Pillars of Creation', desc: 'Eagle Nebula · M16 · 6,500 light years away. Webb peers through the dust to find protostars hidden inside.', src: 'https://esawebb.org/media/archives/images/screen/weic2316a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022', large: true },
+  { id: 'carina',     title: 'Cosmic Cliffs · Carina',  desc: 'A 7,600-light-year edge of the Carina Nebula. New stars are born inside cliffs of cold hydrogen.', src: 'https://esawebb.org/media/archives/images/screen/weic2205a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
+  { id: 'tarantula',  title: 'Tarantula Nebula',         desc: '30 Doradus in the Large Magellanic Cloud — the brightest star-forming region in the local universe.', src: 'https://esawebb.org/media/archives/images/screen/weic2208a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
+  { id: 'stephans',   title: 'Stephan’s Quintet',  desc: 'A galaxy group 290 million light-years away. Four of the five are in a slow gravitational dance.', src: 'https://esawebb.org/media/archives/images/screen/weic2310a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
+  { id: 'deep-field', title: 'SMACS 0723 — First Deep Field', desc: 'The deepest infrared image of the universe ever taken. Every smear of light is a galaxy.', src: 'https://esawebb.org/media/archives/images/screen/weic2218a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
+];
+function renderGallery() {
+  const mosaic = document.getElementById('gal-mosaic');
+  if (!mosaic) return;
+  mosaic.innerHTML = GALLERY_TILES.map(t => `
+    <button class="gal-tile focusable ${t.large ? 'large' : ''}"
+            data-gallery="${t.id}" tabindex="0"
+            style="background-image:url('${t.src}');">
+      <div class="overlay"></div>
+      <div class="caption">
+        <div class="title">${t.title}</div>
+        <div class="credit">${t.credit}</div>
+      </div>
+    </button>
+  `).join('');
+}
+function initGallery() { renderGallery(); }
+function openImageViewer(id) {
+  const t = GALLERY_TILES.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('viewer-img').style.backgroundImage = "url('" + t.src + "')";
+  document.getElementById('viewer-title').textContent = t.title;
+  document.getElementById('viewer-desc').textContent = t.desc;
+  document.getElementById('viewer-credit').textContent = t.credit;
+  document.getElementById('image-viewer').classList.add('show');
+  APP.overlayOpen = 'viewer';
+}
+
+/* ============================================================
+   AMBIENT — bg cycle + clock + settings overlay
+   ============================================================ */
+const AMB_CAPTIONS = [
+  'Cosmic Cliffs · JWST NIRCam + MIRI · 2022',
+  'Pillars of Creation · JWST NIRCam · 2022',
+  'Tarantula Nebula · JWST NIRCam · 2022',
+  'Stephan’s Quintet · JWST NIRCam + MIRI · 2022',
+  'SMACS 0723 · JWST NIRCam · 2022',
+];
+function initAmbient() {
+  const bgs = document.querySelectorAll('#ambient .amb-bg');
+  bgs.forEach(b => { if (!b.style.backgroundImage) b.style.backgroundImage = "url('" + b.dataset.src + "')"; });
+  APP.ambBgIndex = 0;
+  bgs.forEach((b, i) => b.classList.toggle('active', i === 0));
+  document.getElementById('amb-caption').textContent = AMB_CAPTIONS[0];
+  if (APP.ambBgInterval) clearInterval(APP.ambBgInterval);
+  APP.ambBgInterval = setInterval(() => {
+    bgs[APP.ambBgIndex].classList.remove('active');
+    APP.ambBgIndex = (APP.ambBgIndex + 1) % bgs.length;
+    bgs[APP.ambBgIndex].classList.add('active');
+    document.getElementById('amb-caption').textContent = AMB_CAPTIONS[APP.ambBgIndex];
+  }, 30_000);
+
+  function tickAmb() {
+    const d = new Date();
+    const h = d.getHours();
+    const m = d.getMinutes();
+    document.getElementById('amb-clock').textContent = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+  }
+  tickAmb();
+  if (APP.ambClockInterval) clearInterval(APP.ambClockInterval);
+  APP.ambClockInterval = setInterval(tickAmb, 30_000);
+
+  // Start idle
+  APP.ambSettingsOpen = false;
+  document.getElementById('ambient').classList.remove('with-settings');
+}
+function stopAmbient() {
+  if (APP.ambBgInterval) { clearInterval(APP.ambBgInterval); APP.ambBgInterval = null; }
+  if (APP.ambClockInterval) { clearInterval(APP.ambClockInterval); APP.ambClockInterval = null; }
+}
+function openAmbSettings() {
+  APP.ambSettingsOpen = true;
+  document.getElementById('ambient').classList.add('with-settings');
+  // focus first setting
+  setTimeout(() => {
+    const first = document.querySelector('#ambient .amb-settings .focusable');
+    if (first) focusEl(first);
+  }, 50);
+}
+function closeAmbSettings() {
+  APP.ambSettingsOpen = false;
+  document.getElementById('ambient').classList.remove('with-settings');
+  if (focused) { focused.classList.remove('focused'); focused = null; }
+}
+
+const AMB_VALUES = {
+  collection: ['JWST', 'ESO', 'All'],
+  delay: ['5 min', '10 min', '30 min'],
+  shift: ['On', 'Off'],
+};
+const AMB_STATE = { collection: 0, delay: 1, shift: 0 };
+function cycleAmbSetting(action) {
+  const key = action === 'amb-collection' ? 'collection' : action === 'amb-delay' ? 'delay' : 'shift';
+  AMB_STATE[key] = (AMB_STATE[key] + 1) % AMB_VALUES[key].length;
+  const v = AMB_VALUES[key][AMB_STATE[key]];
+  const el = document.getElementById('amb-' + key + '-value');
+  if (el) el.textContent = v;
+}
+
+/* ============================================================
+   OVERLAY MANAGEMENT (detail / image viewer / search)
+   ============================================================ */
+function openSearch() {
+  document.getElementById('search-overlay').classList.add('show');
+  APP.overlayOpen = 'search';
+}
+function closeOverlay() {
+  if (!APP.overlayOpen) return;
+  if (APP.overlayOpen === 'detail') document.getElementById('detail-overlay').classList.remove('show');
+  if (APP.overlayOpen === 'viewer') document.getElementById('image-viewer').classList.remove('show');
+  if (APP.overlayOpen === 'search') document.getElementById('search-overlay').classList.remove('show');
+  APP.overlayOpen = null;
+  // Restore focus to whatever was focused before (it's still tracked)
+  if (focused) try { focused.focus({ preventScroll: true }); } catch(_) {}
+}
+
+/* ============================================================
    FREE WINDOW LOCK
    ============================================================ */
 const FREE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
@@ -1445,6 +3020,9 @@ function checkFreeWindow() {
    ============================================================ */
 function boot() {
   console.log('[starsol] boot — token?', !!APP.token, 'guest?', APP.guest);
+
+  // Build sidebars for all sidebar-bearing screens.
+  mountAllSidebars();
 
   // After splash (2.5s) decide what to show.
   setTimeout(() => {

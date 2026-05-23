@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Account — StarSol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Geist:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap"/>
+<style>
+:root {
+  --space0: #050608; --space1: #0a0d12; --space2: #11151c; --space3: #1a2029; --space4: #232a36;
+  --star100: #fbf3df; --star300: #c8b886; --star500: #d4a44a; --star600: #f0c668;
+  --text2: #8c8773; --text3: #4f4a3e;
+  --ember: #c14a2a; --aurora: #5da888;
+  --serif: 'Instrument Serif', Georgia, serif;
+  --sans: 'Geist', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--space1);color:var(--star100);font-family:var(--sans);min-height:100%;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;position:relative;overflow:hidden}
+
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(1px 1px at 10% 15%,rgba(251,243,223,.6),transparent),
+    radial-gradient(1px 1px at 24% 72%,rgba(251,243,223,.4),transparent),
+    radial-gradient(1.5px 1.5px at 38% 28%,rgba(212,164,74,.35),transparent),
+    radial-gradient(1px 1px at 55% 55%,rgba(251,243,223,.5),transparent),
+    radial-gradient(1px 1px at 71% 18%,rgba(251,243,223,.55),transparent),
+    radial-gradient(1px 1px at 84% 64%,rgba(251,243,223,.4),transparent),
+    radial-gradient(1.5px 1.5px at 92% 38%,rgba(251,243,223,.65),transparent),
+    radial-gradient(1px 1px at 16% 88%,rgba(251,243,223,.45),transparent),
+    radial-gradient(1px 1px at 62% 90%,rgba(212,164,74,.4),transparent);
+  background-repeat:no-repeat}
+
+.card{position:relative;z-index:1;width:100%;max-width:480px;background:var(--space2);border:1px solid var(--space4);border-radius:12px;padding:48px 40px}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.logo-name{font-family:var(--serif);font-style:italic;font-size:24px;color:var(--star100);letter-spacing:-0.01em}
+
+.state{display:none}.state.active{display:block}
+
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--star500);margin-bottom:12px}
+h1{font-family:var(--serif);font-style:italic;font-size:40px;line-height:1.1;color:var(--star100);margin-bottom:16px}
+.subtitle{font-size:15px;font-weight:300;color:var(--star300);line-height:1.6;margin-bottom:28px}
+
+.profile{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--space4)}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--space3);border:1px solid var(--space4);
+  display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;font-size:24px;color:var(--star500)}
+.profile .name{font-family:var(--serif);font-style:italic;font-size:24px;color:var(--star100);line-height:1.1}
+.profile .email{font-family:var(--mono);font-size:11px;color:var(--text2);letter-spacing:.04em;margin-top:4px}
+
+.plan-card{background:rgba(212,164,74,.06);border:1px solid rgba(212,164,74,.3);border-radius:8px;padding:18px 20px;margin-bottom:24px}
+.plan-pill{display:inline-block;background:var(--star500);color:var(--space0);font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:5px 10px;border-radius:100px;margin-bottom:10px}
+.plan-price{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--star100);margin-bottom:4px}
+.plan-renews{font-family:var(--mono);font-size:11px;color:var(--text2);letter-spacing:.06em}
+
+.btn{width:100%;padding:14px;border-radius:6px;font-family:var(--sans);font-size:15px;font-weight:500;
+  cursor:pointer;border:none;transition:all .15s;margin-bottom:10px}
+.btn-primary{background:var(--star500);color:var(--space0)}
+.btn-primary:hover{background:var(--star600)}
+.btn-secondary{background:transparent;color:var(--star300);border:1px solid var(--space4)}
+.btn-secondary:hover{border-color:var(--star500);color:var(--star100)}
+.btn-text{background:none;color:var(--text2);font-size:13px;padding:8px}
+.btn-text:hover{color:var(--ember)}
+
+.form-group{margin-bottom:18px}
+label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:8px}
+input[type=email],input[type=password]{
+  width:100%;padding:12px 14px;background:var(--space1);border:1.5px solid var(--space4);
+  border-radius:6px;color:var(--star100);font-family:var(--sans);font-size:15px;outline:none;transition:border-color .15s}
+input:focus{border-color:var(--star500)}
+
+.alert{padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;display:none}
+.alert.error{background:rgba(193,74,42,.1);border:1px solid rgba(193,74,42,.3);color:var(--ember)}
+
+.footer{margin-top:24px;text-align:center;font-size:12px;color:var(--text3);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.footer a{color:var(--star300);text-decoration:none}.footer a:hover{color:var(--star500)}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(212,164,74,.3);border-top-color:var(--star500);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 100 100">
+      <line x1="28" y1="30" x2="56" y2="18" stroke="#d4a44a" stroke-width="0.5" opacity="0.35"/>
+      <line x1="56" y1="18" x2="80" y2="36" stroke="#d4a44a" stroke-width="0.5" opacity="0.35"/>
+      <line x1="80" y1="36" x2="54" y2="50" stroke="#d4a44a" stroke-width="0.5" opacity="0.35"/>
+      <line x1="54" y1="50" x2="72" y2="70" stroke="#d4a44a" stroke-width="0.5" opacity="0.35"/>
+      <line x1="54" y1="50" x2="38" y2="78" stroke="#d4a44a" stroke-width="0.5" opacity="0.35"/>
+      <line x1="72" y1="70" x2="38" y2="78" stroke="#d4a44a" stroke-width="0.5" opacity="0.35"/>
+      <circle cx="80" cy="36" r="12" fill="#d4a44a" opacity="0.10"/>
+      <circle cx="38" cy="78" r="11" fill="#d4a44a" opacity="0.10"/>
+      <circle cx="28" cy="30" r="3.6" fill="#d4a44a" opacity="0.85"/>
+      <circle cx="56" cy="18" r="3.0" fill="#d4a44a" opacity="0.7"/>
+      <circle cx="80" cy="36" r="5.0" fill="#d4a44a" opacity="1.0"/>
+      <circle cx="54" cy="50" r="2.6" fill="#d4a44a" opacity="0.6"/>
+      <circle cx="72" cy="70" r="3.0" fill="#d4a44a" opacity="0.7"/>
+      <circle cx="38" cy="78" r="4.6" fill="#d4a44a" opacity="1.0"/>
+    </svg>
+    <span class="logo-name">StarSol</span>
+  </div>
+
+  <!-- STATE: Signed in -->
+  <div id="state-signed-in" class="state">
+    <div class="eyebrow">Your account</div>
+    <div id="alert-account" class="alert error"></div>
+    <div class="profile">
+      <div class="avatar" id="user-avatar">R</div>
+      <div>
+        <div class="name" id="user-name">Loading…</div>
+        <div class="email" id="user-email">…</div>
+      </div>
+    </div>
+    <div class="plan-card">
+      <span class="plan-pill" id="user-plan-pill">Explorer · annual</span>
+      <div class="plan-price" id="user-plan-price">$39.99 / yr</div>
+      <div class="plan-renews" id="user-period-end">Renews —</div>
+    </div>
+    <button class="btn btn-primary" id="btn-portal">Manage subscription</button>
+    <button class="btn btn-secondary" onclick="window.location.href='/pricing'">Change plan</button>
+    <button class="btn btn-text" id="btn-signout">Sign out</button>
+  </div>
+
+  <!-- STATE: Sign in -->
+  <div id="state-signin" class="state active">
+    <div class="eyebrow">Sign in</div>
+    <h1>Welcome back.</h1>
+    <p class="subtitle">Sign in to manage your subscription.</p>
+    <div id="alert-signin" class="alert error"></div>
+    <div class="form-group">
+      <label for="signin-email">Email</label>
+      <input type="email" id="signin-email" autocomplete="email" placeholder="you@example.com"/>
+    </div>
+    <div class="form-group">
+      <label for="signin-password">Password</label>
+      <input type="password" id="signin-password" autocomplete="current-password" placeholder="••••••••"/>
+    </div>
+    <button class="btn btn-primary" id="btn-signin">Sign in</button>
+    <p class="footer" style="margin-top:16px"><a href="/pair">Pair a TV →</a></p>
+  </div>
+</div>
+
+<script>
+const API = 'https://starsol.app';
+
+async function loadAccount() {
+  const token = localStorage.getItem('ss-pair-token');
+  if (!token) { goState('signin'); return; }
+  try {
+    const r = await fetch(`${API}/api/account/me`, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) throw new Error('unauthorized');
+    const d = await r.json();
+    document.getElementById('user-name').textContent = d.name || 'You';
+    document.getElementById('user-email').textContent = d.email || '';
+    const init = (d.name || 'Y').trim().charAt(0).toLowerCase();
+    document.getElementById('user-avatar').textContent = init;
+    if (d.subscription) {
+      document.getElementById('user-plan-pill').textContent = d.subscription.plan + ' · ' + (d.subscription.interval || 'annual');
+      document.getElementById('user-plan-price').textContent = d.subscription.priceDisplay || '$39.99 / yr';
+      document.getElementById('user-period-end').textContent = 'Renews ' + (d.subscription.periodEnd || '—');
+    } else {
+      document.getElementById('user-plan-pill').textContent = 'Free';
+      document.getElementById('user-plan-price').textContent = '$0';
+      document.getElementById('user-period-end').textContent = 'No active subscription';
+    }
+    goState('signed-in');
+  } catch {
+    goState('signin');
+  }
+}
+
+document.getElementById('btn-portal').addEventListener('click', async () => {
+  const token = localStorage.getItem('ss-pair-token');
+  const alertEl = document.getElementById('alert-account');
+  alertEl.style.display = 'none';
+  const btn = document.getElementById('btn-portal');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>One moment...';
+  try {
+    const r = await fetch(`${API}/api/billing/portal`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const d = await r.json();
+    if (!r.ok || !d.url) throw new Error('portal_failed');
+    window.location.href = d.url;
+  } catch {
+    alertEl.textContent = 'Could not open the billing portal. Try again.';
+    alertEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+});
+
+document.getElementById('btn-signout').addEventListener('click', () => {
+  localStorage.removeItem('ss-pair-token');
+  goState('signin');
+});
+
+document.getElementById('btn-signin').addEventListener('click', async () => {
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value;
+  const alertEl = document.getElementById('alert-signin');
+  if (!email || !password) { alertEl.textContent = 'Email and password required.'; alertEl.style.display='block'; return; }
+  const btn = document.getElementById('btn-signin');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Signing in...';
+  alertEl.style.display = 'none';
+  try {
+    const r = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password }),
+    });
+    const d = await r.json();
+    if (!r.ok) { alertEl.textContent = 'Wrong email or password.'; alertEl.style.display='block'; return; }
+    localStorage.setItem('ss-pair-token', d.token);
+    loadAccount();
+  } catch {
+    alertEl.textContent = 'Connection error. Try again.';
+    alertEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+});
+
+function goState(id) {
+  document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+  document.getElementById('state-' + id).classList.add('active');
+}
+
+loadAccount();
+</script>
+</body>
+</html>
