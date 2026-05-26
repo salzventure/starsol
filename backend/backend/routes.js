@@ -8,6 +8,8 @@ const store = require('./store');
 const { issueToken, hashPassword, verifyPassword, authMiddleware, requirePlan } = require('./auth');
 const billing = require('./billing');
 const admin = require('./admin');
+const oauth = require('./oauth');
+const siwa  = require('./siwa');
 
 const FREE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000; // 2 days before requiring account
 
@@ -63,6 +65,106 @@ router.post('/auth/login', async (req, res) => {
 router.get('/auth/me', authMiddleware, async (req, res) => {
     const sub = await store.subscriptions.findByUserId(req.user.id);
     res.json({ user: safeUser(req.user), subscription: sub });
+});
+
+router.post('/auth/google', async (req, res) => {
+    const { credential } = req.body || {};
+    if (!credential) return res.status(400).json({ error: 'missing_credential' });
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) return res.status(503).json({ error: 'google_oauth_not_configured' });
+    try {
+        const gRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+        if (!gRes.ok) return res.status(401).json({ error: 'invalid_google_token' });
+        const payload = await gRes.json();
+        if (payload.aud !== clientId) return res.status(401).json({ error: 'token_audience_mismatch' });
+        if (!payload.email_verified) return res.status(401).json({ error: 'email_not_verified' });
+
+        const addr = payload.email.toLowerCase();
+        const name = payload.name || payload.given_name || null;
+
+        let user = await store.users.findByEmail(addr);
+        if (!user) {
+            user = await store.users.create({ name, email: addr, passwordHash: null });
+            store.events.log({ userId: user.id, type: 'auth', event: 'google_register' });
+        } else {
+            await store.users.recordLogin(user.id);
+            store.events.log({ userId: user.id, type: 'auth', event: 'google_login' });
+        }
+
+        const token = issueToken(user);
+        res.json({ token, user: safeUser(user) });
+    } catch (err) {
+        console.error('/auth/google', err);
+        res.status(500).json({ error: 'server_error' });
+    }
+});
+
+// ── Auth config ───────────────────────────────────────────────────────────────
+router.get('/auth/config', (req, res) => {
+    res.json({ google: oauth.googleConfigured(), apple: oauth.appleConfigured() });
+});
+
+// ── Sign In with Apple — native tvOS credential flow ─────────────────────────
+router.post('/auth/siwa', siwa.handler);
+
+// ── Apple OAuth — web redirect flow ──────────────────────────────────────────
+router.get('/auth/oauth/apple/start', async (req, res) => {
+    if (!oauth.appleConfigured()) {
+        return res.status(501).json({ error: 'Apple sign-in is not configured on this server.' });
+    }
+    const rawNext = (req.query.next || '').toString();
+    const next = (rawNext.startsWith('/') && !rawNext.startsWith('//')) ? rawNext : '/dashboard/';
+    const state = oauth.signState({ provider: 'apple', next });
+    res.redirect(302, oauth.appleAuthUrl({ state }));
+});
+
+router.post('/auth/oauth/apple/callback', async (req, res) => {
+    const code  = (req.body?.code  || '').toString();
+    const state = (req.body?.state || '').toString();
+    const sendError = (msg) => res.redirect(302, `/login/?oauth_error=${encodeURIComponent(msg)}`);
+
+    const decoded = oauth.verifyState(state);
+    if (!decoded || decoded.provider !== 'apple') return sendError('invalid state');
+    if (!code) return sendError('missing code');
+
+    try {
+        const profile = await oauth.appleExchange(code);
+        // Apple sends the user's name only on the very first authorization
+        // via the form-post body as a JSON string.
+        if (!profile.name && req.body?.user) {
+            try {
+                const appleUser = JSON.parse(req.body.user);
+                const fn = appleUser?.name?.firstName || '';
+                const ln = appleUser?.name?.lastName  || '';
+                profile.name = [fn, ln].filter(Boolean).join(' ') || null;
+            } catch (_) {}
+        }
+        const { user, created, linked } = await oauth.resolveUserForOauth({ provider: 'apple', profile });
+        store.execute('INSERT INTO events (user_id, type, event, ts) VALUES (?,?,?,?)',
+            [user.id, 'auth', created ? 'apple_register' : 'apple_login', Date.now()]).catch(() => {});
+        const token = issueToken(user);
+        const safeNext = (decoded.next && decoded.next.startsWith('/') && !decoded.next.startsWith('//'))
+            ? decoded.next : '/dashboard/';
+        res.set('Cache-Control', 'no-store');
+        res.send(`<!doctype html><meta charset=utf-8><title>Signing in…</title>
+<body style="font-family:sans-serif;background:#050608;color:#fbf3df;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+  <div style="text-align:center">
+    <div style="font-size:18px;font-weight:600;margin-bottom:8px">Signing you in…</div>
+    <div style="font-size:13px;color:#c8b886">If this hangs, <a href="/login/" style="color:#d4a44a">click here</a>.</div>
+  </div>
+  <script>
+    try {
+      localStorage.setItem('ss-token', ${JSON.stringify(token)});
+      location.replace(${JSON.stringify(safeNext)});
+    } catch (e) {
+      document.body.innerText = 'Could not finish sign-in. Try again from /login.';
+    }
+  </script>
+</body>`);
+    } catch (err) {
+        console.error('[oauth/apple] callback failed:', err.stack || err.message);
+        sendError('Apple sign-in failed. Please try again.');
+    }
 });
 
 // ── Devices (TV pairing — no auth required on register) ──────────────────
@@ -189,6 +291,43 @@ router.get('/ambient', async (req, res) => {
     }
     const images = await store.ambientImages.list({ tier, limit: 100 });
     res.json({ images });
+});
+
+// ── APOD (NASA Astronomy Picture of the Day) ──────────────────────────────
+
+let apodCache = null;
+let apodCachedAt = 0;
+const APOD_TTL_MS = 23 * 60 * 60 * 1000; // 23 hours — refreshes daily
+
+router.get('/apod', async (_req, res) => {
+    try {
+        const now = Date.now();
+        if (apodCache && now - apodCachedAt < APOD_TTL_MS) {
+            return res.json(apodCache);
+        }
+        const key = process.env.NASA_API_KEY || 'DEMO_KEY';
+        const resp = await fetch(`https://api.nasa.gov/planetary/apod?api_key=${key}`);
+        if (!resp.ok) throw new Error(`NASA API ${resp.status}`);
+        const data = await resp.json();
+        // Normalize to a consistent shape the TV receiver expects
+        const payload = {
+            title: data.title,
+            date: data.date,
+            explanation: data.explanation,
+            url: data.hdurl || data.url,
+            media_type: data.media_type,
+            copyright: data.copyright ?? null,
+            credit: data.copyright ? `Image Credit & Copyright: ${data.copyright}` : 'NASA / Public Domain',
+        };
+        apodCache = payload;
+        apodCachedAt = now;
+        res.json(payload);
+    } catch (err) {
+        console.error('/apod', err.message);
+        // Return last cached value on failure rather than an error
+        if (apodCache) return res.json(apodCache);
+        res.status(503).json({ error: 'apod_unavailable' });
+    }
 });
 
 // ── Sky events ────────────────────────────────────────────────────────────

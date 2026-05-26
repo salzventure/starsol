@@ -96,6 +96,10 @@ input:focus{border-color:var(--star500)}
 /* Spinner */
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(212,164,74,.3);border-top-color:var(--star500);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Apple Sign-In */
+.btn-apple{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#000;text-decoration:none}
+.btn-apple:hover{background:#f5f5f7}
 </style>
 </head>
 <body>
@@ -145,6 +149,8 @@ input:focus{border-color:var(--star500)}
     <h1>Welcome back.</h1>
     <p class="subtitle">Sign in to link your TV.</p>
     <div id="alert-signin" class="alert error"></div>
+    <div id="apple-wrap-signin" style="display:none"></div>
+    <div id="apple-divider-signin" class="divider" style="display:none">or</div>
     <div class="form-group">
       <label for="signin-email">Email</label>
       <input type="email" id="signin-email" autocomplete="email" placeholder="you@example.com"/>
@@ -165,6 +171,8 @@ input:focus{border-color:var(--star500)}
     <h1>Start for free.</h1>
     <p class="subtitle">Free account includes 20 JWST images, 7-day sky calendar, and ambient mode.</p>
     <div id="alert-register" class="alert error"></div>
+    <div id="apple-wrap-register" style="display:none"></div>
+    <div id="apple-divider-register" class="divider" style="display:none">or</div>
     <div class="form-group">
       <label for="reg-name">Your name</label>
       <input type="text" id="reg-name" autocomplete="name" placeholder="Rana"/>
@@ -339,6 +347,48 @@ if (urlCode) {
   cleaned.split('').forEach((ch,i) => { if(boxes[i]){ boxes[i].value=ch; boxes[i].classList.add('filled'); }});
   updateCodeBtn();
 }
+
+// ── Apple Sign-In: config + injection ────────────────────────────
+const APPLE_SVG = '<svg width="16" height="19" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-42.3-150.3-99.9C172.1 719.3 128 614.9 128 516.9 128 388.2 201.8 324 273 285.7c55.7-30.1 116.7-37.3 175.6-37.3 64.8 0 123.7 23.9 166.8 23.9 41.1 0 108.5-25.6 176.6-25.6 23.4 0 112.6 2.6 174.4 67.9zM529.2 83.2c26.5-32.1 45.6-76.8 45.6-121.2 0-6.1-.5-12.3-1.6-17.3-43.2 1.6-95.3 28.8-126.4 63-24.2 27.4-47 72.5-47 117.6 0 6.7 1.1 13.4 1.6 15.5 2.7.5 7.1 1.1 11.6 1.1 38.9 0 87.8-26.1 116.2-58.7z"/></svg>';
+
+fetch(`${API}/api/auth/config`).then(r=>r.json()).then(cfg => {
+  if (!(cfg.apple || cfg.oauth?.apple)) return;
+  const next = encodeURIComponent(window.location.href);
+  ['signin','register'].forEach(id => {
+    const wrap = document.getElementById('apple-wrap-'+id);
+    const divider = document.getElementById('apple-divider-'+id);
+    if (!wrap) return;
+    wrap.innerHTML = `<a class="btn btn-apple" id="btn-apple-${id}" href="${API}/api/auth/oauth/apple/start?next=${next}">${APPLE_SVG} Sign in with Apple</a>`;
+    wrap.style.display = 'block';
+    if (divider) divider.style.removeProperty('display');
+    document.getElementById('btn-apple-'+id).addEventListener('click', () => {
+      sessionStorage.setItem('ss-pending-code', pendingCode);
+    });
+  });
+}).catch(()=>{});
+
+// ── OAuth callback: restore session + auto-pair ───────────────────
+(function(){
+  const params = new URLSearchParams(location.search);
+  const oauthToken = params.get('token');
+  if (!oauthToken) return;
+  // Restore pairing code from sessionStorage (saved before Apple redirect)
+  const saved = sessionStorage.getItem('ss-pending-code');
+  if (saved) {
+    pendingCode = saved;
+    sessionStorage.removeItem('ss-pending-code');
+    const cleaned = saved.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
+    cleaned.split('').forEach((ch,i) => { if(boxes[i]){boxes[i].value=ch;boxes[i].classList.add('filled');} });
+    updateCodeBtn();
+  }
+  authToken = oauthToken;
+  localStorage.setItem('ss-pair-token', authToken);
+  // Remove token from URL
+  const cleanUrl = new URL(window.location.href);
+  cleanUrl.searchParams.delete('token');
+  window.history.replaceState({}, '', cleanUrl.toString());
+  if (pendingCode.length >= 6) doPair();
+})();
 
 // Auto-focus first box
 boxes[0].focus();

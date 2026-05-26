@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>StarSol — Astronomy for your TV</title>
+  <meta name="description" content="StarSol streams ambient cosmos, 4K JWST imagery, and live sky events to Google TV and Android TV.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28' fill='%23e2b96f'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+    :root {
+      /* Backgrounds — deep space */
+      --bg-void:        #05070d;
+      --bg-navy:        #0a0e1a;
+      --bg-navy-2:      #0f1422;
+      --bg-navy-3:      #161c2e;
+      --bg-overlay:     rgba(5, 7, 13, 0.72);
+      --bg-overlay-deep:rgba(5, 7, 13, 0.88);
+
+      /* Star gold — primary accent */
+      --gold:           #e2b96f;
+      --gold-bright:    #f0cd8a;
+      --gold-dim:       #b8945a;
+      --gold-glow:      rgba(226, 185, 111, 0.45);
+      --gold-line:      rgba(226, 185, 111, 0.40);
+      --gold-faint:     rgba(226, 185, 111, 0.12);
+
+      /* Observatory red */
+      --red-observe:    #8a1f1f;
+      --red-dim:        rgba(138, 31, 31, 0.35);
+
+      /* Text */
+      --text-primary:   #f4f1ea;
+      --text-secondary: #b8b3a8;
+      --text-tertiary:  #6b6a66;
+      --text-dim:       #3d3d3a;
+
+      /* Star whites */
+      --star-white:     #ffffff;
+      --star-line:      rgba(255, 255, 255, 0.25);
+      --star-faint:     rgba(255, 255, 255, 0.40);
+
+      /* Borders */
+      --border-faint:   rgba(244, 241, 234, 0.08);
+      --border-gold:    rgba(226, 185, 111, 0.22);
+
+      /* Spacing */
+      --s-1:  4px;
+      --s-2:  8px;
+      --s-3:  12px;
+      --s-4:  16px;
+      --s-5:  24px;
+      --s-6:  32px;
+      --s-7:  48px;
+      --s-8:  64px;
+      --s-9:  96px;
+      --s-10: 128px;
+      --s-11: 192px;
+
+      /* Radii */
+      --r-sm: 2px;
+      --r-md: 4px;
+      --r-lg: 6px;
+
+      /* Motion */
+      --ease-out:   cubic-bezier(0.2, 0.7, 0.2, 1);
+      --ease-soft:  cubic-bezier(0.4, 0.0, 0.2, 1);
+      --dur-fast:   180ms;
+      --dur-med:    420ms;
+      --dur-slow:   900ms;
+      --dur-draw:   2400ms;
+
+      /* Typography */
+      --ff-display: 'Cormorant Garamond', 'Times New Roman', serif;
+      --ff-body:    'Inter', system-ui, -apple-system, sans-serif;
+
+      --fs-hero:     clamp(56px, 8vw, 132px);
+      --fs-display:  clamp(40px, 5vw, 84px);
+      --fs-h3:       clamp(28px, 3vw, 44px);
+      --fs-h4:       22px;
+      --fs-lg:       19px;
+      --fs-body:     16px;
+      --fs-sm:       14px;
+      --fs-xs:       12px;
+      --fs-micro:    11px;
+
+      --lh-tight:    1.05;
+      --lh-snug:     1.2;
+      --lh-normal:   1.55;
+      --lh-loose:    1.7;
+
+      --ls-display:  -0.02em;
+      --ls-eyebrow:  0.28em;
+      --ls-nav:      0.14em;
+      --ls-body:     0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      background: var(--bg-void);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      font-family: var(--ff-body);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: var(--gold); color: var(--bg-void); }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    /* ----- Typography primitives ----- */
+    .t-eyebrow {
+      font-family: var(--ff-body);
+      font-size: var(--fs-micro);
+      letter-spacing: var(--ls-eyebrow);
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 500;
+    }
+    .t-hero {
+      font-family: var(--ff-display);
+      font-weight: 400;
+      font-size: var(--fs-hero);
+      line-height: var(--lh-tight);
+      letter-spacing: var(--ls-display);
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .t-hero em {
+      font-style: italic;
+      font-weight: 300;
+      color: var(--gold);
+    }
+    .t-display {
+      font-family: var(--ff-display);
+      font-weight: 400;
+      font-size: var(--fs-display);
+      line-height: var(--lh-snug);
+      letter-spacing: var(--ls-display);
+      margin: 0;
+    }
+    .t-display em { font-style: italic; color: var(--gold); font-weight: 300; }
+    .t-h3 {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: var(--fs-h3);
+      line-height: var(--lh-snug);
+      margin: 0;
+    }
+    .t-h4 {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: var(--fs-h4);
+      letter-spacing: 0.04em;
+      margin: 0;
+    }
+    .t-lead {
+      font-family: var(--ff-body);
+      font-weight: 300;
+      font-size: var(--fs-lg);
+      line-height: var(--lh-loose);
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .t-body {
+      font-family: var(--ff-body);
+      font-weight: 400;
+      font-size: var(--fs-body);
+      line-height: var(--lh-normal);
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .t-caption {
+      font-family: var(--ff-body);
+      font-weight: 300;
+      font-size: var(--fs-sm);
+      line-height: var(--lh-normal);
+      color: var(--text-tertiary);
+      font-style: italic;
+      margin: 0;
+    }
+
+    /* ----- Focus rings ----- */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 4px;
+      border-radius: var(--r-sm);
+    }
+
+    /* ----- Nav ----- */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--s-5) var(--s-7);
+      background: transparent;
+      transition: background var(--dur-med) var(--ease-out),
+                  padding var(--dur-med) var(--ease-out),
+                  border-color var(--dur-med) var(--ease-out);
+      border-bottom: 1px solid transparent;
+    }
+    .nav--scrolled {
+      background: rgba(5, 7, 13, 0.82);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-faint);
+      padding: var(--s-3) var(--s-7);
+    }
+    .nav-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+    }
+    .nav-glyph {
+      color: var(--gold);
+      font-size: 18px;
+      line-height: 1;
+    }
+    .nav-wordmark {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      color: var(--text-primary);
+    }
+    .nav-links {
+      list-style: none;
+      display: flex;
+      gap: var(--s-6);
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      font-family: var(--ff-body);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: var(--ls-nav);
+      color: var(--text-secondary);
+      transition: color var(--dur-fast) var(--ease-out);
+    }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-cta {
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 10px 22px;
+      font-family: var(--ff-body);
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--r-sm);
+      transition: background var(--dur-fast) var(--ease-out),
+                  color var(--dur-fast) var(--ease-out);
+    }
+    .nav-cta:hover {
+      background: var(--gold);
+      color: var(--bg-void);
+    }
+
+    /* ----- Photo moments ----- */
+    .photo-moment {
+      position: relative;
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+    .photo-bg {
+      position: absolute;
+      inset: 0;
+      background-color: var(--bg-void);
+      background-image:
+        radial-gradient(ellipse at 30% 40%, rgba(226,185,111,0.15), transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(138,31,31,0.18), transparent 55%),
+        radial-gradient(ellipse at 50% 50%, rgba(15,20,34,1), var(--bg-void) 80%);
+      box-shadow: inset 0 0 220px rgba(5,7,13,0.7);
+      will-change: transform;
+    }
+    .photo-bg img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: saturate(0.92) contrast(1.05);
+    }
+    .photo-bg.photo-fallback img { display: none; }
+    .photo-scrim {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg,
+          rgba(5,7,13,0.55) 0%,
+          rgba(5,7,13,0.0) 35%,
+          rgba(5,7,13,0.0) 55%,
+          rgba(5,7,13,0.95) 100%);
+      pointer-events: none;
+    }
+    .photo-const-overlay {
+      position: absolute;
+      right: 8%;
+      bottom: 22%;
+      width: 320px;
+      height: 320px;
+      opacity: 0.85;
+      mix-blend-mode: screen;
+      pointer-events: none;
+      z-index: 2;
+      will-change: transform;
+    }
+    .photo-content {
+      position: relative;
+      z-index: 3;
+      padding: 18vh var(--s-7) 0;
+      max-width: 980px;
+    }
+    .photo-content .t-lead {
+      margin-top: var(--s-5);
+      max-width: 620px;
+    }
+    .photo-caption {
+      position: absolute;
+      left: var(--s-7);
+      bottom: var(--s-7);
+      max-width: 480px;
+      z-index: 3;
+    }
+    .caption-label {
+      display: block;
+      font-family: var(--ff-body);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+      color: var(--gold);
+      margin-bottom: var(--s-2);
+    }
+    .caption-text {
+      display: block;
+      font-family: var(--ff-display);
+      font-weight: 400;
+      font-style: italic;
+      font-size: 18px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    /* CTAs */
+    .cta-row {
+      margin-top: var(--s-7);
+      display: flex;
+      gap: var(--s-4);
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-block;
+      font-family: var(--ff-body);
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 16px 28px;
+      border-radius: var(--r-sm);
+      transition: transform var(--dur-fast) var(--ease-out),
+                  background var(--dur-fast) var(--ease-out),
+                  color var(--dur-fast) var(--ease-out);
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .btn-solid {
+      background: var(--gold);
+      color: var(--bg-void);
+    }
+    .btn-solid:hover {
+      background: var(--gold-bright);
+      transform: translateY(-1px);
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border-gold);
+      color: var(--gold);
+    }
+    .btn-ghost:hover {
+      border-color: var(--gold);
+      background: rgba(226,185,111,0.08);
+    }
+
+    /* Caption-only photo moments */
+    .photo-moment--caption-only .photo-content { display: none; }
+
+    /* Constellation overlay variants */
+    .photo-const-overlay--tl { right: auto; bottom: auto; left: 6%; top: 18%; width: 280px; height: 280px; }
+    .photo-const-overlay--tr { right: 6%; left: auto; top: 14%; bottom: auto; width: 280px; height: 280px; }
+
+    /* Constellation line + star defaults */
+    .const-lines {
+      stroke: var(--gold-line);
+      stroke-width: 0.9;
+      stroke-linecap: round;
+      fill: none;
+    }
+    .const-lines polyline,
+    .const-lines line,
+    .const-lines path {
+      stroke-dasharray: 220;
+      stroke-dashoffset: 220;
+      animation: drawLine var(--dur-draw) var(--ease-out) forwards;
+      animation-delay: calc(var(--i, 0) * 120ms);
+      animation-play-state: paused;
+    }
+    .is-visible .const-lines polyline,
+    .is-visible .const-lines line,
+    .is-visible .const-lines path {
+      animation-play-state: running;
+    }
+    @keyframes drawLine {
+      to { stroke-dashoffset: 0; }
+    }
+    .const-stars circle {
+      opacity: 0;
+      transition: opacity 600ms ease-out 2200ms;
+    }
+    .is-visible .const-stars circle { opacity: 1; }
+
+    /* ----- Section header ----- */
+    .section-header {
+      max-width: 720px;
+      margin: 0 0 var(--s-9);
+    }
+    .section-header.center {
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+    .section-header .t-eyebrow { display: block; margin-bottom: var(--s-4); }
+
+    /* ----- Features ----- */
+    .features {
+      padding: var(--s-11) var(--s-7);
+      background: var(--bg-void);
+      position: relative;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--s-7);
+    }
+    .feature {
+      padding: var(--s-6) 0;
+      border-top: 1px solid var(--border-faint);
+    }
+    .feature-num {
+      font-family: var(--ff-display);
+      font-weight: 300;
+      font-size: 64px;
+      color: var(--gold-dim);
+      display: block;
+      line-height: 1;
+      margin-bottom: var(--s-4);
+    }
+    .feature .t-h4 { margin-bottom: var(--s-3); color: var(--text-primary); }
+
+    /* ----- Constellation Showcase (horizontal scroll) ----- */
+    .showcase {
+      padding: var(--s-11) 0 var(--s-11);
+      background: var(--bg-void);
+    }
+    .showcase .section-header {
+      padding: 0 var(--s-7);
+    }
+    .scroll-row {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 520px;
+      gap: var(--s-5);
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 0 var(--s-7) var(--s-7);
+      scrollbar-width: thin;
+      scrollbar-color: var(--gold-dim) transparent;
+    }
+    .scroll-row::-webkit-scrollbar { height: 6px; }
+    .scroll-row::-webkit-scrollbar-track { background: transparent; }
+    .scroll-row::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+    .photo-card {
+      position: relative;
+      width: 520px;
+      height: 680px;
+      scroll-snap-align: start;
+      border-radius: var(--r-md);
+      overflow: hidden;
+      background-color: var(--bg-navy);
+      background-image:
+        radial-gradient(ellipse at 30% 40%, rgba(226,185,111,0.12), transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(138,31,31,0.15), transparent 55%),
+        radial-gradient(ellipse at 50% 50%, rgba(15,20,34,1), var(--bg-void) 80%);
+      box-shadow: inset 0 0 160px rgba(5,7,13,0.7);
+      border: 1px solid var(--border-faint);
+    }
+    .photo-card img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: saturate(0.92) contrast(1.05);
+    }
+    .photo-card .photo-scrim {
+      background: linear-gradient(180deg,
+        rgba(5,7,13,0.0) 0%,
+        rgba(5,7,13,0.0) 45%,
+        rgba(5,7,13,0.85) 100%);
+    }
+    .photo-card-caption {
+      position: absolute;
+      left: var(--s-6);
+      right: var(--s-6);
+      bottom: var(--s-6);
+      z-index: 3;
+    }
+    .photo-card-caption .caption-label { font-size: 10px; }
+    .photo-card-caption .caption-text { font-size: 17px; line-height: 1.5; }
+
+    /* ----- Pricing ----- */
+    .pricing {
+      padding: var(--s-11) var(--s-7);
+      background: var(--bg-navy);
+      border-top: 1px solid var(--border-faint);
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--s-5);
+    }
+    .tier {
+      position: relative;
+      background: var(--bg-navy-2);
+      border: 1px solid var(--border-faint);
+      padding: var(--s-7) var(--s-6);
+      border-radius: var(--r-md);
+      display: flex;
+      flex-direction: column;
+    }
+    .tier.is-featured {
+      border: 1px solid var(--border-gold);
+      background: var(--bg-navy-3);
+      box-shadow: 0 0 60px -20px var(--gold-glow), inset 0 1px 0 rgba(226,185,111,0.08);
+    }
+    .tier-badge {
+      position: absolute;
+      top: -10px;
+      left: 24px;
+      font-family: var(--ff-body);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      background: var(--gold);
+      color: var(--bg-void);
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      font-weight: 500;
+    }
+    .tier-name {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: 28px;
+      margin: 0 0 var(--s-5);
+      color: var(--text-primary);
+    }
+    .tier-price { margin-bottom: var(--s-3); }
+    .tier-price-num {
+      font-family: var(--ff-display);
+      font-weight: 400;
+      font-size: 56px;
+      color: var(--text-primary);
+      line-height: 1;
+      display: block;
+    }
+    .tier-price-sub {
+      font-family: var(--ff-body);
+      font-size: 13px;
+      color: var(--text-tertiary);
+      display: block;
+      margin-top: var(--s-2);
+    }
+    .tier-feats {
+      list-style: none;
+      padding: 0;
+      margin: var(--s-6) 0;
+      flex: 1;
+    }
+    .tier-feats li {
+      font-family: var(--ff-body);
+      font-size: 14px;
+      color: var(--text-secondary);
+      padding: 8px 0 8px 20px;
+      position: relative;
+    }
+    .tier-feats li::before {
+      content: "✦";
+      color: var(--gold-dim);
+      position: absolute;
+      left: 0;
+      font-size: 10px;
+      top: 12px;
+    }
+    .tier-cta {
+      display: block;
+      text-align: center;
+      padding: 14px;
+      font-family: var(--ff-body);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      border-radius: var(--r-sm);
+      transition: transform var(--dur-fast) var(--ease-out),
+                  background var(--dur-fast) var(--ease-out),
+                  border-color var(--dur-fast) var(--ease-out);
+    }
+    .tier-cta--solid {
+      background: var(--gold);
+      color: var(--bg-void);
+      border: 1px solid var(--gold);
+    }
+    .tier-cta--solid:hover {
+      transform: translateY(-1px);
+      background: var(--gold-bright);
+    }
+    .tier-cta--ghost {
+      background: transparent;
+      border: 1px solid var(--border-gold);
+      color: var(--gold);
+    }
+    .tier-cta--ghost:hover {
+      border-color: var(--gold);
+      background: rgba(226,185,111,0.06);
+    }
+
+    /* ----- Footer ----- */
+    .footer {
+      padding: var(--s-9) var(--s-7) var(--s-6);
+      border-top: 1px solid var(--border-faint);
+      background: var(--bg-void);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--s-7);
+    }
+    .footer-brand .t-caption { margin-top: var(--s-4); max-width: 280px; }
+    .footer-h {
+      font-family: var(--ff-body);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      color: var(--text-tertiary);
+      margin: 0 0 var(--s-4);
+      font-weight: 500;
+    }
+    .footer-col a, .footer-col .footer-platform {
+      font-family: var(--ff-body);
+      font-size: 14px;
+      color: var(--text-secondary);
+      display: block;
+      padding: 6px 0;
+      transition: color var(--dur-fast) var(--ease-out);
+    }
+    .footer-col a:hover { color: var(--gold); }
+    .footer-base {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--s-6);
+      margin-top: var(--s-7);
+      border-top: 1px solid var(--border-faint);
+      flex-wrap: wrap;
+      gap: var(--s-4);
+    }
+
+    /* ----- Reveal animation ----- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+    }
+    .reveal.is-visible { opacity: 1; transform: none; }
+
+    /* ----- Responsive ----- */
+    @media (min-width: 1600px) {
+      .features, .pricing, .footer { padding-left: max(var(--s-7), calc((100vw - 1640px) / 2)); padding-right: max(var(--s-7), calc((100vw - 1640px) / 2)); }
+      .scroll-row { padding-left: max(var(--s-7), calc((100vw - 1640px) / 2)); padding-right: max(var(--s-7), calc((100vw - 1640px) / 2)); }
+      .showcase .section-header { padding-left: max(var(--s-7), calc((100vw - 1640px) / 2)); padding-right: max(var(--s-7), calc((100vw - 1640px) / 2)); }
+    }
+    @media (max-width: 1024px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+      .photo-const-overlay { width: 240px; height: 240px; }
+      .nav-links { gap: var(--s-4); }
+      .photo-content { padding: 16vh var(--s-5) 0; }
+    }
+    @media (max-width: 640px) {
+      .nav { padding: var(--s-3) var(--s-5); }
+      .nav--scrolled { padding: var(--s-2) var(--s-5); }
+      .nav-links { display: none; }
+      .features, .pricing { padding: var(--s-9) var(--s-5); }
+      .features-grid { grid-template-columns: 1fr; gap: var(--s-5); }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .photo-content { padding: 14vh var(--s-5) 0; }
+      .photo-caption {
+        position: relative;
+        left: auto; bottom: auto;
+        margin: var(--s-7) var(--s-5);
+        max-width: none;
+      }
+      .photo-moment { min-height: auto; padding-bottom: var(--s-7); }
+      .photo-const-overlay { width: 200px; height: 200px; opacity: 0.7; right: 4%; bottom: 14%; }
+      .photo-const-overlay--tl { left: 4%; top: 14%; width: 200px; height: 200px; }
+      .photo-const-overlay--tr { right: 4%; top: 12%; width: 200px; height: 200px; }
+      .scroll-row { grid-auto-columns: 86vw; padding: 0 var(--s-5) var(--s-7); }
+      .photo-card { width: 86vw; height: 560px; }
+      .footer { padding: var(--s-7) var(--s-5); }
+      .footer-base { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 375px) {
+      .photo-card { width: 86vw; height: 500px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .const-lines polyline,
+      .const-lines line,
+      .const-lines path {
+        stroke-dashoffset: 0 !important;
+      }
+      .const-stars circle { opacity: 1 !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+    /* ── Contact Form ── */
+    .contact { padding: var(--s-10) var(--s-7); background: var(--bg-navy-2); }
+    .contact-inner { max-width: 780px; margin: 0 auto; }
+    .contact .t-eyebrow { margin-bottom: var(--s-4); }
+    .contact .t-display { margin-bottom: var(--s-5); }
+    .contact .t-lead { margin-bottom: var(--s-8); color: var(--text-secondary); }
+    .contact-form { display: flex; flex-direction: column; gap: var(--s-5); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+    .form-group { display: flex; flex-direction: column; gap: var(--s-2); }
+    .form-group label { font-family: var(--ff-body); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+    .form-group input,
+    .form-group textarea { background: var(--bg-navy-3); border: 1px solid var(--border-faint); color: var(--text-primary); font-family: var(--ff-body); font-size: 1rem; padding: var(--s-3) var(--s-4); border-radius: var(--r-sm); outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: vertical; }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: var(--text-tertiary); }
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim); }
+    .contact-submit { align-self: flex-start; background: var(--gold); color: var(--bg-void); font-family: var(--ff-body); font-size: 0.85rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; border: none; padding: var(--s-3) var(--s-6); cursor: pointer; border-radius: var(--r-sm); display: flex; align-items: center; gap: var(--s-2); transition: opacity 0.2s; }
+    .contact-submit:hover { opacity: 0.85; }
+    .contact-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .contact-status { font-family: var(--ff-body); font-size: 0.875rem; min-height: 1.25em; color: var(--gold); }
+    .contact-status.is-error { color: #e05a3a; }
+    @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } .contact { padding: var(--s-8) var(--s-5); } }
+  </style>
+</head>
+<body>
+
+<!-- Reusable SVG filter defs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="starGlow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="starGlowSoft" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ====== NAV ====== -->
+<nav class="nav" role="navigation" aria-label="Primary">
+  <a href="/" class="nav-logo">
+    <span class="nav-glyph">✦</span>
+    <span class="nav-wordmark">StarSol</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#constellations">Constellations</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#about">About</a></li>
+  </ul>
+  <a class="nav-cta" href="pricing.html">Start Watching</a>
+</nav>
+
+<!-- ====== 1. HERO / ORION — PILLARS OF CREATION ====== -->
+<section class="photo-moment" data-photo="pillars" data-constellation="orion">
+  <div class="photo-bg">
+    <img src="https://stsci-opo.org/STScI-01GA76Q01D09HFEV174SVMQDMV.png"
+         alt="The Pillars of Creation, captured by the James Webb Space Telescope"
+         loading="eager"
+         onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+    <div class="photo-scrim"></div>
+  </div>
+
+  <svg class="photo-const-overlay" viewBox="0 0 200 200" aria-hidden="true">
+    <g class="const-lines">
+      <polyline points="58,62 142,68" style="--i:0"/>
+      <polyline points="58,62 100,116" style="--i:1"/>
+      <polyline points="142,68 148,104" style="--i:2"/>
+      <polyline points="148,104 124,110 100,116" style="--i:3"/>
+      <polyline points="100,116 88,158" style="--i:4"/>
+      <polyline points="148,104 168,152" style="--i:5"/>
+      <polyline points="88,158 168,152" style="--i:6"/>
+      <polyline points="124,110 94,144" style="--i:7"/>
+      <polyline points="58,62 100,30 142,68" style="--i:8"/>
+    </g>
+    <g class="const-stars">
+      <circle cx="58" cy="62" r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+      <circle cx="142" cy="68" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+      <circle cx="148" cy="104" r="2.0" fill="var(--star-white)"/>
+      <circle cx="124" cy="110" r="2.0" fill="var(--star-white)"/>
+      <circle cx="100" cy="116" r="2.0" fill="var(--star-white)"/>
+      <circle cx="88" cy="158" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+      <circle cx="168" cy="152" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+      <circle cx="100" cy="30" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+      <circle cx="94" cy="144" r="1.0" fill="var(--star-white)" opacity="0.6"/>
+      <circle cx="90" cy="156" r="1.0" fill="var(--star-white)" opacity="0.6"/>
+    </g>
+  </svg>
+
+  <div class="photo-content">
+    <h1 class="t-hero">The light reaching you tonight<br>
+        left its star <em>before there were continents.</em></h1>
+    <p class="t-lead">StarSol — the night sky, on the largest screen in your home.</p>
+    <div class="cta-row">
+      <a class="btn btn-solid" href="pricing.html">Start Watching</a>
+      <a class="btn btn-ghost" href="#sample">Watch a sample</a>
+    </div>
+  </div>
+
+  <div class="photo-caption">
+    <span class="caption-label">PILLARS OF CREATION · M16 EAGLE NEBULA</span>
+    <span class="caption-text">6,500 light-years distant. The columns are clouds of hydrogen and dust, lit from within.</span>
+  </div>
+</section>
+
+<!-- ====== 2. CARINA / COSMIC CLIFFS ====== -->
+<section class="photo-moment photo-moment--caption-only" data-photo="cosmic-cliffs">
+  <div class="photo-bg">
+    <img src="https://stsci-opo.org/STScI-01GA6KKWHJBKPK8T9B3W6FKQRS.png"
+         alt="The Cosmic Cliffs of the Carina Nebula"
+         loading="lazy"
+         onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+    <div class="photo-scrim"></div>
+  </div>
+  <div class="photo-content"></div>
+  <div class="photo-caption">
+    <span class="caption-label">CARINA NEBULA · COSMIC CLIFFS</span>
+    <span class="caption-text">A nursery for stars, 7,600 light-years away. The cliffs are dust, the dust is the future of suns.</span>
+  </div>
+</section>
+
+<!-- ====== 3. FEATURES ====== -->
+<section id="features" class="features">
+  <header class="section-header reveal">
+    <span class="t-eyebrow">What you'll see</span>
+    <h2 class="t-display">Four windows onto the night.</h2>
+  </header>
+  <div class="features-grid">
+    <article class="feature reveal">
+      <span class="feature-num">01</span>
+      <h3 class="t-h4">Ambient Mode</h3>
+      <p class="t-body">Turn your television into an observatory window.
+        Drift through Hubble and JWST imagery at the pace of starlight —
+        no narration, no captions, just the quiet light of distant things.</p>
+    </article>
+    <article class="feature reveal">
+      <span class="feature-num">02</span>
+      <h3 class="t-h4">JWST Gallery</h3>
+      <p class="t-body">Every public James Webb release, in native 4K.
+        Pillars of Creation. Carina. Cosmic Cliffs. Curated, annotated,
+        and updated within hours of each new image drop.</p>
+    </article>
+    <article class="feature reveal">
+      <span class="feature-num">03</span>
+      <h3 class="t-h4">Sky Events Calendar</h3>
+      <p class="t-body">Meteor showers, eclipses, planetary conjunctions,
+        lunar phases. Filtered for your hemisphere, your latitude,
+        your bortle class. Tomorrow night, the Perseids peak at 2:14am.</p>
+    </article>
+    <article class="feature reveal">
+      <span class="feature-num">04</span>
+      <h3 class="t-h4">Geolocated Alerts</h3>
+      <p class="t-body">A push when the ISS passes overhead. An alert when
+        the aurora forecast crosses Kp 6 for your latitude. Notice given
+        in minutes, not hours. Step outside. Look up.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ====== 4. STEPHAN'S QUINTET — Cygnus overlay ====== -->
+<section class="photo-moment photo-moment--caption-only" data-photo="stephans-quintet" data-constellation="cygnus">
+  <div class="photo-bg">
+    <img src="https://stsci-opo.org/STScI-01GA6KKWKBKK2JKZQMHFQX09AF.png"
+         alt="Stephan's Quintet, a visual grouping of five galaxies"
+         loading="lazy"
+         onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+    <div class="photo-scrim"></div>
+  </div>
+
+  <svg class="photo-const-overlay photo-const-overlay--tl" viewBox="0 0 200 200" aria-hidden="true">
+    <g class="const-lines">
+      <polyline points="100,30 100,60 100,96 100,168" style="--i:0"/>
+      <polyline points="42,92 100,96 158,92" style="--i:1"/>
+    </g>
+    <g class="const-stars">
+      <circle cx="100" cy="30" r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+      <circle cx="100" cy="96" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+      <circle cx="100" cy="168" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+      <circle cx="158" cy="92" r="2.0" fill="var(--star-white)"/>
+      <circle cx="42" cy="92" r="2.0" fill="var(--star-white)"/>
+      <circle cx="100" cy="60" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+    </g>
+  </svg>
+
+  <div class="photo-content"></div>
+  <div class="photo-caption">
+    <span class="caption-label">STEPHAN'S QUINTET · HCG 92</span>
+    <span class="caption-text">Four galaxies bound by gravity, one passing through. The first JWST image of cosmic intimacy.</span>
+  </div>
+</section>
+
+<!-- ====== 5. CONSTELLATION SHOWCASE — horizontal photo scroller ====== -->
+<section id="constellations" class="showcase">
+  <header class="section-header reveal">
+    <span class="t-eyebrow">From the gallery</span>
+    <h2 class="t-display">Light that left <em>before us.</em></h2>
+  </header>
+
+  <div class="scroll-row" role="list">
+    <!-- Card 1: Pillars / Orion -->
+    <article class="photo-card" role="listitem" data-constellation="orion">
+      <img src="https://stsci-opo.org/STScI-01GA76Q01D09HFEV174SVMQDMV.png"
+           alt="Pillars of Creation"
+           loading="lazy"
+           onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+      <div class="photo-scrim"></div>
+      <div class="photo-card-caption">
+        <span class="caption-label">PILLARS OF CREATION · M16 EAGLE NEBULA</span>
+        <span class="caption-text">6,500 light-years distant. The columns are clouds of hydrogen and dust, lit from within.</span>
+      </div>
+    </article>
+
+    <!-- Card 2: Carina / Cosmic Cliffs -->
+    <article class="photo-card" role="listitem" data-constellation="carina">
+      <img src="https://stsci-opo.org/STScI-01GA6KKWG229M41KWK6K6HMNJM.png"
+           alt="Carina Nebula"
+           loading="lazy"
+           onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+      <div class="photo-scrim"></div>
+      <div class="photo-card-caption">
+        <span class="caption-label">CARINA NEBULA · COSMIC CLIFFS</span>
+        <span class="caption-text">A nursery for stars, 7,600 light-years away. The cliffs are dust, the dust is the future of suns.</span>
+      </div>
+    </article>
+
+    <!-- Card 3: Southern Ring -->
+    <article class="photo-card" role="listitem">
+      <img src="https://stsci-opo.org/STScI-01GA6KNK1JJAHFP8Y0KS8YPYGY.png"
+           alt="Southern Ring Nebula"
+           loading="lazy"
+           onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+      <div class="photo-scrim"></div>
+      <div class="photo-card-caption">
+        <span class="caption-label">SOUTHERN RING NEBULA · NGC 3132</span>
+        <span class="caption-text">A dying star, 2,500 light-years off, exhaling itself into the dark.</span>
+      </div>
+    </article>
+
+    <!-- Card 4: Stephan's Quintet -->
+    <article class="photo-card" role="listitem">
+      <img src="https://stsci-opo.org/STScI-01GA6KKWKBKK2JKZQMHFQX09AF.png"
+           alt="Stephan's Quintet"
+           loading="lazy"
+           onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+      <div class="photo-scrim"></div>
+      <div class="photo-card-caption">
+        <span class="caption-label">STEPHAN'S QUINTET · HCG 92</span>
+        <span class="caption-text">Four galaxies bound by gravity, one passing through. The first JWST image of cosmic intimacy.</span>
+      </div>
+    </article>
+
+    <!-- Card 5: Cosmic Cliffs -->
+    <article class="photo-card" role="listitem">
+      <img src="https://stsci-opo.org/STScI-01GA6KKWHJBKPK8T9B3W6FKQRS.png"
+           alt="Cosmic Cliffs of NGC 3324"
+           loading="lazy"
+           onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+      <div class="photo-scrim"></div>
+      <div class="photo-card-caption">
+        <span class="caption-label">COSMIC CLIFFS · NGC 3324</span>
+        <span class="caption-text">A horizon you cannot reach. Eight light-years from the lowest peak to the highest.</span>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ====== 6. SOUTHERN RING — Cassiopeia overlay ====== -->
+<section class="photo-moment photo-moment--caption-only" data-photo="southern-ring" data-constellation="cassiopeia">
+  <div class="photo-bg">
+    <img src="https://stsci-opo.org/STScI-01GA6KNK1JJAHFP8Y0KS8YPYGY.png"
+         alt="The Southern Ring Nebula"
+         loading="lazy"
+         onerror="this.style.display='none';this.parentElement.classList.add('photo-fallback')">
+    <div class="photo-scrim"></div>
+  </div>
+
+  <svg class="photo-const-overlay photo-const-overlay--tr" viewBox="0 0 200 200" aria-hidden="true">
+    <g class="const-lines">
+      <polyline points="40,80 78,120 100,68 130,110 168,78" style="--i:0"/>
+    </g>
+    <g class="const-stars">
+      <circle cx="40" cy="80" r="2.0" fill="var(--star-white)"/>
+      <circle cx="78" cy="120" r="2.0" fill="var(--star-white)"/>
+      <circle cx="100" cy="68" r="2.0" fill="var(--star-white)"/>
+      <circle cx="130" cy="110" r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+      <circle cx="168" cy="78" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+    </g>
+  </svg>
+
+  <div class="photo-content"></div>
+  <div class="photo-caption">
+    <span class="caption-label">SOUTHERN RING NEBULA · NGC 3132</span>
+    <span class="caption-text">A dying star, 2,500 light-years off, exhaling itself into the dark.</span>
+  </div>
+</section>
+
+<!-- ====== 7. PRICING ====== -->
+<section id="pricing" class="pricing">
+  <header class="section-header center reveal">
+    <span class="t-eyebrow">Pricing</span>
+    <h2 class="t-display">Begin freely. Stay <em>if it moves you.</em></h2>
+  </header>
+  <div class="pricing-grid">
+    <article class="tier tier--free reveal">
+      <h3 class="tier-name">Free</h3>
+      <div class="tier-price">
+        <span class="tier-price-num">$0</span>
+        <span class="tier-price-sub">two days, no signup</span>
+      </div>
+      <ul class="tier-feats">
+        <li>Full browse + watch</li>
+        <li>Standard library</li>
+        <li>No account required</li>
+        <li>Locks after 48 hours</li>
+      </ul>
+      <a class="tier-cta tier-cta--ghost" href="pricing.html">Start free</a>
+    </article>
+
+    <article class="tier tier--explorer is-featured reveal">
+      <span class="tier-badge">Most chosen</span>
+      <h3 class="tier-name">Explorer</h3>
+      <div class="tier-price">
+        <span class="tier-price-num">$4.99</span>
+        <span class="tier-price-sub">/ month — or $39.99/yr</span>
+      </div>
+      <ul class="tier-feats">
+        <li>Full library, unlimited</li>
+        <li>4K JWST gallery</li>
+        <li>Ambient mode</li>
+        <li>Sky alerts</li>
+      </ul>
+      <a class="tier-cta tier-cta--solid" href="pricing.html">Start Watching</a>
+    </article>
+
+    <article class="tier tier--observer reveal">
+      <h3 class="tier-name">Observer</h3>
+      <div class="tier-price">
+        <span class="tier-price-num">$7.99</span>
+        <span class="tier-price-sub">/ month — or $64.99/yr</span>
+      </div>
+      <ul class="tier-feats">
+        <li>Everything in Explorer</li>
+        <li>Geolocated ISS &amp; aurora alerts</li>
+        <li>Early JWST drops</li>
+        <li>8K wallpaper downloads</li>
+      </ul>
+      <a class="tier-cta tier-cta--ghost" href="pricing.html">Choose Observer</a>
+    </article>
+
+    <article class="tier tier--inst reveal">
+      <h3 class="tier-name">Institutional</h3>
+      <div class="tier-price">
+        <span class="tier-price-num">$1,500&ndash;5,000</span>
+        <span class="tier-price-sub">/ year — custom</span>
+      </div>
+      <ul class="tier-feats">
+        <li>Planetariums, K&ndash;12 STEM, museums</li>
+        <li>Multi-screen license</li>
+        <li>Curriculum playlists</li>
+        <li>Dedicated support</li>
+      </ul>
+      <a class="tier-cta tier-cta--ghost" href="#contact">Talk to us</a>
+    </article>
+  </div>
+</section>
+
+<!-- ====== CONTACT ====== -->
+<section id="contact" class="contact reveal">
+  <div class="contact-inner">
+    <p class="t-eyebrow">Institutions &amp; Partnerships</p>
+    <h2 class="t-display">Talk to us.</h2>
+    <p class="t-lead">Planetariums, school districts, science museums, and research institutions &mdash; we&rsquo;d love to hear what you&rsquo;re building.</p>
+    <form class="contact-form" id="contactForm" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cf-name">Name</label>
+          <input type="text" id="cf-name" name="name" placeholder="Your name" required autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="cf-org">Organization</label>
+          <input type="text" id="cf-org" name="organization" placeholder="Planetarium, school, museum&hellip;" autocomplete="organization">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="cf-email">Email</label>
+        <input type="email" id="cf-email" name="email" placeholder="you@organization.org" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="cf-message">Message</label>
+        <textarea id="cf-message" name="message" rows="5" placeholder="Tell us about your institution and what you&rsquo;re looking for." required></textarea>
+      </div>
+      <button type="submit" class="contact-submit" id="contactSubmit">
+        Send message <span aria-hidden="true">&#10022;</span>
+      </button>
+      <p class="contact-status" id="contactStatus" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<footer id="about" class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="nav-logo">
+        <span class="nav-glyph">✦</span>
+        <span class="nav-wordmark">StarSol</span>
+      </div>
+      <p class="t-caption">A quiet window onto the universe, for the largest screen in your home.</p>
+    </div>
+    <nav class="footer-col" aria-label="Product">
+      <h4 class="footer-h">Product</h4>
+      <a href="pricing.html">Pricing</a>
+      <a href="account.html">Account</a>
+      <a href="pair.html">Pair a TV</a>
+    </nav>
+    <nav class="footer-col" aria-label="Platforms">
+      <h4 class="footer-h">Platforms</h4>
+      <span class="footer-platform">Google TV</span>
+      <span class="footer-platform">Android TV</span>
+    </nav>
+    <div class="footer-col">
+      <h4 class="footer-h">Credit</h4>
+      <p class="t-caption">Imagery: NASA / ESA / CSA / STScI. Public domain.</p>
+    </div>
+  </div>
+  <div class="footer-base">
+    <span class="t-caption">© 2026 StarSol. StarSol.app</span>
+    <span class="t-caption">Available on Google TV &amp; Android TV</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    'use strict';
+
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ----- Nav scrolled state -----
+    var nav = document.querySelector('.nav');
+    function onNavScroll() {
+      if (!nav) return;
+      nav.classList.toggle('nav--scrolled', window.scrollY > 40);
+    }
+    window.addEventListener('scroll', onNavScroll, { passive: true });
+    onNavScroll();
+
+    // ----- IntersectionObserver: reveal + constellation draw-on -----
+    var observerOpts = { threshold: 0.15, rootMargin: '0px 0px -40px 0px' };
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, observerOpts);
+    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+
+    // Constellation overlays + photo-moments — trigger draw at 0.3
+    var constIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible');
+          constIO.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.photo-moment').forEach(function (el) { constIO.observe(el); });
+
+    // ----- Hero parallax — only if motion is permitted -----
+    if (!reduceMotion) {
+      var photoBgs = document.querySelectorAll('.photo-moment .photo-bg');
+      var overlays = document.querySelectorAll('.photo-const-overlay');
+      var ticking = false;
+      function onScrollParallax() {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(function () {
+          // Per-section parallax: compute relative offset of each section
+          photoBgs.forEach(function (bg) {
+            var rect = bg.parentElement.getBoundingClientRect();
+            var offset = rect.top * -0.18;
+            bg.style.transform = 'translate3d(0,' + offset.toFixed(1) + 'px,0)';
+          });
+          overlays.forEach(function (ov) {
+            var rect = ov.parentElement.getBoundingClientRect();
+            var offset = rect.top * 0.08;
+            // Preserve any existing transforms (e.g., translateY -50%) by re-applying base
+            ov.style.transform = 'translate3d(0,' + offset.toFixed(1) + 'px,0)';
+          });
+          ticking = false;
+        });
+      }
+      window.addEventListener('scroll', onScrollParallax, { passive: true });
+      onScrollParallax();
+    }
+
+    // ----- Smooth anchor scroll for nav links -----
+    document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+      a.addEventListener('click', function (ev) {
+        var href = a.getAttribute('href');
+        if (!href || href === '#') return;
+        var target = document.querySelector(href);
+        if (!target) return;
+        ev.preventDefault();
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      });
+    });
+  })();
+
+  // Contact form
+  (function () {
+    var form = document.getElementById('contactForm');
+    if (!form) return;
+    var btn = document.getElementById('contactSubmit');
+    var status = document.getElementById('contactStatus');
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      status.className = 'contact-status';
+      status.textContent = '';
+      try {
+        var res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form)))
+        });
+        if (res.ok) {
+          status.textContent = 'Message sent. We’ll be in touch within two business days.';
+          form.reset();
+        } else { throw new Error(); }
+      } catch {
+        status.className = 'contact-status is-error';
+        status.textContent = 'Something went wrong. Email us directly at institutions@starsol.app';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Send message <span aria-hidden="true">&#10022;</span>';
+      }
+    });
+  }());
+</script>
+
+</body>
+</html>

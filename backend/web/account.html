@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Geist:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap"/>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
   --space0: #050608; --space1: #0a0d12; --space2: #11151c; --space3: #1a2029; --space4: #232a36;
@@ -130,6 +131,12 @@ input:focus{border-color:var(--star500)}
     <h1>Welcome back.</h1>
     <p class="subtitle">Sign in to manage your subscription.</p>
     <div id="alert-signin" class="alert error"></div>
+    <div id="google-btn-container" style="display:flex;justify-content:center;margin-bottom:18px;min-height:44px"></div>
+    <div style="display:flex;align-items:center;gap:10;margin-bottom:18px">
+      <div style="flex:1;height:1px;background:var(--space4)"></div>
+      <span style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);padding:0 10px">or</span>
+      <div style="flex:1;height:1px;background:var(--space4)"></div>
+    </div>
     <div class="form-group">
       <label for="signin-email">Email</label>
       <input type="email" id="signin-email" autocomplete="email" placeholder="you@example.com"/>
@@ -139,12 +146,47 @@ input:focus{border-color:var(--star500)}
       <input type="password" id="signin-password" autocomplete="current-password" placeholder="••••••••"/>
     </div>
     <button class="btn btn-primary" id="btn-signin">Sign in</button>
-    <p class="footer" style="margin-top:16px"><a href="/pair">Pair a TV →</a></p>
+    <p class="footer" style="margin-top:16px"><a href="/pair">Pair a TV →</a> &nbsp;·&nbsp; <a href="/terms">Terms</a></p>
   </div>
 </div>
 
 <script>
 const API = 'https://starsol.app';
+const GOOGLE_CLIENT_ID = '804375183054-121q0717kr28resdfcaubfqpcgk925ct.apps.googleusercontent.com';
+
+function initGoogleSignIn() {
+  if (!window.google?.accounts?.id) return;
+  window.google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: async ({ credential }) => {
+      const alertEl = document.getElementById('alert-signin');
+      alertEl.style.display = 'none';
+      try {
+        const r = await fetch(`${API}/api/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credential }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'google_auth_failed');
+        localStorage.setItem('ss-pair-token', d.token);
+        loadAccount();
+      } catch {
+        alertEl.textContent = 'Google sign-in failed — try again.';
+        alertEl.style.display = 'block';
+      }
+    },
+  });
+  const container = document.getElementById('google-btn-container');
+  window.google.accounts.id.renderButton(container, {
+    type: 'standard', theme: 'filled_black', size: 'large',
+    text: 'signin_with', shape: 'rectangular', width: container.offsetWidth || 400,
+  });
+}
+
+const gsiScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+if (gsiScript) gsiScript.addEventListener('load', initGoogleSignIn);
+window.addEventListener('load', initGoogleSignIn);
 
 async function loadAccount() {
   const token = localStorage.getItem('ss-pair-token');

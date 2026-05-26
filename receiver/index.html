@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" />
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <style>
 /* ========================================================================
    STARSOL — Design Tokens
@@ -72,8 +73,8 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 }
 .starfield.dim { opacity: 0.4; }
 
-/* OLED pixel-shift — every 180s the body translates ±3px so any pixel that
-   stays bright for too long migrates. CSS-only, near-zero cost. */
+/* OLED pixel-shift — only in ambient mode. Was on body which forced GPU
+   repaint every frame on every screen, causing CPU heat. */
 @keyframes ss-pixel-shift {
    0%   { transform: translate(0, 0); }
   25%   { transform: translate(3px, 0); }
@@ -81,7 +82,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   75%   { transform: translate(-3px, 0); }
  100%   { transform: translate(0, -3px); }
 }
-body { animation: ss-pixel-shift 720s linear infinite; }
+#ambient { animation: ss-pixel-shift 720s linear infinite; }
 
 /* ========================================================================
    Logomark — six-star asterism inline SVG defaults
@@ -1141,6 +1142,16 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   margin-top: 4px;
   flex: 1;
 }
+.const-card .const-svg {
+  width: 100%;
+  height: 110px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+.const-card .const-svg svg { width: 100%; height: 100%; display: block; }
+.detail-svg { width: 240px; height: 240px; flex-shrink: 0; }
+.detail-svg svg { width: 100%; height: 100%; }
+.detail-panel-inner { display: flex; gap: 48px; align-items: flex-start; }
 .const-card .visible-pill {
   display: inline-block;
   align-self: flex-start;
@@ -1203,12 +1214,15 @@ body { animation: ss-pixel-shift 720s linear infinite; }
 }
 .gallery-mosaic {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 14px;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 12px;
   flex: 1;
-  height: 720px;
+  height: 740px;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
+.gallery-mosaic::-webkit-scrollbar { display: none; }
 .gal-tile {
   position: relative;
   border: 1px solid var(--ss-space4);
@@ -1298,14 +1312,33 @@ body { animation: ss-pixel-shift 720s linear infinite; }
 /* ========================================================================
    AMBIENT MODE
    ======================================================================== */
+/* Ken Burns — 4 variants, JS assigns one per image transition */
+@keyframes kb-zoom-in  { from { transform: scale(1.00); } to { transform: scale(1.07); } }
+@keyframes kb-zoom-out { from { transform: scale(1.07); } to { transform: scale(1.00); } }
+@keyframes kb-pan-r    { from { transform: scale(1.04) translateX(-2%); } to { transform: scale(1.04) translateX(2%); } }
+@keyframes kb-pan-l    { from { transform: scale(1.04) translateX(2%);  } to { transform: scale(1.04) translateX(-2%); } }
+
 #ambient { background: var(--ss-space0); }
 #ambient .amb-bg {
   position: absolute; inset: 0;
   background-size: cover; background-position: center;
+  will-change: opacity, transform;
   transition: opacity 2s ease;
   opacity: 0;
 }
 #ambient .amb-bg.active { opacity: 1; }
+#ambient .amb-bg.active.kb-zoom-in  { animation: kb-zoom-in  30s linear forwards; }
+#ambient .amb-bg.active.kb-zoom-out { animation: kb-zoom-out 30s linear forwards; }
+#ambient .amb-bg.active.kb-pan-r    { animation: kb-pan-r   30s linear forwards; }
+#ambient .amb-bg.active.kb-pan-l    { animation: kb-pan-l   30s linear forwards; }
+
+/* Ambient UI auto-fade — JS adds/removes amb-ui-visible */
+#ambient .amb-clock,
+#ambient .amb-caption,
+#ambient .amb-credit { opacity: 0; transition: opacity 1.2s ease; }
+#ambient.amb-ui-visible .amb-clock,
+#ambient.amb-ui-visible .amb-caption,
+#ambient.amb-ui-visible .amb-credit { opacity: 1; }
 #ambient .amb-clock {
   position: absolute; bottom: 64px; left: 80px;
   font-family: var(--ff-mono);
@@ -1313,7 +1346,6 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   color: rgba(251, 243, 223, 0.4);
   letter-spacing: -0.02em;
   z-index: 3;
-  transition: opacity 400ms ease;
 }
 #ambient .amb-caption {
   position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
@@ -1324,7 +1356,7 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   text-transform: uppercase;
   text-align: center;
   z-index: 3;
-  transition: opacity 400ms ease;
+  white-space: nowrap;
 }
 #ambient .amb-credit {
   position: absolute; bottom: 64px; right: 80px;
@@ -1334,11 +1366,10 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   letter-spacing: 0.18em;
   text-transform: uppercase;
   z-index: 3;
-  transition: opacity 400ms ease;
 }
 #ambient.with-settings .amb-clock,
 #ambient.with-settings .amb-caption,
-#ambient.with-settings .amb-credit { opacity: 0; }
+#ambient.with-settings .amb-credit { opacity: 0 !important; transition: none; }
 #ambient .amb-settings {
   position: absolute; top: 0; left: 0; bottom: 0; width: 50%;
   background: linear-gradient(to right, rgba(5,6,8,0.92) 0%, rgba(5,6,8,0.85) 70%, transparent 100%);
@@ -1604,6 +1635,70 @@ body { animation: ss-pixel-shift 720s linear infinite; }
 #browse .sidebar, #sky .sidebar, #constellations .sidebar,
 #gallery .sidebar, #ambient .sidebar { z-index: 5; }
 
+/* ========================================================================
+   TONIGHT WHISPER — low-third ISS / aurora / event banner
+   Fades in over 8s, never interrupts. Press OK or auto-dismisses.
+   ======================================================================== */
+.tonight-whisper {
+  position: fixed;
+  bottom: -80px;
+  left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 20px;
+  background: rgba(10, 13, 18, 0.92);
+  border: 1px solid rgba(93, 168, 136, 0.5);
+  border-radius: 6px;
+  padding: 16px 28px;
+  z-index: 200;
+  transition: bottom 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.tonight-whisper.show { bottom: 48px; pointer-events: auto; }
+.tonight-whisper .w-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ss-aurora);
+  box-shadow: 0 0 12px var(--ss-aurora);
+  flex-shrink: 0;
+  animation: w-pulse 2s ease-in-out infinite;
+}
+@keyframes w-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.tonight-whisper .w-text {
+  font-family: var(--ff-sans);
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--ss-star100);
+  line-height: 1.3;
+}
+.tonight-whisper .w-text strong {
+  font-weight: 500;
+  color: var(--ss-aurora);
+}
+.tonight-whisper .w-sub {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.tonight-whisper .w-dismiss {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--ss-star300);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border: 1px solid var(--ss-space4);
+  padding: 6px 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
 /* ---------- Lock screen ---------- */
 #lock { background: var(--ss-space0); display: flex; align-items: center; justify-content: center; text-align: center; }
 #lock .lock-inner { max-width: 720px; padding: 64px; z-index: 2; position: relative; }
@@ -1623,6 +1718,91 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   font-size: 22px; color: var(--ss-star300); line-height: 1.5;
   margin-bottom: 48px;
 }
+
+/* Search overlay */
+.search-overlay .panel { max-width: 900px; padding: 48px; }
+.search-input-row { display: flex; align-items: center; gap: 16px; background: var(--ss-space2); border: 1px solid var(--ss-space4); border-radius: 8px; padding: 16px 24px; margin: 24px 0 20px; }
+.search-icon { font-size: 20px; opacity: 0.5; }
+.search-query { font-family: var(--ff-mono); font-size: 22px; color: var(--ss-star100); letter-spacing: .04em; min-width: 300px; }
+.search-keys { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.sk { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 6px; background: var(--ss-space2); border: 1px solid var(--ss-space4); font-family: var(--ff-mono); font-size: 14px; font-weight: 500; color: var(--ss-star300); cursor: pointer; transition: background 120ms; }
+.sk.del { width: 60px; font-size: 18px; }
+.sk.clr { width: 80px; font-size: 11px; letter-spacing: .08em; }
+.sk.focused { background: var(--ss-star500); border-color: var(--ss-star600); color: var(--ss-space0); }
+.search-results { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.search-result { display: flex; align-items: center; gap: 16px; padding: 14px 20px; background: var(--ss-space2); border: 1px solid transparent; border-radius: 8px; text-align: left; cursor: pointer; transition: border-color 120ms; }
+.search-result.focused { border-color: var(--ss-star500); }
+.sr-type { font-family: var(--ff-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ss-star500); width: 80px; flex-shrink: 0; }
+.sr-label { font-size: 15px; font-weight: 400; flex: 1; }
+.sr-sub { font-family: var(--ff-mono); font-size: 12px; color: var(--ss-star300); }
+.no-results { padding: 24px; color: var(--ss-star300); font-family: var(--ff-mono); font-size: 14px; }
+
+/* Image viewer nav arrows */
+.viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 64px; height: 64px; border-radius: 50%; background: rgba(10,13,18,0.7); border: 1px solid rgba(212,164,74,0.3); color: var(--ss-star300); font-size: 32px; cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 200ms; }
+.image-viewer:hover .viewer-nav, .viewer-nav.focused { opacity: 1; }
+.viewer-nav.focused { border-color: var(--ss-star500); color: var(--ss-star100); }
+.viewer-nav.prev { left: 32px; }
+.viewer-nav.next { right: 32px; }
+.viewer-counter { font-family: var(--ff-mono); font-size: 12px; letter-spacing: .08em; color: var(--ss-star300); margin-bottom: 4px; text-align: right; }
+
+/* Filter pill interactivity */
+.sky-pills .ss-pill { cursor: pointer; }
+.sky-pills .ss-pill.focused { outline: 2px solid var(--ss-star500); outline-offset: 2px; }
+
+/* ── Video Player ─────────────────────────────────────────────────────── */
+#player { background: #000; overflow: hidden; }
+#player-video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.player-spinner {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.player-spinner::after {
+  content: ''; width: 56px; height: 56px; border-radius: 50%;
+  border: 3px solid rgba(212,164,74,0.25); border-top-color: var(--ss-star500);
+  animation: spin 0.9s linear infinite;
+}
+.player-spinner.hidden { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.player-controls {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(5,6,8,0.75) 0%, transparent 22%, transparent 68%, rgba(5,6,8,0.9) 100%);
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 48px 72px; opacity: 0; transition: opacity 280ms ease;
+}
+.player-controls.visible { opacity: 1; }
+.player-top { display: flex; flex-direction: column; gap: 8px; }
+.player-video-title { font-family: var(--ff-serif); font-style: italic; font-size: 36px; color: var(--ss-star100); line-height: 1.15; }
+.player-video-credit { font-family: var(--ff-mono); font-size: 13px; letter-spacing: .1em; color: var(--ss-star300); }
+.player-bottom { display: flex; flex-direction: column; gap: 16px; }
+.player-progress-row { display: flex; align-items: center; gap: 20px; }
+.player-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.18); border-radius: 2px; overflow: hidden; }
+.player-fill { height: 100%; background: var(--ss-star500); border-radius: 2px; width: 0%; transition: width 0.5s linear; }
+.player-time { font-family: var(--ff-mono); font-size: 13px; color: var(--ss-star300); white-space: nowrap; min-width: 100px; text-align: right; }
+.player-hint { font-family: var(--ff-mono); font-size: 12px; letter-spacing: .08em; color: rgba(200,184,134,0.6); }
+.player-paused-badge {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(5,6,8,0.8); border: 1px solid rgba(212,164,74,0.3);
+  border-radius: 50%; width: 96px; height: 96px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 200ms; pointer-events: none;
+}
+.player-paused-badge.show { opacity: 1; }
+.player-paused-badge svg { width: 40px; height: 40px; color: var(--ss-star500); }
+.player-tap-to-play, .player-error-msg {
+  position: absolute; inset: 0; display: none; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  background: rgba(5,6,8,0.85); pointer-events: none;
+}
+.player-tap-to-play.show, .player-error-msg.show { display: flex; }
+
+/* Video tiles in browse */
+.media-tile.video-tile .tile-img { position: relative; }
+.media-tile.video-tile .play-badge {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+}
+.media-tile.video-tile .play-badge svg { width: 36px; height: 36px; color: rgba(212,164,74,0.85); filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7)); }
+.media-tile.video-tile .tile-meta::before { content: '▶  '; color: var(--ss-star500); font-size: 10px; }
+
 </style>
 </head>
 <body>
@@ -1772,7 +1952,7 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   <div class="bg-overlay"></div>
 
   <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar" data-sidebar="tonight">
     <div class="brand">
       <svg viewBox="0 0 100 100"><use href="#ss-mark"/></svg>
       <div class="brand-label">
@@ -1844,7 +2024,8 @@ body { animation: ss-pixel-shift 720s linear infinite; }
           <div class="kv"><div class="k">Mag</div><div class="v mono">&minus;3.4</div></div>
           <div class="kv"><div class="k">Max alt</div><div class="v mono">68&deg;</div></div>
           <div class="kv"><div class="k">Direction</div><div class="v">WSW &rarr; ENE</div></div>
-          <div class="kv"><div class="k">Cloud cover</div><div class="v">12%</div></div>
+          <div class="kv"><div class="k">Cloud cover</div><div class="v"><span id="meta-cloud">12%</span></div></div>
+          <div class="kv"><div class="k">Moon</div><div class="v"><span id="meta-moon">Waning Crescent</span></div></div>
         </div>
       </div>
     </div>
@@ -1852,32 +2033,32 @@ body { animation: ss-pixel-shift 720s linear infinite; }
     <div class="also">
       <div class="section-label">Also visible tonight</div>
       <div class="cards" id="cards-row">
-        <button class="sky-card aurora focusable" tabindex="0">
+        <button class="sky-card aurora focusable" data-sky="iss-pass" tabindex="0">
           <div class="time">8:42 PM</div>
           <div class="name">ISS pass</div>
           <div class="sub">WSW &rarr; ENE &middot; 5m52s &middot; mag &minus;3.4</div>
         </button>
-        <button class="sky-card focusable" tabindex="0">
+        <button class="sky-card focusable" data-sky="jupiter" tabindex="0">
           <div class="time">9:11 PM</div>
           <div class="name">Jupiter rising</div>
           <div class="sub">East &middot; 4 moons via binoculars</div>
         </button>
-        <button class="sky-card focusable" tabindex="0">
+        <button class="sky-card focusable" data-sky="saturn" tabindex="0">
           <div class="time">9:48 PM</div>
           <div class="name">Saturn, with rings</div>
           <div class="sub">South-east &middot; 38&deg; altitude</div>
         </button>
-        <button class="sky-card focusable" tabindex="0">
+        <button class="sky-card focusable" data-sky="andromeda" tabindex="0">
           <div class="time">10:22 PM</div>
           <div class="name">Andromeda</div>
           <div class="sub">North-east &middot; M31 &middot; naked eye</div>
         </button>
-        <button class="sky-card focusable" tabindex="0">
+        <button class="sky-card focusable" data-sky="pleiades" tabindex="0">
           <div class="time">11:04 PM</div>
           <div class="name">Pleiades cluster</div>
           <div class="sub">East &middot; Seven Sisters &middot; M45</div>
         </button>
-        <button class="sky-card focusable" tabindex="0">
+        <button class="sky-card focusable" data-sky="orion-rising" tabindex="0">
           <div class="time">12:18 AM</div>
           <div class="name">Orion rising</div>
           <div class="sub">South-east &middot; sword, belt &amp; nebula</div>
@@ -1891,115 +2072,110 @@ body { animation: ss-pixel-shift 720s linear infinite; }
      SCREEN 5: BROWSE (Watch)
      ===================================================================== -->
 <section class="screen" id="browse">
-  <div class="bg-image" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
+  <div class="bg-image" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');"></div>
   <div class="bg-overlay"></div>
   <aside class="sidebar" data-sidebar="browse"></aside>
   <div class="main" id="browse-main">
     <div class="featured">
-      <span class="ss-pill gold">Featured · StarSol Original</span>
-      <h1>Deep Field<br/>— Year Four.</h1>
-      <div class="meta">Six episodes · 4K HDR · narrated by Janet McTeer</div>
-      <p>Four years into JWST's mission, the deepest single image ever taken is also the most populated — every smear of light is a galaxy. We walk through it, one redshift at a time.</p>
+      <span class="ss-pill gold">JWST · Public archive</span>
+      <h1>The universe,<br/>unfiltered.</h1>
+      <div class="meta">17,000+ images · updated within hours of every release · 4K HDR</div>
+      <p>Every image the James Webb Space Telescope has released to the public. Sorted by release date. Searchable by target, instrument, and distance from Earth.</p>
       <div class="btn-row">
-        <button class="btn btn-primary focusable" data-action="play-featured" tabindex="0">▶ Resume Ep. 3</button>
-        <button class="btn btn-secondary focusable" data-action="add-list" tabindex="0">+ My list</button>
-        <button class="btn btn-secondary focusable" data-action="details-featured" tabindex="0">Details</button>
+        <button class="btn btn-primary focusable" data-action="play-featured" tabindex="0">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="vertical-align:-2px;margin-right:6px"><path d="M8 5v14l11-7z"/></svg>Watch documentary
+        </button>
+        <button class="btn btn-secondary focusable" data-action="go-gallery" tabindex="0">Browse gallery</button>
+        <button class="btn btn-secondary focusable" data-action="go-ambient" tabindex="0">Ambient mode</button>
       </div>
     </div>
     <div class="rows">
       <div class="media-row">
         <div class="row-header">
           <div class="row-label">JWST Gallery</div>
-          <div class="row-count">5 items ▶</div>
+          <div class="row-count">5 images ▶</div>
         </div>
         <div class="row-tiles">
-          <button class="media-tile focusable" tabindex="0">
+          <button class="media-tile focusable" data-gallery="pillars" tabindex="0">
             <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');"></div>
             <div class="tile-title">The Pillars of Creation</div>
-            <div class="tile-meta">JWST · NIRCam · 2022</div>
+            <div class="tile-meta">Eagle Nebula · NIRCam · 2022</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
+          <button class="media-tile focusable" data-gallery="carina" tabindex="0">
             <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2205a.jpg');"></div>
             <div class="tile-title">Cosmic Cliffs · Carina</div>
-            <div class="tile-meta">JWST · NIRCam + MIRI · 2022</div>
+            <div class="tile-meta">Carina Nebula · NIRCam + MIRI · 2022</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
+          <button class="media-tile focusable" data-gallery="tarantula" tabindex="0">
             <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
             <div class="tile-title">Tarantula Nebula</div>
-            <div class="tile-meta">JWST · NIRCam · 2022</div>
+            <div class="tile-meta">30 Doradus · NIRCam · 2022</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
+          <button class="media-tile focusable" data-gallery="stephans" tabindex="0">
             <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310a.jpg');"></div>
             <div class="tile-title">Stephan's Quintet</div>
-            <div class="tile-meta">JWST · NIRCam + MIRI · 2022</div>
+            <div class="tile-meta">HCG 92 · NIRCam + MIRI · 2022</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
+          <button class="media-tile focusable" data-gallery="deep-field" tabindex="0">
             <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');"></div>
             <div class="tile-title">SMACS 0723 — First Deep Field</div>
-            <div class="tile-meta">JWST · NIRCam · 2022</div>
+            <div class="tile-meta">Galaxy cluster · NIRCam · 2022</div>
           </button>
         </div>
       </div>
       <div class="media-row">
         <div class="row-header">
-          <div class="row-label">Series</div>
-          <div class="row-count">4 items ▶</div>
+          <div class="row-label">JWST Documentaries</div>
+          <div class="row-count">3 videos ▶</div>
         </div>
         <div class="row-tiles">
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');">
-              <span class="badge">New</span>
+          <button class="media-tile video-tile focusable" data-video="jwst-first-light" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');background-size:cover;background-position:center;">
+              <div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
             </div>
-            <div class="tile-title">Deep Field — Year Four</div>
-            <div class="tile-meta">Series · 6 episodes</div>
+            <div class="tile-title">JWST — First Light</div>
+            <div class="tile-meta">NASA · 24 min · 2022</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');"></div>
-            <div class="tile-title">A History of the Telescope</div>
-            <div class="tile-meta">Series · 8 episodes</div>
+          <button class="media-tile video-tile focusable" data-video="cosmic-cliffs-tour" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2205a.jpg');background-size:cover;background-position:center;">
+              <div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+            </div>
+            <div class="tile-title">Cosmic Cliffs — A Tour</div>
+            <div class="tile-meta">NASA · ESA · CSA · 8 min · 2022</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://cdn.eso.org/images/screen/eso0932a.jpg');"></div>
-            <div class="tile-title">Cassini's Last Year</div>
-            <div class="tile-meta">Series · 5 episodes</div>
-          </button>
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
-            <div class="tile-title">Voyagers — The Pioneers</div>
-            <div class="tile-meta">Series · 4 episodes</div>
+          <button class="media-tile video-tile focusable" data-video="stephan-quintet" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310a.jpg');background-size:cover;background-position:center;">
+              <div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+            </div>
+            <div class="tile-title">Stephan's Quintet Deep Dive</div>
+            <div class="tile-meta">NASA · ESA · CSA · 12 min · 2022</div>
           </button>
         </div>
       </div>
       <div class="media-row">
         <div class="row-header">
-          <div class="row-label">Documentaries</div>
-          <div class="row-count">5 items ▶</div>
+          <div class="row-label">More to explore</div>
+          <div class="row-count">See all &#9654;</div>
         </div>
         <div class="row-tiles">
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310a.jpg');"></div>
-            <div class="tile-title">Stephan's Quintet</div>
-            <div class="tile-meta">Documentary · 47 min</div>
+          <button class="media-tile focusable" data-action="go-sky" tabindex="0">
+            <div class="tile-img" style="background:radial-gradient(ellipse at 30% 70%, rgba(93,168,136,0.3) 0%, #0a0d12 70%);display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 80 80" width="64" height="64" opacity="0.7"><circle cx="40" cy="40" r="2" fill="#c8b886"/><circle cx="20" cy="20" r="1.5" fill="#fbf3df"/><circle cx="60" cy="15" r="1" fill="#fbf3df"/><circle cx="55" cy="55" r="1.5" fill="#c8b886"/><circle cx="15" cy="60" r="1" fill="#fbf3df"/><circle cx="70" cy="45" r="1" fill="#fbf3df"/><line x1="20" y1="20" x2="40" y2="40" stroke="rgba(212,164,74,0.4)" stroke-width="1"/><line x1="60" y1="15" x2="40" y2="40" stroke="rgba(212,164,74,0.4)" stroke-width="1"/></svg>
+            </div>
+            <div class="tile-title">Sky Calendar</div>
+            <div class="tile-meta">90-day events · passes · eclipses</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310c.jpg');"></div>
-            <div class="tile-title">A Cartwheel, in Slow Motion</div>
-            <div class="tile-meta">32 min · ring galaxy</div>
+          <button class="media-tile focusable" data-action="go-constellations" tabindex="0">
+            <div class="tile-img" style="background:radial-gradient(ellipse at 70% 30%, rgba(212,164,74,0.2) 0%, #0a0d12 70%);display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 80 80" width="64" height="64" opacity="0.8"><circle cx="40" cy="12" r="3" fill="rgba(212,164,74,0.9)"/><circle cx="60" cy="35" r="2" fill="#fbf3df"/><circle cx="52" cy="58" r="2" fill="#fbf3df"/><circle cx="28" cy="58" r="2" fill="#fbf3df"/><circle cx="20" cy="35" r="2" fill="#fbf3df"/><line x1="40" y1="12" x2="60" y2="35" stroke="rgba(212,164,74,0.35)" stroke-width="1.2"/><line x1="60" y1="35" x2="52" y2="58" stroke="rgba(212,164,74,0.35)" stroke-width="1.2"/><line x1="52" y1="58" x2="28" y2="58" stroke="rgba(212,164,74,0.35)" stroke-width="1.2"/><line x1="28" y1="58" x2="20" y2="35" stroke="rgba(212,164,74,0.35)" stroke-width="1.2"/><line x1="20" y1="35" x2="40" y2="12" stroke="rgba(212,164,74,0.35)" stroke-width="1.2"/></svg>
+            </div>
+            <div class="tile-title">Constellations</div>
+            <div class="tile-meta">88 charts · mythology · history</div>
           </button>
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');"></div>
-            <div class="tile-title">A Star's Last Breath</div>
-            <div class="tile-meta">18 min · Wolf-Rayet</div>
-          </button>
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2205a.jpg');"></div>
-            <div class="tile-title">Hubble at 30</div>
-            <div class="tile-meta">Documentary · 88 min</div>
-          </button>
-          <button class="media-tile focusable" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');"></div>
-            <div class="tile-title">Earthrise — The Photograph</div>
-            <div class="tile-meta">Documentary · 52 min</div>
+          <button class="media-tile focusable" data-nav="ambient" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2409a.jpg');background-size:cover;background-position:center;"></div>
+            <div class="tile-title">Ambient Mode</div>
+            <div class="tile-meta">JWST cycling · 4K · Ken Burns</div>
           </button>
         </div>
       </div>
@@ -2015,15 +2191,15 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   <div class="bg-overlay"></div>
   <aside class="sidebar" data-sidebar="sky"></aside>
   <div class="main" id="sky-main">
-    <div class="sky-eyebrow">90-day sky calendar · Brooklyn, NY · Bortle 8</div>
+    <div class="sky-eyebrow" id="sky-eyebrow">90-day sky calendar · Brooklyn, NY · Bortle 8</div>
     <div class="sky-header">
       <h1>The sky calendar.</h1>
-      <div class="sky-pills">
-        <span class="ss-pill gold">All</span>
-        <span class="ss-pill">ISS passes</span>
-        <span class="ss-pill">Meteor showers</span>
-        <span class="ss-pill">Eclipses</span>
-        <span class="ss-pill">Launches</span>
+      <div class="sky-pills" id="sky-filter-pills">
+        <span class="ss-pill gold focusable" data-filter="all" tabindex="0">All</span>
+        <span class="ss-pill focusable" data-filter="iss" tabindex="0">ISS passes</span>
+        <span class="ss-pill focusable" data-filter="planet" tabindex="0">Planets</span>
+        <span class="ss-pill focusable" data-filter="meteor" tabindex="0">Meteor showers</span>
+        <span class="ss-pill focusable" data-filter="moon" tabindex="0">Moon</span>
       </div>
     </div>
     <table class="events">
@@ -2044,12 +2220,12 @@ body { animation: ss-pixel-shift 720s linear infinite; }
     <div class="const-eyebrow">Learn the sky · mythology · history · spot tonight</div>
     <div class="const-header">
       <h1>88 constellations.</h1>
-      <div class="sky-pills">
-        <span class="ss-pill gold">All</span>
-        <span class="ss-pill aurora">Visible tonight</span>
-        <span class="ss-pill">Circumpolar</span>
-        <span class="ss-pill">Northern</span>
-        <span class="ss-pill">Southern</span>
+      <div class="sky-pills" id="const-filter-pills">
+        <span class="ss-pill gold focusable" data-constfilter="all" tabindex="0">All 88</span>
+        <span class="ss-pill aurora focusable" data-constfilter="visible" tabindex="0">Visible tonight</span>
+        <span class="ss-pill focusable" data-constfilter="circumpolar" tabindex="0">Circumpolar</span>
+        <span class="ss-pill focusable" data-constfilter="winter" tabindex="0">Winter</span>
+        <span class="ss-pill focusable" data-constfilter="summer" tabindex="0">Summer</span>
       </div>
     </div>
     <div class="const-grid" id="const-grid"></div>
@@ -2069,7 +2245,7 @@ body { animation: ss-pixel-shift 720s linear infinite; }
         <div class="sky-eyebrow">JWST archive · curated · sorted by release</div>
         <h1>JWST Gallery.</h1>
       </div>
-      <div class="count-badge">1,247 images</div>
+      <div class="count-badge">1,347 images</div>
     </div>
     <div class="gallery-mosaic" id="gal-mosaic"></div>
   </div>
@@ -2079,20 +2255,34 @@ body { animation: ss-pixel-shift 720s linear infinite; }
      SCREEN 9: AMBIENT MODE
      ===================================================================== -->
 <section class="screen" id="ambient">
-  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2205a.jpg"></div>
-  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2316a.jpg"></div>
-  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2208a.jpg"></div>
-  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2310a.jpg"></div>
-  <div class="amb-bg" data-src="https://esawebb.org/media/archives/images/screen/weic2218a.jpg"></div>
+  <!-- 14 JWST/ESA images — all CC BY 4.0, credit required -->
+  <div class="amb-bg" data-idx="0" data-src="https://esawebb.org/media/archives/images/screen/weic2205a.jpg"></div>
+  <div class="amb-bg" data-idx="1" data-src="https://esawebb.org/media/archives/images/screen/weic2316a.jpg"></div>
+  <div class="amb-bg" data-idx="2" data-src="https://esawebb.org/media/archives/images/screen/weic2208a.jpg"></div>
+  <div class="amb-bg" data-idx="3" data-src="https://esawebb.org/media/archives/images/screen/weic2310a.jpg"></div>
+  <div class="amb-bg" data-idx="4" data-src="https://esawebb.org/media/archives/images/screen/weic2218a.jpg"></div>
+  <div class="amb-bg" data-idx="5" data-src="https://esawebb.org/media/archives/images/screen/weic2212a.jpg"></div>
+  <div class="amb-bg" data-idx="6" data-src="https://esawebb.org/media/archives/images/screen/weic2301a.jpg"></div>
+  <div class="amb-bg" data-idx="7" data-src="https://esawebb.org/media/archives/images/screen/weic2302a.jpg"></div>
+  <div class="amb-bg" data-idx="8" data-src="https://esawebb.org/media/archives/images/screen/weic2308a.jpg"></div>
+  <div class="amb-bg" data-idx="9" data-src="https://esawebb.org/media/archives/images/screen/weic2409a.jpg"></div>
+  <div class="amb-bg" data-idx="10" data-src="https://esawebb.org/media/archives/images/screen/weic2204a.jpg"></div>
+  <div class="amb-bg" data-idx="11" data-src="https://esawebb.org/media/archives/images/screen/weic2206a.jpg"></div>
+  <div class="amb-bg" data-idx="12" data-src="https://esawebb.org/media/archives/images/screen/weic2312a.jpg"></div>
+  <div class="amb-bg" data-idx="13" data-src="https://esawebb.org/media/archives/images/screen/weic2319a.jpg"></div>
   <div class="amb-clock" id="amb-clock">21:51</div>
   <div class="amb-caption" id="amb-caption">Cosmic Cliffs · JWST NIRCam + MIRI · 2022</div>
-  <div class="amb-credit">NASA · ESA · CSA · STScI</div>
+  <div class="amb-credit" id="amb-credit">NASA · ESA · CSA · STScI</div>
   <div class="amb-settings">
     <div class="eyebrow">Ambient mode</div>
     <h1>Settings</h1>
-    <button class="setting focusable" data-action="amb-collection" tabindex="0">
-      <span class="label">Collection</span>
-      <span class="value" id="amb-collection-value">JWST</span>
+    <button class="setting focusable" data-action="amb-channel" tabindex="0">
+      <span class="label">Channel</span>
+      <span class="value" id="amb-channel-value">All JWST</span>
+    </button>
+    <button class="setting focusable" data-action="amb-sound" tabindex="0">
+      <span class="label">Sound</span>
+      <span class="value" id="amb-sound-value">Off</span>
     </button>
     <button class="setting focusable" data-action="amb-delay" tabindex="0">
       <span class="label">Idle delay</span>
@@ -2112,38 +2302,38 @@ body { animation: ss-pixel-shift 720s linear infinite; }
 <section class="screen" id="pricing">
   <div class="starfield starfield-bg"></div>
   <div class="price-wrap">
-    <div class="eyebrow">7 days free on any plan</div>
-    <h1>Choose your plan.</h1>
+    <div class="eyebrow">One-time unlock · No subscription</div>
+    <h1>Own it forever.</h1>
     <div class="plans">
       <div class="plan-card primary focusable" data-action="buy-explorer" tabindex="0">
-        <span class="primary-pill">Primary plan</span>
-        <div class="plan-name">Explorer</div>
-        <div class="price-main">$39.99 / yr</div>
-        <div class="price-sub">or $4.99 / mo</div>
+        <span class="primary-pill">Best value</span>
+        <div class="plan-name">StarSol</div>
+        <div class="price-main">$9.99</div>
+        <div class="price-sub">One-time · Yours forever</div>
         <ul class="features">
-          <li>Full JWST + Hubble + ESO gallery</li>
-          <li>Complete documentary library</li>
-          <li>Ambient mode — full image collection</li>
-          <li>Sky event calendar — 365 days</li>
-          <li>Live events — launches, eclipses, JWST drops</li>
+          <li>Full JWST + Hubble + ESO gallery (1,200+ images)</li>
+          <li>Ambient mode — 4K cinematic image cycling</li>
+          <li>Sky event calendar — 365 days ahead</li>
+          <li>Constellation guide — 88 charts with mythology</li>
+          <li>ISS pass alerts for your location</li>
+          <li>New JWST drops added weekly, free forever</li>
         </ul>
-        <button class="cta">Start 7-day trial</button>
+        <button class="cta">Unlock StarSol — $9.99</button>
       </div>
       <div class="plan-card secondary focusable" data-action="buy-observer" tabindex="0">
-        <div class="plan-name">Observer</div>
-        <div class="price-main">$7.99 / mo</div>
-        <div class="price-sub">or $64.99 / yr</div>
+        <div class="plan-name">Gift</div>
+        <div class="price-main">$9.99</div>
+        <div class="price-sub">Send to someone who loves the sky</div>
         <ul class="features">
-          <li>Everything in Explorer</li>
-          <li>Geolocated ISS pass alerts</li>
-          <li>Aurora alert when KP index spikes</li>
-          <li>Early JWST image drops</li>
-          <li>8K wallpaper downloads</li>
+          <li>Everything in the full unlock</li>
+          <li>Delivered as a digital gift code</li>
+          <li>Works on any Android TV or Google TV</li>
+          <li>No account required for the recipient</li>
         </ul>
-        <button class="cta">Start 7-day trial</button>
+        <button class="cta">Buy a gift</button>
       </div>
     </div>
-    <button class="continue-free focusable" data-action="continue-free" tabindex="0">Continue free →</button>
+    <button class="continue-free focusable" data-action="continue-free" tabindex="0">Continue browsing free →</button>
   </div>
 </section>
 
@@ -2152,30 +2342,47 @@ body { animation: ss-pixel-shift 720s linear infinite; }
      ===================================================================== -->
 <div class="detail-overlay" id="detail-overlay">
   <div class="panel">
-    <div class="eyebrow" id="detail-eyebrow"></div>
-    <h2 id="detail-title"></h2>
-    <p id="detail-desc"></p>
-    <div id="detail-kvs"></div>
+    <div class="detail-panel-inner">
+      <div class="detail-svg" id="detail-svg"></div>
+      <div class="detail-text">
+        <div class="eyebrow" id="detail-eyebrow"></div>
+        <h2 id="detail-title"></h2>
+        <p id="detail-desc"></p>
+        <div id="detail-kvs"></div>
+      </div>
+    </div>
     <div class="hint">Press BACK to close</div>
   </div>
 </div>
 
 <div class="image-viewer" id="image-viewer">
   <div class="img-bg" id="viewer-img"></div>
+  <button class="viewer-nav prev focusable" id="viewer-prev" tabindex="0" data-action="viewer-prev">&#8249;</button>
+  <button class="viewer-nav next focusable" id="viewer-next" tabindex="0" data-action="viewer-next">&#8250;</button>
   <div class="footer">
     <div>
       <div class="title" id="viewer-title"></div>
       <div class="desc" id="viewer-desc"></div>
     </div>
-    <div class="credit" id="viewer-credit"></div>
+    <div style="text-align:right">
+      <div class="viewer-counter" id="viewer-counter">1 / 10</div>
+      <div class="credit" id="viewer-credit"></div>
+    </div>
   </div>
 </div>
 
 <div class="search-overlay" id="search-overlay">
   <div class="panel">
-    <div class="ss-eyebrow">Search</div>
-    <h2>Search coming soon.</h2>
-    <p>Press BACK to return</p>
+    <div class="ss-eyebrow">Search the sky</div>
+    <div class="search-input-row">
+      <span class="search-icon">&#9906;</span>
+      <span class="search-query" id="search-query">Type to search&hellip;</span>
+    </div>
+    <div class="search-keys" id="search-keys">
+      <span class="sk" data-ch="A">A</span><span class="sk" data-ch="B">B</span><span class="sk" data-ch="C">C</span><span class="sk" data-ch="D">D</span><span class="sk" data-ch="E">E</span><span class="sk" data-ch="F">F</span><span class="sk" data-ch="G">G</span><span class="sk" data-ch="H">H</span><span class="sk" data-ch="I">I</span><span class="sk" data-ch="J">J</span><span class="sk" data-ch="K">K</span><span class="sk" data-ch="L">L</span><span class="sk" data-ch="M">M</span><span class="sk" data-ch="N">N</span><span class="sk" data-ch="O">O</span><span class="sk" data-ch="P">P</span><span class="sk" data-ch="Q">Q</span><span class="sk" data-ch="R">R</span><span class="sk" data-ch="S">S</span><span class="sk" data-ch="T">T</span><span class="sk" data-ch="U">U</span><span class="sk" data-ch="V">V</span><span class="sk" data-ch="W">W</span><span class="sk" data-ch="X">X</span><span class="sk" data-ch="Y">Y</span><span class="sk" data-ch="Z">Z</span><span class="sk del" data-ch="DEL">&larr;</span><span class="sk clr" data-ch="CLR">Clear</span>
+    </div>
+    <div class="search-results" id="search-results"></div>
+    <div class="hint">D-pad to navigate keys &middot; BACK to close</div>
   </div>
 </div>
 
@@ -2192,8 +2399,50 @@ body { animation: ss-pixel-shift 720s linear infinite; }
   </div>
 </section>
 
+<!-- =====================================================================
+     SCREEN: VIDEO PLAYER
+     ===================================================================== -->
+<section class="screen" id="player">
+  <video id="player-video" playsinline autoplay></video>
+  <div class="player-spinner" id="player-spinner"></div>
+  <div class="player-paused-badge" id="player-paused-badge">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+  </div>
+  <div class="player-tap-to-play" id="player-tap-to-play">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M8 5v14l11-7z"/></svg>
+    <div style="font-family:var(--ff-mono);font-size:13px;letter-spacing:.1em;color:var(--ss-star300);margin-top:12px">Press OK to play</div>
+  </div>
+  <div class="player-error-msg" id="player-error-msg">
+    <div style="font-family:var(--ff-serif);font-style:italic;font-size:28px;color:var(--ss-star100);margin-bottom:8px">Unable to play</div>
+    <div style="font-family:var(--ff-mono);font-size:13px;color:var(--ss-star300)">Check your connection and press BACK</div>
+  </div>
+  <div class="player-controls" id="player-controls">
+    <div class="player-top">
+      <div class="player-video-title" id="player-title"></div>
+      <div class="player-video-credit" id="player-credit"></div>
+    </div>
+    <div class="player-bottom">
+      <div class="player-progress-row">
+        <div class="player-bar"><div class="player-fill" id="player-fill"></div></div>
+        <div class="player-time" id="player-time">0:00 / 0:00</div>
+      </div>
+      <div class="player-hint">OK — pause &nbsp;·&nbsp; ◄► — seek 10s &nbsp;·&nbsp; BACK — exit</div>
+    </div>
+  </div>
+</section>
+
 <!-- Exit toast -->
 <div class="exit-toast" id="exit-toast">Press BACK again to exit</div>
+
+<!-- Tonight Whisper — ISS / aurora / event low-third alert -->
+<div class="tonight-whisper" id="tonight-whisper">
+  <div class="w-dot"></div>
+  <div>
+    <div class="w-text" id="whisper-text">ISS passing overhead in <strong>8 min</strong></div>
+    <div class="w-sub" id="whisper-sub">Look NW · Magnitude −3.4 · Visible 5m 52s</div>
+  </div>
+  <div class="w-dismiss" id="whisper-dismiss">OK</div>
+</div>
 
 <script>
 'use strict';
@@ -2222,6 +2471,20 @@ const APP = {
   ambClockInterval: null,
   ambSettingsOpen: false,
   overlayOpen: null, // 'detail' | 'viewer' | 'search' | null
+  lat: 40.65,
+  lon: -73.95,
+  location: 'Brooklyn, NY',
+  bortle: 8,
+  cloudCover: null,
+  skyFilter: 'all',
+  constFilter: 'all',
+  searchQuery: '',
+  viewerIdx: 0,
+  playerHls: null,
+  playerContent: null,
+  playerControlsTimer: null,
+  playerProgressInterval: null,
+  playerOrigin: null, // element that triggered playback — restored on BACK
 };
 
 if (!localStorage.getItem('ss-first-seen')) {
@@ -2280,6 +2543,12 @@ function navigate(name) {
   el.classList.add('active');
   APP.currentScreen = name;
 
+  // Sync all sidebar nav items so active state is always correct regardless
+  // of how navigation was triggered (sidebar click vs programmatic navigate()).
+  document.querySelectorAll('.sidebar .nav-item[data-nav]').forEach(function(n) {
+    n.classList.toggle('active', n.dataset.nav === name);
+  });
+
   // Reset exit-armed flag on screen change.
   APP.exitArmed = false;
   hideExitToast();
@@ -2297,6 +2566,8 @@ function navigate(name) {
   if (name === 'gallery') initGallery();
   if (name === 'ambient') initAmbient();
   if (name !== 'ambient') stopAmbient();
+  if (name === 'player') initPlayer();
+  if (name !== 'player') stopPlayer();
 
   // Focus first focusable on the new screen.
   // For Tonight, default to the primary hero button (not sidebar) so sidebar starts collapsed.
@@ -2317,8 +2588,10 @@ function navigate(name) {
       first = null;
     } else if (name === 'pricing') {
       first = el.querySelector('.plan-card.primary.focusable');
+    } else if (name === 'player') {
+      first = null; // player handles its own key events
     }
-    if (!first && name !== 'ambient') first = el.querySelector('.focusable');
+    if (!first && name !== 'ambient' && name !== 'player') first = el.querySelector('.focusable');
     if (first) focusEl(first);
   }, 80);
 }
@@ -2385,7 +2658,7 @@ function moveFocus(dir) {
     let primary, secondary;
     if (dir === 'up' || dir === 'down')   { primary = Math.abs(dy); secondary = Math.abs(dx); }
     else                                   { primary = Math.abs(dx); secondary = Math.abs(dy); }
-    // weight secondary heavier so we don't jump to far-off rows
+    // weight secondary heavier so we don\'t jump to far-off rows
     const score = primary + secondary * 2.2;
     if (score < bestScore) { bestScore = score; best = el; }
   }
@@ -2409,10 +2682,17 @@ function activateFocused() {
     handleAction(action);
   } else if (focused.dataset.const) {
     openConstellationDetail(focused.dataset.const);
+  } else if (focused.dataset.stype) {
+    activateSearchResult(focused);
+  } else if (focused.dataset.video) {
+    APP.playerOrigin = focused;
+    openVideoPlayer(focused.dataset.video);
   } else if (focused.dataset.gallery) {
     openImageViewer(focused.dataset.gallery);
   } else if (focused.dataset.sky) {
     openSkyDetail(focused.dataset.sky);
+  } else if (focused.classList.contains('sk')) {
+    searchKeyPress(focused.dataset.ch);
   } else {
     // generic card click — animate
     focused.animate(
@@ -2440,10 +2720,17 @@ function handleAction(action) {
       openSkyDetail('iss-pass');
       break;
     case 'play-featured':
+      APP.playerOrigin = focused;
+      playVideo(VIDEO_CATALOG['jwst-first-light']);
+      break;
     case 'add-list':
     case 'details-featured':
       console.log('[action]', action, '— (mock)');
       break;
+    case 'go-gallery':    navigate('gallery'); break;
+    case 'go-ambient':    navigate('ambient'); break;
+    case 'go-sky':        navigate('sky'); break;
+    case 'go-constellations': navigate('constellations'); break;
     case 'buy-explorer':
       API.post('/api/billing/checkout', { plan: 'explorer_annual' });
       console.log('[buy] explorer_annual');
@@ -2458,7 +2745,13 @@ function handleAction(action) {
     case 'amb-exit':
       navigate('tonight');
       break;
+    case 'viewer-prev':
+      viewerPrev(); break;
+    case 'viewer-next':
+      viewerNext(); break;
     case 'amb-collection':
+    case 'amb-channel':
+    case 'amb-sound':
     case 'amb-delay':
     case 'amb-shift':
       cycleAmbSetting(action);
@@ -2532,6 +2825,13 @@ window.starsolBack = function () {
     return false; // root — let shell background the app
   }
   // For all other inner screens, go back to Tonight (hierarchy).
+  if (APP.currentScreen === 'player') {
+    const origin = APP.playerOrigin;
+    navigate(APP.prevScreen || 'browse');
+    if (origin && document.contains(origin)) setTimeout(() => focusEl(origin), 150);
+    APP.playerOrigin = null;
+    return true;
+  }
   const innerScreens = ['browse', 'sky', 'constellations', 'gallery', 'ambient', 'pricing'];
   if (innerScreens.includes(APP.currentScreen)) {
     navigate('tonight');
@@ -2554,10 +2854,40 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Ambient mode (idle): any key opens settings overlay
+  // Player screen: OK=pause/play, LEFT/RIGHT=seek, any key shows controls
+  if (APP.currentScreen === 'player') {
+    e.preventDefault();
+    const isEnterP = k === 13 || k === 32 || key === 'Enter' || key === ' ';
+    const isLeftP  = k === 37 || key === 'ArrowLeft';
+    const isRightP = k === 39 || key === 'ArrowRight';
+    showPlayerControls();
+    if (isEnterP) togglePlayerPause();
+    if (isLeftP)  seekVideo(-10);
+    if (isRightP) seekVideo(10);
+    return;
+  }
+
+  // Ambient mode (idle): directional keys have ambient actions, others open settings
   if (APP.currentScreen === 'ambient' && !APP.ambSettingsOpen) {
     e.preventDefault();
-    openAmbSettings();
+    const isUp2    = k === 38 || key === 'ArrowUp';
+    const isDown2  = k === 40 || key === 'ArrowDown';
+    const isRight2 = k === 39 || key === 'ArrowRight';
+    const isEnter2 = k === 13 || k === 32 || key === 'Enter' || key === ' ';
+    if (isUp2) {
+      // Up = show tonight whisper / event info
+      showAmbUI();
+    } else if (isRight2) {
+      // Right = advance to next image
+      advanceAmbient();
+    } else if (isDown2) {
+      openAmbSettings();
+    } else if (isEnter2) {
+      // OK = toggle caption visibility
+      showAmbUI();
+    } else {
+      openAmbSettings();
+    }
     return;
   }
 
@@ -2573,6 +2903,11 @@ document.addEventListener('keydown', (e) => {
   const isRight = k === 39 || key === 'ArrowRight';
   const isDown  = k === 40 || key === 'ArrowDown';
   const isEnter = k === 13 || k === 32 || key === 'Enter' || key === ' ';
+  // Image viewer: left/right navigate images
+  if (APP.overlayOpen === 'viewer') {
+    if (isLeft)  { e.preventDefault(); viewerPrev(); return; }
+    if (isRight) { e.preventDefault(); viewerNext(); return; }
+  }
   if (isLeft)  { e.preventDefault(); moveFocus('left'); }
   else if (isUp)    { e.preventDefault(); moveFocus('up'); }
   else if (isRight) { e.preventDefault(); moveFocus('right'); }
@@ -2713,7 +3048,7 @@ function initTonight() {
   }
   tickClock();
   if (APP.clockInterval) clearInterval(APP.clockInterval);
-  APP.clockInterval = setInterval(tickClock, 30_000);
+  APP.clockInterval = setInterval(tickClock, 60_000);
 
   // Date eyebrow
   const dateEl = document.getElementById('tonight-date');
@@ -2732,6 +3067,77 @@ function initTonight() {
   } else {
     if (userName) userName.textContent = 'Guest';
     if (userPlan) userPlan.textContent = 'Preview';
+  }
+
+  // Wire up whisper dismiss button (idempotent)
+  const dismissBtn = document.getElementById('whisper-dismiss');
+  if (dismissBtn && !dismissBtn._wired) {
+    dismissBtn._wired = true;
+    dismissBtn.addEventListener('click', dismissWhisper);
+  }
+
+  // Moon phase in meta card
+  (function() {
+    const mp = moonPhase(new Date());
+    const el = document.getElementById('meta-moon');
+    if (el) el.textContent = mp.name + ' · ' + mp.illum + '% lit';
+  })();
+
+  // APOD — inject live NASA Picture of the Day card
+  fetchApod();
+
+  // ISS live position + pass prediction
+  fetchISSPass();
+
+  // Weather + geolocation (non-blocking)
+  fetchWeather();
+  requestGeolocation();
+}
+
+async function fetchApod() {
+  try {
+    // Try backend first, fall back to NASA APOD directly (DEMO_KEY = 30 req/hr)
+    let data = await API.get('/apod');
+    if (!data || !data.title) {
+      const r = await fetch('https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY');
+      data = r.ok ? await r.json() : null;
+    }
+    if (!data || !data.title) return;
+
+    // If it\'s an image, add it to the background cycle
+    if (data.media_type === 'image' && data.url) {
+      const bgStack = document.querySelector('#tonight');
+      if (bgStack) {
+        const el = document.createElement('div');
+        el.className = 'bg-image';
+        el.style.backgroundImage = "url('" + data.url + "')";
+        bgStack.insertBefore(el, bgStack.firstChild);
+      }
+    }
+
+    // Prepend a Picture of the Day card to the cards row
+    const cardsRow = document.getElementById('cards-row');
+    if (!cardsRow) return;
+
+    const title = data.title.length > 38 ? data.title.slice(0, 36) + '…' : data.title;
+    const card = document.createElement('button');
+    card.className = 'sky-card focusable';
+    card.tabIndex = 0;
+    card.dataset.apodUrl = data.url || '';
+    card.dataset.apodExplanation = data.explanation || '';
+    card.dataset.apodCredit = data.credit || '';
+    if (data.media_type === 'image' && data.url) {
+      card.style.backgroundImage = "url('" + data.url + "')";
+      card.style.backgroundSize = 'cover';
+      card.style.backgroundPosition = 'center';
+    }
+    card.innerHTML =
+      '<div class="time" style="color:var(--ss-star500);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Picture of the Day</div>' +
+      '<div class="name">' + title + '</div>' +
+      '<div class="sub">' + (data.credit || 'NASA · Public Domain') + '</div>';
+    cardsRow.insertBefore(card, cardsRow.firstChild);
+  } catch (_) {
+    // APOD is non-critical — fail silently
   }
 }
 
@@ -2787,23 +3193,278 @@ function mountAllSidebars() {
 }
 
 /* ============================================================
+   ASTRONOMICAL UTILITIES
+   ============================================================ */
+function moonPhase(date) {
+  const d = date || new Date();
+  const JD = (d.getTime() / 86400000) + 2440587.5;
+  const cycle = 29.53058867;
+  const phase = ((JD - 2451550.1) % cycle + cycle) % cycle;
+  const illum = Math.round((1 - Math.cos(phase / cycle * 2 * Math.PI)) / 2 * 100);
+  if (phase < 1.85)  return { name: 'New Moon',        illum: 0,   sym: 'NM' };
+  if (phase < 7.38)  return { name: 'Waxing Crescent', illum: illum, sym: 'WC' };
+  if (phase < 9.22)  return { name: 'First Quarter',   illum: 50,  sym: 'FQ' };
+  if (phase < 14.77) return { name: 'Waxing Gibbous',  illum: illum, sym: 'WG' };
+  if (phase < 16.61) return { name: 'Full Moon',       illum: 100, sym: 'FM' };
+  if (phase < 22.15) return { name: 'Waning Gibbous',  illum: illum, sym: 'WG' };
+  if (phase < 23.99) return { name: 'Last Quarter',    illum: 50,  sym: 'LQ' };
+  return               { name: 'Waning Crescent', illum: illum, sym: 'WC' };
+}
+
+// Constellation evening visibility lookup (month 0=Jan, N. hemisphere mid-latitudes)
+const CONST_VISIBILITY_MONTHS = {
+  'orion':      [10,11,0,1,2],
+  'ursa-major': [0,1,2,3,4,5,6,7,8,9,10,11],
+  'cassiopeia': [0,1,2,3,4,5,6,7,8,9,10,11],
+  'leo':        [1,2,3,4,5],
+  'scorpius':   [4,5,6,7,8],
+  'cygnus':     [5,6,7,8,9,10],
+  'andromeda':  [7,8,9,10,11],
+  'gemini':     [11,0,1,2,3],
+  'perseus':    [8,9,10,11,0,1],
+  'virgo':      [2,3,4,5,6],
+  'aquarius':   [7,8,9,10],
+  'lyra':       [4,5,6,7,8,9],
+  'hercules':   [4,5,6,7,8],
+  'bootes':     [3,4,5,6,7],
+  'sagittarius':[5,6,7,8],
+  'capricornus':[6,7,8,9],
+  'pisces':     [9,10,11,0],
+  'taurus':     [10,11,0,1,2,3],
+  'auriga':     [10,11,0,1,2],
+  'crux':       [3,4,5],
+};
+function constVisibleNow(id) {
+  const months = CONST_VISIBILITY_MONTHS[id];
+  if (!months) return false;
+  return months.includes(new Date().getMonth());
+}
+function constIsCircumpolar(id) {
+  return ['ursa-major','cassiopeia'].includes(id);
+}
+
+/* ============================================================
+   GEOLOCATION + WEATHER
+   ============================================================ */
+async function fetchWeather() {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + APP.lat +
+      '&longitude=' + APP.lon +
+      '&current=cloud_cover,weather_code&timezone=auto&forecast_days=1';
+    const r = await fetch(url);
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.current && data.current.cloud_cover != null) {
+      APP.cloudCover = data.current.cloud_cover;
+      const el = document.getElementById('meta-cloud');
+      if (el) el.textContent = APP.cloudCover + '%';
+    }
+  } catch(_) {}
+}
+
+async function reverseGeocode(lat, lon) {
+  try {
+    const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lon + '&zoom=10';
+    const r = await fetch(url, { headers: { 'User-Agent': 'StarSol/1.0 (starsol.app)' } });
+    const data = await r.json();
+    if (data && data.address) {
+      const city = data.address.city || data.address.town || data.address.village || data.address.county || '';
+      const state = data.address.state_code || data.address.state || '';
+      if (city) APP.location = [city, state].filter(Boolean).join(', ');
+    }
+  } catch(_) {}
+  // Update all location-aware labels
+  const skyEye = document.getElementById('sky-eyebrow');
+  if (skyEye) skyEye.textContent = '90-day sky calendar · ' + APP.location + ' · Bortle ' + APP.bortle;
+  const constEye = document.querySelector('#constellations .const-eyebrow');
+  if (constEye) constEye.textContent = 'Learn the sky · mythology · spot tonight from ' + APP.location;
+  if (APP.currentScreen === 'constellations') renderConstellations();
+}
+
+function requestGeolocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    APP.lat = parseFloat(pos.coords.latitude.toFixed(4));
+    APP.lon = parseFloat(pos.coords.longitude.toFixed(4));
+    reverseGeocode(APP.lat, APP.lon);
+    fetchWeather();
+  }, null, { timeout: 8000, maximumAge: 3600000 });
+}
+
+/* ============================================================
+   SEARCH ENGINE
+   ============================================================ */
+let _searchQuery = '';
+const SEARCH_LIMIT = 6;
+
+function buildSearchIndex() {
+  const idx = [];
+  CONSTELLATIONS_DATA.forEach(c => idx.push({
+    type: 'constellation', id: c.id,
+    label: c.name, sub: c.season + ' · ' + c.latin,
+    text: (c.name + ' ' + c.latin + ' ' + c.myth + ' ' + c.season).toLowerCase()
+  }));
+  GALLERY_TILES.forEach(t => idx.push({
+    type: 'gallery', id: t.id,
+    label: t.title, sub: t.credit.split(' · ').slice(0,2).join(' · '),
+    text: (t.title + ' ' + t.desc).toLowerCase()
+  }));
+  SKY_EVENTS.forEach(e => idx.push({
+    type: 'sky', id: e.id,
+    label: e.name, sub: e.date + ' · ' + e.time,
+    text: (e.name + ' ' + e.desc).toLowerCase()
+  }));
+  Object.entries(VIDEO_CATALOG).forEach(([slug, v]) => idx.push({
+    type: 'video', id: slug,
+    label: v.title, sub: v.credit,
+    text: (v.title + ' ' + v.credit + ' jwst documentary space').toLowerCase()
+  }));
+  return idx;
+}
+let _searchIndex = null;
+
+function runSearch(query) {
+  if (!_searchIndex) _searchIndex = buildSearchIndex();
+  if (!query || query.length < 2) return [];
+  const q = query.toLowerCase();
+  return _searchIndex.filter(x => x.text.includes(q)).slice(0, SEARCH_LIMIT);
+}
+
+function renderSearchResults(results) {
+  const el = document.getElementById('search-results');
+  if (!el) return;
+  if (!results.length) {
+    el.innerHTML = '<div class="no-results">No results for “' + _searchQuery + '”</div>';
+    return;
+  }
+  el.innerHTML = results.map((r, i) =>
+    '<button class="search-result focusable" data-stype="' + r.type + '" data-sid="' + r.id + '" tabindex="0">' +
+    '<span class="sr-type">' + r.type + '</span>' +
+    '<span class="sr-label">' + r.label + '</span>' +
+    '<span class="sr-sub">' + r.sub + '</span>' +
+    '</button>'
+  ).join('');
+}
+
+function openSearch() {
+  _searchQuery = '';
+  const qEl = document.getElementById('search-query');
+  if (qEl) qEl.textContent = 'Type to search…';
+  renderSearchResults([]);
+  document.getElementById('search-overlay').classList.add('show');
+  APP.overlayOpen = 'search';
+  // Focus first key
+  const firstKey = document.querySelector('#search-keys .sk');
+  if (firstKey) focusEl(firstKey);
+}
+
+function searchKeyPress(ch) {
+  if (ch === 'DEL') {
+    _searchQuery = _searchQuery.slice(0, -1);
+  } else if (ch === 'CLR') {
+    _searchQuery = '';
+  } else {
+    _searchQuery += ch;
+  }
+  const qEl = document.getElementById('search-query');
+  if (qEl) qEl.textContent = _searchQuery || 'Type to search…';
+  renderSearchResults(runSearch(_searchQuery));
+}
+
+function activateSearchResult(el) {
+  const type = el.dataset.stype;
+  const id = el.dataset.sid;
+  closeOverlay();
+  if (type === 'constellation') { navigate('constellations'); setTimeout(() => openConstellationDetail(id), 300); }
+  else if (type === 'gallery')   { navigate('gallery'); setTimeout(() => openImageViewer(id), 300); }
+  else if (type === 'sky')       { navigate('sky'); setTimeout(() => openSkyDetail(id), 300); }
+  else if (type === 'video')     { openVideoPlayer(id); } // playerOrigin intentionally not set — search button is hidden on closeOverlay
+}
+
+/* ============================================================
    SKY CALENDAR — data + rendering
    ============================================================ */
 const SKY_EVENTS = [
-  { id: 'iss-pass',     date: 'Tonight',   time: '20:42 EDT', name: 'ISS pass',                 vis: 'aurora', access: 'free',     desc: 'A bright, silent arc from west-south-west to east-north-east. Magnitude −3.4, peak altitude 68°, visible for 5 min 52 sec.', kv: { Mag: '−3.4', Duration: '5m 52s', Direction: 'WSW → ENE' } },
-  { id: 'jupiter',      date: 'Tonight',   time: '21:11 EDT', name: 'Jupiter rising',           vis: 'aurora', access: 'free',     desc: 'Jupiter clears the eastern horizon — its four Galilean moons resolve in binoculars.', kv: { Mag: '−2.3', Altitude: '12°', Constellation: 'Aries' } },
-  { id: 'lyrids',       date: 'Apr 22',    time: '02:30 EDT', name: 'Lyrid meteor shower peak', vis: 'aurora', access: 'observer', desc: 'Up to 18 meteors per hour, radiant near Vega. Best after midnight when the radiant is high.', kv: { ZHR: '18/h', Radiant: 'Lyra', Moon: '23% waning' } },
-  { id: 'launch',       date: 'May 28',    time: '14:00 UTC', name: 'SpaceX · Starlink Group 8-23', vis: 'live',   access: 'observer', desc: 'Falcon 9 lifts a Starlink stack from LC-39A. Live stream with commentary from Dr. Phil Metzger.', kv: { Vehicle: 'Falcon 9', Pad: 'LC-39A', Window: '4 min' } },
-  { id: 'mercury',      date: 'Jun 04',    time: '05:48 EDT', name: 'Mercury · greatest elongation', vis: 'aurora', access: 'free',     desc: 'Mercury at its greatest western elongation — best morning visibility for the next 6 months.', kv: { Elongation: '24.9°', Mag: '+0.5', Constellation: 'Taurus' } },
-  { id: 'conjunction',  date: 'Jun 17',    time: '23:00 EDT', name: 'Saturn–Neptune conjunction',vis: 'aurora', access: 'free',     desc: 'Saturn passes 1.2° from Neptune in Aquarius. Use a 60mm scope to split them.', kv: { Separation: '1.2°', Constellation: 'Aquarius' } },
-  { id: 'solstice',     date: 'Jun 21',    time: '04:42 EDT', name: 'Summer solstice',          vis: 'none',   access: 'free',     desc: 'Longest day of the year in the northern hemisphere. The sun reaches its northernmost point.', kv: { 'Sun dec': '+23.44°' } },
-  { id: 'eclipse',      date: 'Aug 12',    time: '18:48 EDT', name: 'Partial lunar eclipse',    vis: 'live',   access: 'observer', desc: 'A 38% partial lunar eclipse visible across eastern North America. Live narration from Cerro Tololo.', kv: { Magnitude: '0.38', Duration: '2h 14m' } },
-  { id: 'perseids',     date: 'Aug 13',    time: '03:00 EDT', name: 'Perseid meteor shower peak', vis: 'aurora', access: 'free',     desc: 'The year’s most reliable meteor shower — up to 100 meteors per hour at peak from a dark site.', kv: { ZHR: '100/h', Radiant: 'Perseus', Moon: '52% waxing' } },
+  // ---- Tonight (May 24, 2026) ----
+  { id: 'iss-may24',    cat: 'iss',    date: 'Tonight',   time: '9:18 PM',   name: 'ISS pass — mag −3.2',           vis: 'aurora', access: 'free',
+    desc: 'A brilliant arc from WSW to ENE. Brightest pass this week at magnitude −3.2, peak altitude 72°. Visible for 5 min 14 sec if skies are clear.',
+    kv: { Mag: '−3.2', Duration: '5m 14s', 'Max alt': '72°', Direction: 'WSW → ENE', Visible: 'Naked eye' } },
+  { id: 'jupiter-may',  cat: 'planet', date: 'Tonight',   time: '9:40 PM',   name: 'Jupiter in Gemini',              vis: 'aurora', access: 'free',
+    desc: 'Jupiter is well-placed in the western evening sky at magnitude −2.0. Four Galilean moons are visible in any binoculars. Look for Io, Europa, Ganymede, and Callisto.',
+    kv: { Mag: '−2.0', Altitude: '28° W', Constellation: 'Gemini', Moons: 'Io · Europa · Ganymede · Callisto' } },
+  { id: 'mars-may',     cat: 'planet', date: 'Tonight',   time: '8:45 PM',   name: 'Mars in the northwest',          vis: 'aurora', access: 'free',
+    desc: 'Mars glows at magnitude +1.0 in the northwest sky as twilight fades. A good target for a small telescope — the tiny disk shows surface detail at high power.',
+    kv: { Mag: '+1.0', Altitude: '22° NW', Constellation: 'Cancer', Diameter: '7 arc-sec' } },
+  { id: 'virgo-may',    cat: 'planet', date: 'Tonight',   time: '10:15 PM',  name: 'Spica · brightest in Virgo',     vis: 'aurora', access: 'free',
+    desc: 'Spica, the brightest star in Virgo, reaches its highest point in the south. A blue-white binary 250 light-years away at magnitude +1.0, spinning at 20,000 km/h.',
+    kv: { Mag: '+1.0', Distance: '250 ly', Type: 'Spectroscopic binary', Altitude: '42° S' } },
+  // ---- May 27 ----
+  { id: 'newmoon-may',  cat: 'moon',   date: 'May 27',    time: 'Sunrise',   name: 'New Moon — dark sky window',     vis: 'none',   access: 'free',
+    desc: 'New Moon brings pitch-dark skies — best four nights of the month for deep-sky observing. Prime time for faint galaxies, nebulae, and the Milky Way core.',
+    kv: { Phase: 'New Moon', Illumination: '0%', 'Best for': 'Galaxies · nebulae · Milky Way', Bortle: 'Dominant factor' } },
+  // ---- June ----
+  { id: 'iss-jun01',    cat: 'iss',    date: 'Jun 1',     time: '10:02 PM',  name: 'ISS pass — mag −2.8',            vis: 'aurora', access: 'free',
+    desc: 'Magnitude −2.8 pass from SW to NE, peak altitude 61°. The ISS may briefly fade as it enters Earth\'s shadow near the horizon.',
+    kv: { Mag: '−2.8', Duration: '4m 48s', 'Max alt': '61°', Direction: 'SW → NE' } },
+  { id: 'mercury-jun',  cat: 'planet', date: 'Jun 4',     time: '5:30 AM',   name: 'Mercury · greatest elongation',  vis: 'aurora', access: 'free',
+    desc: 'Mercury reaches 24.9° greatest western elongation — best morning appearance of 2026. Look low in the east-northeast before sunrise. A small telescope shows a 50% illuminated phase.',
+    kv: { Elongation: '24.9° W', Mag: '+0.5', Altitude: '11° ENE', Constellation: 'Taurus' } },
+  { id: 'fullmoon-jun', cat: 'moon',   date: 'Jun 11',    time: '7:44 AM',   name: 'Strawberry Full Moon',            vis: 'none',   access: 'free',
+    desc: 'June\'s full moon rises at sunset and sets at dawn. Named the Strawberry Moon by Algonquin peoples who used it to time wild strawberry harvest season.',
+    kv: { Phase: 'Full Moon', Illumination: '100%', Rises: '8:12 PM', Sets: '5:51 AM', Distance: '405,000 km' } },
+  { id: 'saturn-jun',   cat: 'planet', date: 'Jun 15',    time: '1:00 AM',   name: 'Saturn · rings at 10°',          vis: 'aurora', access: 'free',
+    desc: 'Saturn is well-placed before dawn in Aquarius. Ring tilt is 10° — clearly visible in a 60mm scope. Titan, its largest moon, is easy in binoculars at magnitude +8.5.',
+    kv: { Mag: '+0.8', Altitude: '38° S', Constellation: 'Aquarius', 'Ring tilt': '10°', Moon: 'Titan +8.5' } },
+  { id: 'solstice',     cat: 'solar',  date: 'Jun 20',    time: '10:02 PM',  name: 'Summer Solstice 2026',            vis: 'none',   access: 'free',
+    desc: 'Longest day of the year in the northern hemisphere. The sun reaches its northernmost declination (+23.44°) and pauses before heading south. Astronomical summer begins.',
+    kv: { 'Sun Dec': '+23.44°', 'Day length': '15h 05m (40°N)', Sunrise: '5:23 AM', Sunset: '8:31 PM' } },
+  { id: 'newmoon-jun',  cat: 'moon',   date: 'Jun 25',    time: '9:32 PM',   name: 'New Moon — Milky Way season',    vis: 'none',   access: 'free',
+    desc: 'Second new moon of summer. The Milky Way core rises high in the south after midnight, perfect for astrophotography and star-party viewing.',
+    kv: { Phase: 'New Moon', Illumination: '0%', 'Milky Way': 'Core at meridian 1–3 AM', Best: 'Sagittarius region' } },
+  // ---- July ----
+  { id: 'aphelion',     cat: 'solar',  date: 'Jul 4',     time: '2:00 PM',   name: 'Earth at aphelion',               vis: 'none',   access: 'free',
+    desc: 'Earth reaches its farthest point from the Sun — 152.1 million km. The Sun is 3.4% fainter than at perihelion (January), but northern summer still dominates because axial tilt matters far more.',
+    kv: { Distance: '152.1M km', 'Sun size': '31.5 arc-min (smallest)', Speed: '29.3 km/s' } },
+  { id: 'iss-jul10',    cat: 'iss',    date: 'Jul 10',    time: '9:56 PM',   name: 'ISS pass series — 5 nights',     vis: 'aurora', access: 'free',
+    desc: 'The ISS enters a favorable visibility window for mid-northern latitudes. Multiple nightly passes including a magnitude −3.5 pass on July 12.',
+    kv: { Peak: 'Jul 12 · 9:48 PM', Mag: '−3.5', Duration: '6m 02s', Frequency: '~2 passes/night' } },
+  { id: 'fullmoon-jul', cat: 'moon',   date: 'Jul 10',    time: '4:37 PM',   name: 'Buck Full Moon',                  vis: 'none',   access: 'free',
+    desc: 'July\'s full moon rises in Capricornus. Named the Buck Moon by Algonquin peoples after the time when male deer grow their new antlers in velvet.',
+    kv: { Phase: 'Full Moon', Illumination: '100%', Constellation: 'Capricornus', Rises: '8:44 PM' } },
+  { id: 'delta-aq',     cat: 'meteor', date: 'Jul 28',    time: '1:30 AM',   name: 'S. Delta Aquariids peak',         vis: 'aurora', access: 'free',
+    desc: 'ZHR 25 meteors/hour from Aquarius. These slow-moving meteors favor southern observers, but long-trailed fireballs are visible from northern latitudes.',
+    kv: { ZHR: '25/h', Radiant: 'Aquarius', Moon: '15% waxing crescent', Best: 'Southern US / Mexico' } },
+  { id: 'newmoon-jul',  cat: 'moon',   date: 'Jul 24',    time: '1:11 PM',   name: 'New Moon — Perseid buildup',     vis: 'none',   access: 'free',
+    desc: 'July new moon falls two weeks before Perseids peak — ideal dark sky timing for early shower observers. Perseid activity begins building now.',
+    kv: { Phase: 'New Moon', Illumination: '0%', 'Perseid ZHR': 'Building (~10/h)' } },
+  // ---- August ----
+  { id: 'perseids-build', cat: 'meteor', date: 'Aug 5',   time: 'All night', name: 'Perseids — pre-peak rising',    vis: 'aurora', access: 'free',
+    desc: 'Perseid activity climbs significantly one week before peak. Earth is sweeping into Swift-Tuttle\'s densest debris trail. Expect 20–40 bright meteors per hour.',
+    kv: { ZHR: '20–40/h', Radiant: 'Perseus', Moon: 'Favorable (new moon Jul 24)', Status: 'Building to peak' } },
+  { id: 'fullmoon-aug', cat: 'moon',   date: 'Aug 9',     time: '3:55 AM',   name: 'Sturgeon Full Moon',              vis: 'none',   access: 'free',
+    desc: 'August\'s full moon coincides with peak Perseid activity. Moonlight will reduce observed ZHR by ~40% this year — seek shadow or face away from the moon.',
+    kv: { Phase: 'Full Moon', Illumination: '100%', 'Impact': 'Reduces Perseid ZHR ~40%', Rises: '8:18 PM' } },
+  { id: 'perseids',    cat: 'meteor', date: 'Aug 11',     time: '11:00 PM',  name: 'Perseid meteor shower peak',      vis: 'aurora', access: 'free',
+    desc: 'The year\'s most spectacular meteor shower. Up to 100 meteors/hour under ideal conditions; expect 50–70/h with the waning gibbous moon. Comet Swift-Tuttle debris hits the atmosphere at 59 km/s, creating fast bright streaks.',
+    kv: { ZHR: '100/h', 'Moon ZHR': '~60/h', Radiant: 'Perseus', Speed: '59 km/s', Duration: '~3 peak nights' } },
+  { id: 'saturn-close', cat: 'planet', date: 'Aug 14',    time: 'All night', name: 'Saturn · best of 2026',          vis: 'aurora', access: 'free',
+    desc: 'Saturn reaches its closest approach to Earth for 2026, well-placed all night in Aquarius. Ring tilt of 10° remains favorable. Titan magnitude +8.5 visible in binoculars.',
+    kv: { Mag: '+0.3', Altitude: '42° S at midnight', Constellation: 'Aquarius', Distance: '1.32 AU', Rings: '10° tilt' } },
+  { id: 'newmoon-aug', cat: 'moon',   date: 'Aug 22',     time: '11:58 PM',  name: 'New Moon — dark skies return',  vis: 'none',   access: 'free',
+    desc: 'Dark skies return after the August full moon. The Milky Way core is still high in the south — prime time for deep-sky imaging of Sagittarius and Scorpius.',
+    kv: { Phase: 'New Moon', Illumination: '0%', 'Milky Way': 'Core high in the south', Best: 'Sagittarius · Scorpius' } },
 ];
-function renderSkyEvents() {
+function renderSkyEvents(filter) {
+  const f = filter || APP.skyFilter || 'all';
+  APP.skyFilter = f;
   const tbody = document.getElementById('sky-events-body');
   if (!tbody) return;
-  tbody.innerHTML = SKY_EVENTS.map((e, i) => {
+  // Update pill active states
+  document.querySelectorAll('#sky-filter-pills .ss-pill').forEach(p => {
+    p.classList.toggle('gold', p.dataset.filter === f);
+  });
+  const events = f === 'all' ? SKY_EVENTS : SKY_EVENTS.filter(e => e.cat === f);
+  tbody.innerHTML = events.map((e, i) => {
     const visCell = e.vis === 'aurora' ? '<span class="ss-pill aurora">Visible</span>'
                   : e.vis === 'live'   ? '<span class="ss-pill ember">Live stream</span>'
                   : '<span style="color:var(--ss-space4);font-family:var(--ff-mono);">—</span>';
@@ -2818,7 +3479,16 @@ function renderSkyEvents() {
     </tr>`;
   }).join('');
 }
-function initSky() { renderSkyEvents(); }
+function initSky() {
+  renderSkyEvents();
+  // Wire filter pills
+  document.querySelectorAll('#sky-filter-pills .ss-pill').forEach(pill => {
+    if (!pill._filterWired) {
+      pill._filterWired = true;
+      pill.addEventListener('click', () => renderSkyEvents(pill.dataset.filter));
+    }
+  });
+}
 function openSkyDetail(id) {
   const e = SKY_EVENTS.find(x => x.id === id);
   if (!e) return;
@@ -2829,41 +3499,151 @@ function openSkyDetail(id) {
   kvBox.innerHTML = Object.entries(e.kv || {}).map(([k, v]) =>
     `<div class="kv"><div class="k">${k}</div><div class="v">${v}</div></div>`
   ).join('');
+  const detailSvgEl = document.getElementById('detail-svg');
+  if (detailSvgEl) detailSvgEl.innerHTML = '';
   document.getElementById('detail-overlay').classList.add('show');
   APP.overlayOpen = 'detail';
+}
+
+/* ============================================================
+   CONSTELLATION SVG DATA (viewBox 0 0 200 200)
+   lines: [x1,y1,x2,y2] pairs  |  stars: {x,y,r,a} — a=alpha (bright, gold)
+   ============================================================ */
+const CONST_STARS = {
+  'orion': {
+    lines: [[50,58,148,62],[50,58,68,118],[148,62,132,112],[68,118,100,120],[100,120,132,112],[68,118,58,172],[132,112,148,170]],
+    stars: [{x:50,y:58,r:4.5,a:true},{x:148,y:62,r:2.8,a:false},{x:68,y:118,r:2.2,a:false},{x:100,y:120,r:2.2,a:false},{x:132,y:112,r:2.2,a:false},{x:58,y:172,r:2.5,a:false},{x:148,y:170,r:4,a:true}]
+  },
+  'ursa-major': {
+    lines: [[90,48,108,75],[108,75,140,80],[140,80,122,52],[122,52,90,48],[122,52,150,42],[150,42,172,30],[172,30,188,18]],
+    stars: [{x:90,y:48,r:3,a:false},{x:108,y:75,r:2.5,a:false},{x:140,y:80,r:2.2,a:false},{x:122,y:52,r:2,a:false},{x:150,y:42,r:3.2,a:true},{x:172,y:30,r:2.5,a:false},{x:188,y:18,r:2.2,a:false}]
+  },
+  'cassiopeia': {
+    lines: [[22,112,60,80],[60,80,100,105],[100,105,142,72],[142,72,178,95]],
+    stars: [{x:22,y:112,r:2.5,a:false},{x:60,y:80,r:3.5,a:true},{x:100,y:105,r:3,a:false},{x:142,y:72,r:2.5,a:false},{x:178,y:95,r:2.2,a:false}]
+  },
+  'leo': {
+    lines: [[65,130,70,108],[70,108,80,88],[80,88,88,68],[88,68,102,62],[102,62,115,72],[115,72,80,88],[65,130,130,118],[130,118,158,130],[130,118,80,88]],
+    stars: [{x:65,y:130,r:3.8,a:true},{x:70,y:108,r:2.2,a:false},{x:80,y:88,r:3,a:false},{x:88,y:68,r:2,a:false},{x:102,y:62,r:2.2,a:false},{x:115,y:72,r:2,a:false},{x:130,y:118,r:2.5,a:false},{x:158,y:130,r:3,a:false}]
+  },
+  'scorpius': {
+    lines: [[70,48,90,58],[90,58,100,72],[100,72,112,78],[112,78,118,90],[118,90,122,105],[122,105,126,122],[126,122,132,140],[132,140,144,162],[144,162,154,172]],
+    stars: [{x:70,y:48,r:2,a:false},{x:90,y:58,r:2.2,a:false},{x:100,y:72,r:4.2,a:true},{x:112,y:78,r:2,a:false},{x:118,y:90,r:2,a:false},{x:122,y:105,r:2,a:false},{x:126,y:122,r:2,a:false},{x:132,y:140,r:2.2,a:false},{x:144,y:162,r:3.2,a:false},{x:154,y:172,r:2.8,a:false}]
+  },
+  'cygnus': {
+    lines: [[100,22,100,100],[100,100,100,178],[38,100,100,100],[100,100,162,100]],
+    stars: [{x:100,y:22,r:4,a:true},{x:100,y:100,r:2.5,a:false},{x:38,y:100,r:2.2,a:false},{x:162,y:100,r:2.2,a:false},{x:100,y:178,r:2.5,a:false}]
+  },
+  'andromeda': {
+    lines: [[38,100,78,100],[78,100,118,90],[118,90,158,78],[158,78,185,65],[78,100,68,68],[118,90,108,60]],
+    stars: [{x:38,y:100,r:3.2,a:true},{x:78,y:100,r:2.8,a:false},{x:118,y:90,r:2.5,a:false},{x:158,y:78,r:2,a:false},{x:185,y:65,r:1.8,a:false},{x:68,y:68,r:1.8,a:false},{x:108,y:60,r:1.8,a:false}]
+  },
+  'gemini': {
+    lines: [[65,32,128,28],[65,32,68,75],[128,28,125,72],[68,75,125,72],[68,75,72,118],[125,72,122,118],[72,118,122,118],[72,118,76,155],[122,118,118,155]],
+    stars: [{x:65,y:32,r:3.2,a:false},{x:128,y:28,r:3.8,a:true},{x:68,y:75,r:2,a:false},{x:125,y:72,r:2,a:false},{x:72,y:118,r:2,a:false},{x:122,y:118,r:2,a:false},{x:76,y:155,r:1.8,a:false},{x:118,y:155,r:1.8,a:false}]
+  },
+  'perseus': {
+    lines: [[100,38,88,62],[88,62,78,90],[78,90,62,115],[62,115,50,140],[88,62,115,75],[115,75,138,88],[138,88,155,105]],
+    stars: [{x:100,y:38,r:3.2,a:true},{x:88,y:62,r:2.5,a:false},{x:115,y:75,r:2.8,a:false},{x:78,y:90,r:2,a:false},{x:138,y:88,r:2,a:false},{x:62,y:115,r:2,a:false},{x:155,y:105,r:1.8,a:false}]
+  },
+  'virgo': {
+    lines: [[95,38,92,68],[92,68,85,100],[85,100,78,130],[78,130,65,158],[85,100,115,110],[115,110,142,95],[142,95,165,78],[92,68,120,60]],
+    stars: [{x:95,y:38,r:2,a:false},{x:92,y:68,r:2.2,a:false},{x:85,y:100,r:4,a:true},{x:78,y:130,r:2,a:false},{x:65,y:158,r:1.8,a:false},{x:115,y:110,r:2.2,a:false},{x:142,y:95,r:2,a:false},{x:165,y:78,r:2,a:false}]
+  },
+  'aquarius': {
+    lines: [[88,45,80,80],[80,80,72,110],[72,110,58,138],[58,138,48,165],[80,80,100,90],[100,90,120,85],[120,85,140,90],[100,90,95,120],[95,120,88,148]],
+    stars: [{x:88,y:45,r:3.2,a:true},{x:80,y:80,r:2,a:false},{x:100,y:90,r:2.5,a:false},{x:72,y:110,r:2,a:false},{x:120,y:85,r:2,a:false},{x:58,y:138,r:1.8,a:false},{x:95,y:120,r:1.8,a:false}]
+  },
+  'lyra': {
+    lines: [[100,28,78,72],[78,72,80,108],[80,108,120,108],[120,108,122,72],[122,72,100,28],[78,72,122,72]],
+    stars: [{x:100,y:28,r:4.5,a:true},{x:78,y:72,r:2.2,a:false},{x:122,y:72,r:2.2,a:false},{x:80,y:108,r:2,a:false},{x:120,y:108,r:2,a:false}]
+  }
+};
+
+function buildConstSVG(id) {
+  const d = CONST_STARS[id];
+  if (!d) return '';
+  const goldFill = 'rgba(212,164,74,0.92)';
+  const goldGlow = 'rgba(212,164,74,0.28)';
+  const starFill = 'rgba(251,243,223,0.88)';
+  const lineColor = 'rgba(212,164,74,0.38)';
+  const lines = d.lines.map(function(seg) {
+    return '<line x1="'+seg[0]+'" y1="'+seg[1]+'" x2="'+seg[2]+'" y2="'+seg[3]+'" stroke="'+lineColor+'" stroke-width="1.2" stroke-linecap="round"/>';
+  }).join('');
+  const stars = d.stars.map(function(s) {
+    if (s.a) {
+      return '<circle cx="'+s.x+'" cy="'+s.y+'" r="'+(s.r+3.5)+'" fill="'+goldGlow+'"/>'+
+             '<circle cx="'+s.x+'" cy="'+s.y+'" r="'+s.r+'" fill="'+goldFill+'"/>';
+    }
+    return '<circle cx="'+s.x+'" cy="'+s.y+'" r="'+s.r+'" fill="'+starFill+'"/>';
+  }).join('');
+  return '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">'+lines+stars+'</svg>';
 }
 
 /* ============================================================
    CONSTELLATIONS — data + rendering
    ============================================================ */
 const CONSTELLATIONS_DATA = [
-  { id: 'orion',      name: 'Orion',       latin: 'Orionis',         season: 'Winter',      visible: true,  myth: 'The Hunter — a Greek warrior with belt and sword. The most recognizable winter constellation.' },
-  { id: 'ursa-major', name: 'Ursa Major',  latin: 'Ursae Majoris',   season: 'Year-round',  visible: true,  myth: 'The Great Bear. Contains the Big Dipper asterism that points to Polaris.' },
-  { id: 'cassiopeia', name: 'Cassiopeia',  latin: 'Cassiopeiae',     season: 'Year-round',  visible: true,  myth: 'The vain Queen, chained to her throne. A bright W-shape opposite the Big Dipper.' },
-  { id: 'leo',        name: 'Leo',         latin: 'Leonis',          season: 'Spring',      visible: false, myth: 'The Nemean Lion slain by Hercules. The Sickle forms the lion’s head.' },
-  { id: 'scorpius',   name: 'Scorpius',    latin: 'Scorpii',         season: 'Summer',      visible: false, myth: 'The Scorpion that killed Orion. Antares — "rival of Mars" — burns red at its heart.' },
-  { id: 'cygnus',     name: 'Cygnus',      latin: 'Cygni',           season: 'Summer',      visible: false, myth: 'The Swan flying south along the Milky Way. The Northern Cross.' },
-  { id: 'andromeda',  name: 'Andromeda',   latin: 'Andromedae',      season: 'Fall',        visible: true,  myth: 'The chained princess. Inside her, M31 — the furthest object the naked eye can see.' },
-  { id: 'gemini',     name: 'Gemini',      latin: 'Geminorum',       season: 'Winter',      visible: true,  myth: 'The Twins Castor and Pollux. Source of the December Geminid meteor shower.' },
-  { id: 'perseus',    name: 'Perseus',     latin: 'Persei',          season: 'Fall/Winter', visible: true,  myth: 'The hero who beheaded Medusa. Algol — the Demon Star — winks at us every 2.87 days.' },
-  { id: 'virgo',      name: 'Virgo',       latin: 'Virginis',        season: 'Spring',      visible: false, myth: 'The goddess of harvest. Home to the Virgo galaxy cluster — thousands of galaxies.' },
-  { id: 'aquarius',   name: 'Aquarius',    latin: 'Aquarii',         season: 'Fall',        visible: true,  myth: 'The water-bearer pouring out a stream. Faint but ancient — a zodiac constellation.' },
-  { id: 'lyra',       name: 'Lyra',        latin: 'Lyrae',           season: 'Summer',      visible: false, myth: 'The Lyre of Orpheus. Anchored by Vega — fifth-brightest star in the sky.' },
+  { id: 'orion',      name: 'Orion',       latin: 'Orionis',         season: 'Winter',      circumpolar: false,
+    myth: 'The Hunter — a Greek warrior with belt and sword. Stars: Betelgeuse (red supergiant, 700x Sun\'s size), Rigel (blue supergiant, 47,000x Sun\'s luminosity). Home to the Great Nebula M42, a stellar nursery 1,344 light-years away.' },
+  { id: 'ursa-major', name: 'Ursa Major',  latin: 'Ursae Majoris',   season: 'Year-round',  circumpolar: true,
+    myth: 'The Great Bear. The Big Dipper asterism points to Polaris, the North Star. Never sets from latitudes above 41°N. Zeus placed the nymph Callisto among the stars to protect her from his jealous wife Hera.' },
+  { id: 'cassiopeia', name: 'Cassiopeia',  latin: 'Cassiopeiae',     season: 'Year-round',  circumpolar: true,
+    myth: 'The vain Queen, chained to her throne by Poseidon. Her W-shape sits opposite the Big Dipper, both circling Polaris. In 1572, a supernova in Cassiopeia was so bright it was visible in daylight.' },
+  { id: 'leo',        name: 'Leo',         latin: 'Leonis',          season: 'Spring',      circumpolar: false,
+    myth: 'The Nemean Lion slain by Hercules as his first labor. Regulus, the lion\'s heart, is the 21st brightest star and lies on the ecliptic. The Leonid meteor shower radiates from Leo each November.' },
+  { id: 'scorpius',   name: 'Scorpius',    latin: 'Scorpii',         season: 'Summer',      circumpolar: false,
+    myth: 'The Scorpion that killed Orion. Antares — "rival of Mars" — burns red at its heart: a supergiant 700 times wider than the Sun. The Milky Way runs through Scorpius, rich in star clusters.' },
+  { id: 'cygnus',     name: 'Cygnus',      latin: 'Cygni',           season: 'Summer',      circumpolar: false,
+    myth: 'The Swan flying south along the Milky Way. Deneb, its tail star, is one of the most luminous stars visible — 160,000 solar luminosities. Cygnus X-1, a famous black hole, lies inside this constellation.' },
+  { id: 'andromeda',  name: 'Andromeda',   latin: 'Andromedae',      season: 'Fall',        circumpolar: false,
+    myth: 'The chained princess, rescued by Perseus from the sea monster Cetus. Her galaxy M31, at 2.537 million light-years, contains a trillion stars and is on a collision course with our own Milky Way.' },
+  { id: 'gemini',     name: 'Gemini',      latin: 'Geminorum',       season: 'Winter',      circumpolar: false,
+    myth: 'The divine twins Castor and Pollux — one mortal, one immortal. Castor itself is a six-star system. The Geminid meteor shower, the year\'s most intense, radiates from Gemini each December.' },
+  { id: 'perseus',    name: 'Perseus',     latin: 'Persei',          season: 'Fall/Winter', circumpolar: false,
+    myth: 'The hero who beheaded Medusa and rescued Andromeda. Algol — the Demon Star — is an eclipsing binary that dims by 1.3 magnitudes every 2.87 days, visible to the naked eye without a telescope.' },
+  { id: 'virgo',      name: 'Virgo',       latin: 'Virginis',        season: 'Spring',      circumpolar: false,
+    myth: 'The goddess of harvest and justice, holding wheat sheaves. Spica is a blue-white binary at +1.0 magnitude. The Virgo galaxy cluster contains 2,000+ galaxies within a few degrees — a supercluster 65M light-years away.' },
+  { id: 'aquarius',   name: 'Aquarius',    latin: 'Aquarii',         season: 'Fall',        circumpolar: false,
+    myth: 'The Water-Bearer pouring out celestial waters. One of the oldest zodiac constellations, associated with Ganymede, cupbearer to the Olympian gods. Home to the Helix Nebula — the closest planetary nebula to Earth.' },
+  { id: 'lyra',       name: 'Lyra',        latin: 'Lyrae',           season: 'Summer',      circumpolar: false,
+    myth: 'The golden lyre of Orpheus, placed among the stars by Zeus after his death. Vega, the alpha star, is the fifth-brightest in the sky and was the North Star 12,000 years ago due to Earth\'s axial precession.' },
 ];
-function renderConstellations() {
+function renderConstellations(filter) {
+  const f = filter || APP.constFilter || 'all';
+  APP.constFilter = f;
   const grid = document.getElementById('const-grid');
   if (!grid) return;
-  grid.innerHTML = CONSTELLATIONS_DATA.map(c => `
-    <button class="const-card focusable" data-const="${c.id}" tabindex="0">
+  // Update filter pill states
+  document.querySelectorAll('#const-filter-pills .ss-pill').forEach(p => {
+    p.classList.toggle('gold', p.dataset.constfilter === f);
+  });
+  let data = CONSTELLATIONS_DATA;
+  if (f === 'visible')     data = data.filter(c => constVisibleNow(c.id));
+  else if (f === 'circumpolar') data = data.filter(c => c.circumpolar);
+  else if (f === 'winter') data = data.filter(c => c.season.toLowerCase().includes('winter'));
+  else if (f === 'summer') data = data.filter(c => c.season.toLowerCase().includes('summer'));
+  grid.innerHTML = data.map(c => {
+    const visible = constVisibleNow(c.id);
+    return `<button class="const-card focusable" data-const="${c.id}" tabindex="0">
+      <div class="const-svg">${buildConstSVG(c.id)}</div>
       <div class="season-badge">${c.season}</div>
       <div class="const-name">${c.name}</div>
       <div class="const-latin">${c.latin}</div>
       <div class="const-myth">${c.myth}</div>
-      ${c.visible ? '<span class="visible-pill">Visible tonight</span>' : ''}
-    </button>
-  `).join('');
+      ${visible ? '<span class="visible-pill">Visible tonight</span>' : ''}
+    </button>`;
+  }).join('');
 }
-function initConstellations() { renderConstellations(); }
+function initConstellations() {
+  renderConstellations();
+  document.querySelectorAll('#const-filter-pills .ss-pill').forEach(pill => {
+    if (!pill._constFilterWired) {
+      pill._constFilterWired = true;
+      pill.addEventListener('click', () => renderConstellations(pill.dataset.constfilter));
+    }
+  });
+}
 function openConstellationDetail(id) {
   const c = CONSTELLATIONS_DATA.find(x => x.id === id);
   if (!c) return;
@@ -2871,11 +3651,15 @@ function openConstellationDetail(id) {
   document.getElementById('detail-title').textContent = c.name;
   document.getElementById('detail-desc').textContent = c.myth + ' Best viewed during ' + c.season + ' from mid-northern latitudes. Look for it after twilight, climbing in the east.';
   const kvBox = document.getElementById('detail-kvs');
+  const visNow = constVisibleNow(c.id);
   kvBox.innerHTML = `
-    <div class="kv"><div class="k">Best viewing</div><div class="v">${c.season}</div></div>
-    <div class="kv"><div class="k">Tonight</div><div class="v">${c.visible ? 'Visible from Brooklyn' : 'Below the horizon'}</div></div>
+    <div class="kv"><div class="k">Season</div><div class="v">${c.season}</div></div>
+    <div class="kv"><div class="k">Tonight</div><div class="v">${c.circumpolar ? 'Circumpolar — always visible' : visNow ? 'Visible from ' + APP.location : 'Below horizon this month'}</div></div>
     <div class="kv"><div class="k">Latin name</div><div class="v">${c.latin}</div></div>
+    ${c.circumpolar ? '<div class="kv"><div class="k">Type</div><div class="v">Never sets from 40°N</div></div>' : ''}
   `;
+  const detailSvgEl = document.getElementById('detail-svg');
+  if (detailSvgEl) detailSvgEl.innerHTML = buildConstSVG(id);
   document.getElementById('detail-overlay').classList.add('show');
   APP.overlayOpen = 'detail';
 }
@@ -2884,11 +3668,16 @@ function openConstellationDetail(id) {
    GALLERY — 5-tile mosaic
    ============================================================ */
 const GALLERY_TILES = [
-  { id: 'pillars',    title: 'The Pillars of Creation', desc: 'Eagle Nebula · M16 · 6,500 light years away. Webb peers through the dust to find protostars hidden inside.', src: 'https://esawebb.org/media/archives/images/screen/weic2316a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022', large: true },
-  { id: 'carina',     title: 'Cosmic Cliffs · Carina',  desc: 'A 7,600-light-year edge of the Carina Nebula. New stars are born inside cliffs of cold hydrogen.', src: 'https://esawebb.org/media/archives/images/screen/weic2205a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
-  { id: 'tarantula',  title: 'Tarantula Nebula',         desc: '30 Doradus in the Large Magellanic Cloud — the brightest star-forming region in the local universe.', src: 'https://esawebb.org/media/archives/images/screen/weic2208a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
-  { id: 'stephans',   title: 'Stephan’s Quintet',  desc: 'A galaxy group 290 million light-years away. Four of the five are in a slow gravitational dance.', src: 'https://esawebb.org/media/archives/images/screen/weic2310a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
-  { id: 'deep-field', title: 'SMACS 0723 — First Deep Field', desc: 'The deepest infrared image of the universe ever taken. Every smear of light is a galaxy.', src: 'https://esawebb.org/media/archives/images/screen/weic2218a.jpg', credit: 'NASA · ESA · CSA · STScI · 2022' },
+  { id: 'pillars',    title: 'The Pillars of Creation',          desc: 'Eagle Nebula · M16 · 6,500 light years away. Webb peers through the dust to find protostars hidden inside.', src: 'https://esawebb.org/media/archives/images/screen/weic2316a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022', large: true },
+  { id: 'carina',     title: 'Cosmic Cliffs · Carina',           desc: 'A 7,600-light-year edge of the Carina Nebula. New stars are born inside cliffs of cold hydrogen.', src: 'https://esawebb.org/media/archives/images/screen/weic2205a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { id: 'tarantula',  title: 'Tarantula Nebula · 30 Doradus',    desc: '30 Doradus in the Large Magellanic Cloud — the brightest star-forming region in the local universe.', src: 'https://esawebb.org/media/archives/images/screen/weic2208a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { id: 'stephans',   title: 'Stephan\'s Quintet',               desc: 'A galaxy group 290 million light-years away. Four of the five are in a slow gravitational dance.', src: 'https://esawebb.org/media/archives/images/screen/weic2310a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { id: 'deep-field', title: 'SMACS 0723 · First JWST Deep Field', desc: 'The deepest infrared image of the universe ever taken. Every smear of light is a galaxy.', src: 'https://esawebb.org/media/archives/images/screen/weic2218a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { id: 'cartwheel',  title: 'Cartwheel Galaxy',                  desc: 'A ring galaxy 500 million light-years away in Sculptor. Formed when a smaller galaxy punched through its center.', src: 'https://esawebb.org/media/archives/images/screen/weic2212a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { id: 'wolf-rayet', title: 'Wolf-Rayet 124',                    desc: 'A massive star blowing off its outer layers at 1,000 km/s. Webb captured the nebula it creates in unprecedented detail.', src: 'https://esawebb.org/media/archives/images/screen/weic2308a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2023' },
+  { id: 'horsehead',  title: 'Horsehead Nebula',                  desc: 'The iconic Horsehead in Orion, 1,300 light-years away. JWST reveals filaments never seen in visible light.', src: 'https://esawebb.org/media/archives/images/screen/weic2409a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2024' },
+  { id: 's-ring',     title: 'Southern Ring Nebula · NGC 3132',   desc: 'A dying star 2,000 light-years away in Vela. Webb shows two stars at its center — one alive, one fading.', src: 'https://esawebb.org/media/archives/images/screen/weic2204a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { id: 'ngc346',     title: 'NGC 346 · Star Nursery in SMC',     desc: 'Young stars forming in a bar-shaped cluster 200,000 light-years away in our companion galaxy.', src: 'https://esawebb.org/media/archives/images/screen/weic2302a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
 ];
 function renderGallery() {
   const mosaic = document.getElementById('gal-mosaic');
@@ -2907,62 +3696,139 @@ function renderGallery() {
 }
 function initGallery() { renderGallery(); }
 function openImageViewer(id) {
-  const t = GALLERY_TILES.find(x => x.id === id);
+  APP.viewerIdx = GALLERY_TILES.findIndex(x => x.id === id);
+  if (APP.viewerIdx < 0) APP.viewerIdx = 0;
+  renderViewer(APP.viewerIdx);
+  document.getElementById('image-viewer').classList.add('show');
+  APP.overlayOpen = 'viewer';
+}
+function renderViewer(idx) {
+  const t = GALLERY_TILES[idx];
   if (!t) return;
   document.getElementById('viewer-img').style.backgroundImage = "url('" + t.src + "')";
   document.getElementById('viewer-title').textContent = t.title;
   document.getElementById('viewer-desc').textContent = t.desc;
   document.getElementById('viewer-credit').textContent = t.credit;
-  document.getElementById('image-viewer').classList.add('show');
-  APP.overlayOpen = 'viewer';
+  const ctr = document.getElementById('viewer-counter');
+  if (ctr) ctr.textContent = (idx + 1) + ' / ' + GALLERY_TILES.length;
+}
+function viewerPrev() {
+  APP.viewerIdx = (APP.viewerIdx - 1 + GALLERY_TILES.length) % GALLERY_TILES.length;
+  renderViewer(APP.viewerIdx);
+}
+function viewerNext() {
+  APP.viewerIdx = (APP.viewerIdx + 1) % GALLERY_TILES.length;
+  renderViewer(APP.viewerIdx);
 }
 
 /* ============================================================
-   AMBIENT — bg cycle + clock + settings overlay
+   AMBIENT — Ken Burns cycle + auto-hide UI + settings overlay
    ============================================================ */
-const AMB_CAPTIONS = [
-  'Cosmic Cliffs · JWST NIRCam + MIRI · 2022',
-  'Pillars of Creation · JWST NIRCam · 2022',
-  'Tarantula Nebula · JWST NIRCam · 2022',
-  'Stephan’s Quintet · JWST NIRCam + MIRI · 2022',
-  'SMACS 0723 · JWST NIRCam · 2022',
+const AMB_DATA = [
+  { caption: 'Cosmic Cliffs · Carina Nebula',          credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { caption: 'Pillars of Creation · Eagle Nebula M16',  credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { caption: 'Tarantula Nebula · 30 Doradus',           credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { caption: 'Stephan\'s Quintet · 290M light-years',   credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { caption: 'SMACS 0723 · First JWST Deep Field',      credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { caption: 'Cartwheel Galaxy · 500M light-years',     credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { caption: 'NGC 346 · Star cluster in the SMC',       credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
+  { caption: 'NGC 1433 · Barred spiral galaxy',         credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
+  { caption: 'Wolf-Rayet 124 · Stellar wind nebula',   credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2023' },
+  { caption: 'Horsehead Nebula · Orion Molecular Cloud', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2024' },
+  { caption: 'Southern Ring Nebula · NGC 3132',         credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { caption: 'NGC 7469 · Interacting galaxy pair',      credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { caption: 'NGC 5068 · Face-on spiral galaxy',        credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
+  { caption: 'IC 5332 · Spiral galaxy at 29M ly',       credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
 ];
+
+const KB_CLASSES = ['kb-zoom-in', 'kb-zoom-out', 'kb-pan-r', 'kb-pan-l'];
+let _lastKbIdx = -1;
+
+function pickKenBurns() {
+  let idx;
+  do { idx = Math.floor(Math.random() * KB_CLASSES.length); } while (idx === _lastKbIdx && KB_CLASSES.length > 1);
+  _lastKbIdx = idx;
+  return KB_CLASSES[idx];
+}
+
+let _ambUiHideTimer = null;
+function showAmbUI() {
+  const el = document.getElementById('ambient');
+  if (!el) return;
+  el.classList.add('amb-ui-visible');
+  if (_ambUiHideTimer) clearTimeout(_ambUiHideTimer);
+  _ambUiHideTimer = setTimeout(() => {
+    if (!APP.ambSettingsOpen) el.classList.remove('amb-ui-visible');
+  }, 8000);
+}
+
+function updateAmbCaption(idx) {
+  const safe = ((idx % AMB_DATA.length) + AMB_DATA.length) % AMB_DATA.length;
+  const d = AMB_DATA[safe];
+  const cap = document.getElementById('amb-caption');
+  const cred = document.getElementById('amb-credit');
+  if (cap) cap.textContent = d.caption;
+  if (cred) cred.textContent = d.credit;
+  showAmbUI();
+}
+
 function initAmbient() {
-  const bgs = document.querySelectorAll('#ambient .amb-bg');
-  bgs.forEach(b => { if (!b.style.backgroundImage) b.style.backgroundImage = "url('" + b.dataset.src + "')"; });
+  const bgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
+  // Lazy-load background images
+  bgs.forEach(b => {
+    if (!b.style.backgroundImage && b.dataset.src) {
+      b.style.backgroundImage = "url('" + b.dataset.src + "')";
+    }
+  });
   APP.ambBgIndex = 0;
-  bgs.forEach((b, i) => b.classList.toggle('active', i === 0));
-  document.getElementById('amb-caption').textContent = AMB_CAPTIONS[0];
+  // Remove all KB classes, reset opacity, activate first
+  bgs.forEach((b, i) => {
+    b.classList.remove('active', ...KB_CLASSES);
+    if (i === 0) {
+      b.classList.add('active', pickKenBurns());
+    }
+  });
+  updateAmbCaption(0);
+
   if (APP.ambBgInterval) clearInterval(APP.ambBgInterval);
   APP.ambBgInterval = setInterval(() => {
-    bgs[APP.ambBgIndex].classList.remove('active');
+    bgs[APP.ambBgIndex].classList.remove('active', ...KB_CLASSES);
     APP.ambBgIndex = (APP.ambBgIndex + 1) % bgs.length;
-    bgs[APP.ambBgIndex].classList.add('active');
-    document.getElementById('amb-caption').textContent = AMB_CAPTIONS[APP.ambBgIndex];
+    const next = bgs[APP.ambBgIndex];
+    next.classList.add('active', pickKenBurns());
+    updateAmbCaption(APP.ambBgIndex);
   }, 30_000);
 
   function tickAmb() {
     const d = new Date();
     const h = d.getHours();
     const m = d.getMinutes();
-    document.getElementById('amb-clock').textContent = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+    const el = document.getElementById('amb-clock');
+    if (el) el.textContent = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
   }
   tickAmb();
   if (APP.ambClockInterval) clearInterval(APP.ambClockInterval);
-  APP.ambClockInterval = setInterval(tickAmb, 30_000);
+  APP.ambClockInterval = setInterval(tickAmb, 60_000);
 
-  // Start idle
   APP.ambSettingsOpen = false;
-  document.getElementById('ambient').classList.remove('with-settings');
+  const screen = document.getElementById('ambient');
+  screen.classList.remove('with-settings');
 }
+
 function stopAmbient() {
   if (APP.ambBgInterval) { clearInterval(APP.ambBgInterval); APP.ambBgInterval = null; }
   if (APP.ambClockInterval) { clearInterval(APP.ambClockInterval); APP.ambClockInterval = null; }
+  if (_ambUiHideTimer) { clearTimeout(_ambUiHideTimer); _ambUiHideTimer = null; }
+  const screen = document.getElementById('ambient');
+  if (screen) screen.classList.remove('amb-ui-visible');
 }
+
 function openAmbSettings() {
   APP.ambSettingsOpen = true;
-  document.getElementById('ambient').classList.add('with-settings');
-  // focus first setting
+  syncAmbUI();
+  const screen = document.getElementById('ambient');
+  screen.classList.add('with-settings', 'amb-ui-visible');
+  if (_ambUiHideTimer) { clearTimeout(_ambUiHideTimer); _ambUiHideTimer = null; }
   setTimeout(() => {
     const first = document.querySelector('#ambient .amb-settings .focusable');
     if (first) focusEl(first);
@@ -2971,37 +3837,125 @@ function openAmbSettings() {
 function closeAmbSettings() {
   APP.ambSettingsOpen = false;
   document.getElementById('ambient').classList.remove('with-settings');
+  // Let UI auto-hide in 8s
+  showAmbUI();
   if (focused) { focused.classList.remove('focused'); focused = null; }
 }
 
 const AMB_VALUES = {
-  collection: ['JWST', 'ESO', 'All'],
-  delay: ['5 min', '10 min', '30 min'],
-  shift: ['On', 'Off'],
+  channel: ['All JWST', 'Deep Field', 'Nebulae', 'Galaxies', 'Solar System'],
+  sound:   ['Off', 'Cosmos', 'Mission Audio'],
+  delay:   ['5 min', '10 min', '30 min'],
+  shift:   ['On', 'Off'],
 };
-const AMB_STATE = { collection: 0, delay: 1, shift: 0 };
+function loadAmbState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('ss-amb-state') || '{}');
+    return {
+      channel: saved.channel || 0,
+      sound:   saved.sound   || 0,
+      delay:   saved.delay   || 1,
+      shift:   saved.shift   || 0,
+    };
+  } catch(_) { return { channel: 0, sound: 0, delay: 1, shift: 0 }; }
+}
+const AMB_STATE = loadAmbState();
+function syncAmbUI() {
+  const idMap = { channel: 'amb-channel-value', sound: 'amb-sound-value', delay: 'amb-delay-value', shift: 'amb-shift-value' };
+  Object.entries(idMap).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = AMB_VALUES[k][AMB_STATE[k]];
+  });
+}
 function cycleAmbSetting(action) {
-  const key = action === 'amb-collection' ? 'collection' : action === 'amb-delay' ? 'delay' : 'shift';
+  const map = { 'amb-channel': 'channel', 'amb-sound': 'sound', 'amb-delay': 'delay', 'amb-shift': 'shift', 'amb-collection': 'channel' };
+  const key = map[action];
+  if (!key) return;
   AMB_STATE[key] = (AMB_STATE[key] + 1) % AMB_VALUES[key].length;
   const v = AMB_VALUES[key][AMB_STATE[key]];
-  const el = document.getElementById('amb-' + key + '-value');
+  const idMap = { channel: 'amb-channel-value', sound: 'amb-sound-value', delay: 'amb-delay-value', shift: 'amb-shift-value' };
+  const el = document.getElementById(idMap[key]);
   if (el) el.textContent = v;
+  try { localStorage.setItem('ss-amb-state', JSON.stringify(AMB_STATE)); } catch(_) {}
+}
+
+function advanceAmbient() {
+  const bgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
+  if (!bgs.length) return;
+  bgs[APP.ambBgIndex].classList.remove('active', ...KB_CLASSES);
+  APP.ambBgIndex = (APP.ambBgIndex + 1) % bgs.length;
+  const next = bgs[APP.ambBgIndex];
+  next.classList.add('active', pickKenBurns());
+  updateAmbCaption(APP.ambBgIndex);
+  // Reset interval so dwell resets from this image
+  if (APP.ambBgInterval) clearInterval(APP.ambBgInterval);
+  APP.ambBgInterval = setInterval(() => {
+    bgs[APP.ambBgIndex].classList.remove('active', ...KB_CLASSES);
+    APP.ambBgIndex = (APP.ambBgIndex + 1) % bgs.length;
+    bgs[APP.ambBgIndex].classList.add('active', pickKenBurns());
+    updateAmbCaption(APP.ambBgIndex);
+  }, 30_000);
+}
+
+/* ============================================================
+   TONIGHT WHISPER — ISS / aurora banner
+   ============================================================ */
+let _whisperTimer = null;
+function showWhisper(text, sub, durationMs) {
+  const banner = document.getElementById('tonight-whisper');
+  const textEl = document.getElementById('whisper-text');
+  const subEl = document.getElementById('whisper-sub');
+  if (!banner) return;
+  if (textEl) textEl.innerHTML = text;
+  if (subEl) subEl.textContent = sub || '';
+  banner.classList.add('show');
+  if (_whisperTimer) clearTimeout(_whisperTimer);
+  _whisperTimer = setTimeout(() => dismissWhisper(), durationMs || 20000);
+}
+function dismissWhisper() {
+  const banner = document.getElementById('tonight-whisper');
+  if (banner) banner.classList.remove('show');
+  if (_whisperTimer) { clearTimeout(_whisperTimer); _whisperTimer = null; }
+}
+
+async function fetchISSPass() {
+  try {
+    const pos = await fetch('https://api.wheretheiss.at/v1/satellites/25544').then(r => r.json());
+    if (!pos || !pos.latitude) return;
+    // Display current ISS position as a "visible soon" mock
+    // (real pass prediction requires N2YO API with lat/lng)
+    const lat = pos.latitude.toFixed(1);
+    const lng = pos.longitude.toFixed(1);
+    const altitude = pos.altitude ? pos.altitude.toFixed(0) + ' km' : '~408 km';
+    // Show in the tonight screen meta card if it exists
+    const issEl = document.getElementById('iss-position');
+    if (issEl) issEl.textContent = lat + '°, ' + lng + '° · Alt ' + altitude;
+    // Simulate a pass alert (in a real app, use N2YO pass prediction API)
+    // Show whisper if we haven\'t shown one yet this session
+    if (!sessionStorage.getItem('whisper-shown')) {
+      sessionStorage.setItem('whisper-shown', '1');
+      // Delay 8s so the user has settled on tonight screen
+      setTimeout(() => {
+        showWhisper(
+          'ISS passing overhead in <strong>~12 min</strong>',
+          'Look NW · Peak altitude 68° · Magnitude −3.4',
+          18000
+        );
+      }, 8000);
+    }
+  } catch(e) { /* silent */ }
 }
 
 /* ============================================================
    OVERLAY MANAGEMENT (detail / image viewer / search)
    ============================================================ */
-function openSearch() {
-  document.getElementById('search-overlay').classList.add('show');
-  APP.overlayOpen = 'search';
-}
 function closeOverlay() {
   if (!APP.overlayOpen) return;
   if (APP.overlayOpen === 'detail') document.getElementById('detail-overlay').classList.remove('show');
   if (APP.overlayOpen === 'viewer') document.getElementById('image-viewer').classList.remove('show');
   if (APP.overlayOpen === 'search') document.getElementById('search-overlay').classList.remove('show');
   APP.overlayOpen = null;
-  // Restore focus to whatever was focused before (it's still tracked)
+  // Restore focus to whatever was focused before (it\'s still tracked)
   if (focused) try { focused.focus({ preventScroll: true }); } catch(_) {}
 }
 
@@ -3013,6 +3967,218 @@ function checkFreeWindow() {
   if (APP.token) return false; // signed-in: never lock
   if (!APP.guest) return false;  // not yet committed to guest
   return (Date.now() - APP.firstSeen) > FREE_WINDOW_MS;
+}
+
+/* ============================================================
+   VIDEO PLAYER
+   ============================================================ */
+const VIDEO_CATALOG = {
+  'jwst-first-light':  { playback_id: 'VZtzUzGRv02OhRnZCxcNg3', title: 'JWST — First Light',             credit: 'NASA · ESA · CSA · STScI' },
+  'cosmic-cliffs-tour':{ playback_id: 'VZtzUzGRv02OhRnZCxcNg3', title: 'Cosmic Cliffs — A Tour',          credit: 'NASA · ESA · CSA · STScI · CC BY 4.0' },
+  'stephan-quintet':   { playback_id: 'VZtzUzGRv02OhRnZCxcNg3', title: "Stephan's Quintet Deep Dive",     credit: 'NASA · ESA · CSA · STScI · CC BY 4.0' },
+};
+
+function openVideoPlayer(slug) {
+  const content = VIDEO_CATALOG[slug];
+  if (!content) return;
+  playVideo(content);
+}
+
+function playVideo(content) {
+  APP.playerContent = content;
+  navigate('player');
+}
+
+function _playerOnWaiting() {
+  const s = document.getElementById('player-spinner');
+  if (s) s.classList.remove('hidden');
+}
+function _playerOnPlaying() {
+  const s = document.getElementById('player-spinner');
+  if (s) s.classList.add('hidden');
+  document.getElementById('player-tap-to-play')?.classList.remove('show');
+}
+function _playerOnEnded() {
+  const origin = APP.playerOrigin;
+  navigate(APP.prevScreen || 'browse');
+  if (origin && document.contains(origin)) setTimeout(() => focusEl(origin), 150);
+  APP.playerOrigin = null;
+  APP.playerContent = null;
+}
+function _playerOnError() {
+  document.getElementById('player-spinner')?.classList.add('hidden');
+  document.getElementById('player-error-msg')?.classList.add('show');
+}
+
+function _playerAttachListeners(video) {
+  video.addEventListener('waiting', _playerOnWaiting);
+  video.addEventListener('playing', _playerOnPlaying);
+  video.addEventListener('ended',   _playerOnEnded);
+  video.addEventListener('error',   _playerOnError);
+}
+function _playerRemoveListeners(video) {
+  video.removeEventListener('waiting', _playerOnWaiting);
+  video.removeEventListener('playing', _playerOnPlaying);
+  video.removeEventListener('ended',   _playerOnEnded);
+  video.removeEventListener('error',   _playerOnError);
+}
+
+function initPlayer() {
+  const video   = document.getElementById('player-video');
+  const spinner = document.getElementById('player-spinner');
+  const titleEl = document.getElementById('player-title');
+  const creditEl= document.getElementById('player-credit');
+  if (!video || !APP.playerContent) return;
+
+  titleEl.textContent  = APP.playerContent.title  || '';
+  creditEl.textContent = APP.playerContent.credit || '';
+
+  // Reset all overlay state
+  spinner.classList.remove('hidden');
+  document.getElementById('player-tap-to-play')?.classList.remove('show');
+  document.getElementById('player-error-msg')?.classList.remove('show');
+  document.getElementById('player-paused-badge')?.classList.remove('show');
+  const fill = document.getElementById('player-fill');
+  if (fill) fill.style.width = '0%';
+  const timeEl = document.getElementById('player-time');
+  if (timeEl) timeEl.textContent = '0:00 / 0:00';
+
+  // Tear down previous session
+  if (APP.playerHls) { APP.playerHls.destroy(); APP.playerHls = null; }
+  _playerRemoveListeners(video);
+
+  const src = 'https://stream.mux.com/' + APP.playerContent.playback_id + '.m3u8';
+
+  function _tryPlay() {
+    video.play().catch(() => {
+      // Autoplay blocked — show tap-to-play prompt
+      spinner.classList.add('hidden');
+      document.getElementById('player-tap-to-play')?.classList.add('show');
+    });
+  }
+
+  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+    APP.playerHls = new Hls({ lowLatencyMode: false });
+    APP.playerHls.loadSource(src);
+    APP.playerHls.attachMedia(video);
+    APP.playerHls.on(Hls.Events.MANIFEST_PARSED, () => {
+      spinner.classList.add('hidden');
+      _tryPlay();
+    });
+    APP.playerHls._recoverAttempts = 0;
+    APP.playerHls.on(Hls.Events.ERROR, (_, data) => {
+      if (!data.fatal) return;
+      console.error('[player] HLS fatal error', data.type, data.details);
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        APP.playerHls.startLoad();
+      } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        APP.playerHls._recoverAttempts = (APP.playerHls._recoverAttempts || 0) + 1;
+        if (APP.playerHls._recoverAttempts === 1) {
+          APP.playerHls.recoverMediaError();
+        } else if (APP.playerHls._recoverAttempts === 2) {
+          APP.playerHls.swapAudioCodec();
+          APP.playerHls.recoverMediaError();
+        } else {
+          _playerOnError();
+        }
+      } else {
+        _playerOnError();
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = src;
+    video.addEventListener('canplay', () => { spinner.classList.add('hidden'); }, { once: true });
+    _tryPlay();
+  } else {
+    _playerOnError();
+    return;
+  }
+
+  _playerAttachListeners(video);
+  showPlayerControls();
+
+  if (APP.playerProgressInterval) clearInterval(APP.playerProgressInterval);
+  APP.playerProgressInterval = setInterval(updatePlayerProgress, 500);
+}
+
+function stopPlayer() {
+  const video = document.getElementById('player-video');
+  if (APP.playerHls) { APP.playerHls.destroy(); APP.playerHls = null; }
+  if (video) {
+    video.pause();
+    _playerRemoveListeners(video);
+    video.removeAttribute('src');
+    video.load();
+  }
+  if (APP.playerControlsTimer) { clearTimeout(APP.playerControlsTimer); APP.playerControlsTimer = null; }
+  if (APP.playerProgressInterval) { clearInterval(APP.playerProgressInterval); APP.playerProgressInterval = null; }
+  // Reset all overlay state so next session starts clean
+  document.getElementById('player-controls')?.classList.remove('visible');
+  document.getElementById('player-paused-badge')?.classList.remove('show');
+  document.getElementById('player-tap-to-play')?.classList.remove('show');
+  document.getElementById('player-error-msg')?.classList.remove('show');
+  document.getElementById('player-spinner')?.classList.add('hidden');
+  const fill = document.getElementById('player-fill');
+  if (fill) fill.style.width = '0%';
+  const timeEl = document.getElementById('player-time');
+  if (timeEl) timeEl.textContent = '0:00 / 0:00';
+  APP.playerContent = null;
+}
+
+function showPlayerControls() {
+  const ctrl = document.getElementById('player-controls');
+  if (ctrl) ctrl.classList.add('visible');
+  if (APP.playerControlsTimer) clearTimeout(APP.playerControlsTimer);
+  APP.playerControlsTimer = setTimeout(() => {
+    const video = document.getElementById('player-video');
+    if (video && !video.paused) {
+      const ctrl2 = document.getElementById('player-controls');
+      if (ctrl2) ctrl2.classList.remove('visible');
+    }
+  }, 3500);
+}
+
+function togglePlayerPause() {
+  const video = document.getElementById('player-video');
+  const badge = document.getElementById('player-paused-badge');
+  const tapEl = document.getElementById('player-tap-to-play');
+  if (!video) return;
+  if (video.paused) {
+    if (tapEl) tapEl.classList.remove('show');
+    if (badge) badge.classList.remove('show');
+    video.play().catch(() => {
+      if (tapEl) tapEl.classList.add('show');
+    });
+  } else {
+    video.pause();
+    if (badge) badge.classList.add('show');
+  }
+  showPlayerControls();
+}
+
+function seekVideo(deltaSec) {
+  const video = document.getElementById('player-video');
+  if (!video || !isFinite(video.duration)) return;
+  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + deltaSec));
+  updatePlayerProgress();
+}
+
+function updatePlayerProgress() {
+  const video   = document.getElementById('player-video');
+  const fill    = document.getElementById('player-fill');
+  const timeEl  = document.getElementById('player-time');
+  if (!video || !fill || !timeEl) return;
+  const cur = video.currentTime || 0;
+  const dur = video.duration   || 0;
+  fill.style.width = dur > 0 ? ((cur / dur) * 100).toFixed(2) + '%' : '0%';
+  timeEl.textContent = fmtTime(cur) + ' / ' + fmtTime(dur);
+}
+
+function fmtTime(s) {
+  if (!isFinite(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + String(sec).padStart(2, '0');
 }
 
 /* ============================================================

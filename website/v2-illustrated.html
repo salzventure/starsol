@@ -1,0 +1,1360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>StarSol — Astronomy for your TV</title>
+  <meta name="description" content="StarSol streams ambient cosmos, 4K JWST imagery, and live sky events to Google TV and Android TV.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28' fill='%23e2b96f'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+    :root {
+      /* Backgrounds — deep space */
+      --bg-void:        #05070d;
+      --bg-navy:        #0a0e1a;
+      --bg-navy-2:      #0f1422;
+      --bg-navy-3:      #161c2e;
+      --bg-overlay:     rgba(5, 7, 13, 0.72);
+      --bg-overlay-deep:rgba(5, 7, 13, 0.88);
+
+      /* Star gold */
+      --gold:           #e2b96f;
+      --gold-bright:    #f0cd8a;
+      --gold-dim:       #b8945a;
+      --gold-glow:      rgba(226, 185, 111, 0.45);
+      --gold-line:      rgba(226, 185, 111, 0.40);
+      --gold-faint:     rgba(226, 185, 111, 0.12);
+
+      /* Observatory red */
+      --red-observe:    #8a1f1f;
+      --red-dim:        rgba(138, 31, 31, 0.35);
+
+      /* Text */
+      --text-primary:   #f4f1ea;
+      --text-secondary: #b8b3a8;
+      --text-tertiary:  #6b6a66;
+      --text-dim:       #3d3d3a;
+
+      /* Star whites */
+      --star-white:     #ffffff;
+      --star-line:      rgba(255, 255, 255, 0.25);
+      --star-faint:     rgba(255, 255, 255, 0.40);
+
+      /* Borders */
+      --border-faint:   rgba(244, 241, 234, 0.08);
+      --border-gold:    rgba(226, 185, 111, 0.22);
+
+      /* Spacing scale */
+      --s-1:  4px;
+      --s-2:  8px;
+      --s-3:  12px;
+      --s-4:  16px;
+      --s-5:  24px;
+      --s-6:  32px;
+      --s-7:  48px;
+      --s-8:  64px;
+      --s-9:  96px;
+      --s-10: 128px;
+      --s-11: 192px;
+
+      --r-sm: 2px;
+      --r-md: 4px;
+      --r-lg: 6px;
+
+      --ease-out:   cubic-bezier(0.2, 0.7, 0.2, 1);
+      --ease-soft:  cubic-bezier(0.4, 0.0, 0.2, 1);
+      --dur-fast:   180ms;
+      --dur-med:    420ms;
+      --dur-slow:   900ms;
+      --dur-draw:   2400ms;
+
+      /* Type */
+      --ff-display: 'Cormorant Garamond', 'Times New Roman', serif;
+      --ff-body:    'Inter', system-ui, -apple-system, sans-serif;
+
+      --fs-hero:     clamp(56px, 8vw, 132px);
+      --fs-display:  clamp(40px, 5vw, 84px);
+      --fs-h3:       clamp(28px, 3vw, 44px);
+      --fs-h4:       22px;
+      --fs-lg:       19px;
+      --fs-body:     16px;
+      --fs-sm:       14px;
+      --fs-xs:       12px;
+      --fs-micro:    11px;
+
+      --lh-tight:    1.05;
+      --lh-snug:     1.2;
+      --lh-normal:   1.55;
+      --lh-loose:    1.7;
+
+      --ls-display:  -0.02em;
+      --ls-eyebrow:  0.28em;
+      --ls-nav:      0.14em;
+      --ls-body:     0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      background: var(--bg-void);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      font-family: var(--ff-body);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: var(--gold); color: var(--bg-void); }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    /* Type primitives */
+    .t-eyebrow {
+      font-family: var(--ff-body);
+      font-size: var(--fs-micro);
+      letter-spacing: var(--ls-eyebrow);
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 500;
+    }
+    .t-hero {
+      font-family: var(--ff-display);
+      font-weight: 400;
+      font-size: var(--fs-hero);
+      line-height: var(--lh-tight);
+      letter-spacing: var(--ls-display);
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .t-hero em {
+      font-style: italic;
+      font-weight: 300;
+      color: var(--gold);
+    }
+    .t-display {
+      font-family: var(--ff-display);
+      font-weight: 400;
+      font-size: var(--fs-display);
+      line-height: var(--lh-snug);
+      letter-spacing: var(--ls-display);
+      margin: 0;
+    }
+    .t-display em {
+      font-style: italic;
+      font-weight: 300;
+      color: var(--gold);
+    }
+    .t-h3 {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: var(--fs-h3);
+      line-height: var(--lh-snug);
+      margin: 0;
+    }
+    .t-h4 {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: var(--fs-h4);
+      letter-spacing: 0.04em;
+      margin: 0;
+    }
+    .t-lead {
+      font-family: var(--ff-body);
+      font-weight: 300;
+      font-size: var(--fs-lg);
+      line-height: var(--lh-loose);
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .t-body {
+      font-family: var(--ff-body);
+      font-weight: 400;
+      font-size: var(--fs-body);
+      line-height: var(--lh-normal);
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .t-caption {
+      font-family: var(--ff-body);
+      font-weight: 300;
+      font-size: var(--fs-sm);
+      line-height: var(--lh-normal);
+      color: var(--text-tertiary);
+      font-style: italic;
+      margin: 0;
+    }
+
+    /* ---------- Nav ---------- */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--s-5) var(--s-7);
+      background: transparent;
+      transition: background var(--dur-med) var(--ease-out),
+                  padding var(--dur-med) var(--ease-out),
+                  border-color var(--dur-med) var(--ease-out);
+      border-bottom: 1px solid transparent;
+    }
+    .nav--scrolled {
+      background: rgba(5, 7, 13, 0.82);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-faint);
+      padding: var(--s-3) var(--s-7);
+    }
+    .nav-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+    }
+    .nav-glyph {
+      color: var(--gold);
+      font-size: 18px;
+      line-height: 1;
+    }
+    .nav-wordmark {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      color: var(--text-primary);
+    }
+    .nav-links {
+      list-style: none;
+      display: flex;
+      gap: var(--s-6);
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      font-family: var(--ff-body);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: var(--ls-nav);
+      color: var(--text-secondary);
+      font-weight: 500;
+      transition: color var(--dur-fast) var(--ease-out);
+    }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-cta {
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 10px 22px;
+      font-family: var(--ff-body);
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--r-sm);
+      transition: background var(--dur-med) var(--ease-out),
+                  color var(--dur-med) var(--ease-out);
+    }
+    .nav-cta:hover { background: var(--gold); color: var(--bg-void); }
+
+    @media (max-width: 1024px) {
+      .nav-links { gap: var(--s-4); }
+    }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .nav { padding: var(--s-3) var(--s-5); }
+      .nav--scrolled { padding: var(--s-3) var(--s-5); }
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 var(--s-7);
+      overflow: hidden;
+      background: var(--bg-void);
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 35%, rgba(226,185,111,0.07), transparent 55%),
+        radial-gradient(ellipse at 70% 65%, rgba(138,31,31,0.06), transparent 60%),
+        radial-gradient(ellipse at 50% 50%, rgba(15,20,34,0.5), transparent 75%);
+      pointer-events: none;
+    }
+    .star-field {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+    .star-dot {
+      position: absolute;
+      background: var(--star-white);
+      border-radius: 50%;
+      animation: twinkle ease-in-out infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: var(--start, 0.4); transform: scale(1); }
+      50%      { opacity: 0.95;              transform: scale(1.25); }
+    }
+
+    .hero-const-wrap {
+      position: relative;
+      z-index: 2;
+      width: 60vmin;
+      height: 60vmin;
+      max-width: 720px;
+      max-height: 720px;
+      margin-top: var(--s-9);
+      margin-bottom: var(--s-7);
+    }
+    .hero-const-wrap .const-svg { width: 100%; height: 100%; }
+
+    .hero-text {
+      position: relative;
+      z-index: 2;
+      max-width: 880px;
+      margin: 0 auto;
+      padding-bottom: var(--s-10);
+    }
+    .hero-text .t-eyebrow {
+      display: inline-block;
+      margin-bottom: var(--s-5);
+    }
+    .hero-text .t-hero {
+      margin-bottom: var(--s-5);
+    }
+    .hero-text .t-lead {
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ---------- Section header ---------- */
+    .section-header {
+      max-width: 720px;
+      margin: 0 auto var(--s-9);
+    }
+    .section-header.center {
+      text-align: center;
+    }
+    .section-header .t-eyebrow {
+      display: inline-block;
+      margin-bottom: var(--s-4);
+    }
+
+    /* ---------- Features ---------- */
+    .features {
+      padding: var(--s-11) var(--s-7);
+      background: var(--bg-void);
+      position: relative;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--s-7);
+      max-width: 1640px;
+      margin: 0 auto;
+    }
+    .feature {
+      padding: var(--s-6) 0;
+      border-top: 1px solid var(--border-faint);
+    }
+    .feature-num {
+      font-family: var(--ff-display);
+      font-weight: 300;
+      font-size: 64px;
+      color: var(--gold-dim);
+      display: block;
+      line-height: 1;
+      margin-bottom: var(--s-4);
+    }
+    .feature .t-h4 {
+      margin-bottom: var(--s-3);
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 1024px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .features-grid { grid-template-columns: 1fr; gap: var(--s-5); }
+      .features { padding: var(--s-9) var(--s-5); }
+    }
+
+    /* ---------- Constellation grid ---------- */
+    .constellations {
+      padding: var(--s-11) var(--s-7);
+      background: var(--bg-void);
+      border-top: 1px solid var(--border-faint);
+    }
+    .const-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--s-5);
+      max-width: 1640px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1100px) {
+      .const-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .const-grid { grid-template-columns: 1fr; }
+      .constellations { padding: var(--s-9) var(--s-5); }
+    }
+
+    .constellation-panel {
+      position: relative;
+      background: var(--bg-navy);
+      border: 1px solid var(--border-faint);
+      border-radius: var(--r-md);
+      padding: var(--s-6);
+      aspect-ratio: 1 / 1.15;
+      display: flex;
+      flex-direction: column;
+      transition: transform var(--dur-med) var(--ease-out),
+                  border-color var(--dur-med) var(--ease-out);
+      overflow: hidden;
+    }
+    .constellation-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 38%, rgba(226,185,111,0.05), transparent 60%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--dur-med) var(--ease-out);
+    }
+    .constellation-panel:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-gold);
+    }
+    .constellation-panel:hover::before { opacity: 1; }
+    .constellation-panel:hover .const-lines {
+      stroke: var(--gold-bright);
+    }
+
+    .const-svg {
+      flex: 1;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+    }
+    .const-meta {
+      margin-top: var(--s-4);
+      text-align: center;
+    }
+    .const-name {
+      letter-spacing: 0.32em;
+      color: var(--gold);
+      margin: 0 0 var(--s-2);
+      text-align: center;
+    }
+    .const-myth {
+      text-align: center;
+      max-width: 36ch;
+      margin: 0 auto;
+    }
+
+    /* Hero const styles — stars always visible on hero (no draw-in effect) */
+    .hero-const-wrap .const-stars circle {
+      opacity: 1;
+    }
+
+    /* Line draw-on animation */
+    .const-lines polyline,
+    .const-lines line,
+    .const-lines path {
+      stroke-dasharray: 320;
+      stroke-dashoffset: 320;
+      animation: drawLine var(--dur-draw) var(--ease-out) forwards;
+      animation-delay: calc(var(--i, 0) * 120ms);
+      animation-play-state: paused;
+    }
+    @keyframes drawLine {
+      to { stroke-dashoffset: 0; }
+    }
+    .constellation-panel.is-visible .const-lines polyline,
+    .constellation-panel.is-visible .const-lines line,
+    .constellation-panel.is-visible .const-lines path {
+      animation-play-state: running;
+    }
+    .constellation-panel .const-stars circle {
+      opacity: 0;
+      transition: opacity 600ms ease-out 2200ms;
+    }
+    .constellation-panel.is-visible .const-stars circle {
+      opacity: 1;
+    }
+    /* Hero plays immediately */
+    .hero-const-wrap .const-lines polyline,
+    .hero-const-wrap .const-lines line,
+    .hero-const-wrap .const-lines path {
+      animation-play-state: running;
+    }
+
+    /* ---------- Pricing ---------- */
+    .pricing {
+      padding: var(--s-11) var(--s-7);
+      background: var(--bg-navy);
+      border-top: 1px solid var(--border-faint);
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: var(--s-5);
+      max-width: 1640px;
+      margin: 0 auto;
+    }
+    .tier {
+      position: relative;
+      background: var(--bg-navy-2);
+      border: 1px solid var(--border-faint);
+      padding: var(--s-7) var(--s-6);
+      border-radius: var(--r-md);
+      display: flex;
+      flex-direction: column;
+    }
+    .tier.is-featured {
+      border: 1px solid var(--border-gold);
+      background: var(--bg-navy-3);
+      box-shadow: 0 0 60px -20px var(--gold-glow), inset 0 1px 0 rgba(226,185,111,0.08);
+    }
+    .tier-badge {
+      position: absolute;
+      top: -10px;
+      left: 24px;
+      font-family: var(--ff-body);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      background: var(--gold);
+      color: var(--bg-void);
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      font-weight: 500;
+    }
+    .tier-name {
+      font-family: var(--ff-display);
+      font-weight: 500;
+      font-size: 28px;
+      margin: 0 0 var(--s-5);
+      color: var(--text-primary);
+    }
+    .tier-price {
+      margin-bottom: var(--s-5);
+    }
+    .tier-price-num {
+      font-family: var(--ff-display);
+      font-weight: 400;
+      font-size: 56px;
+      color: var(--text-primary);
+      line-height: 1;
+      display: inline-block;
+    }
+    .tier-price-sub {
+      font-family: var(--ff-body);
+      font-size: 13px;
+      color: var(--text-tertiary);
+      display: block;
+      margin-top: var(--s-2);
+    }
+    .tier-feats {
+      list-style: none;
+      padding: 0;
+      margin: var(--s-6) 0;
+      flex: 1;
+    }
+    .tier-feats li {
+      font-family: var(--ff-body);
+      font-size: 14px;
+      color: var(--text-secondary);
+      padding: 8px 0 8px 20px;
+      position: relative;
+    }
+    .tier-feats li::before {
+      content: "✦";
+      color: var(--gold-dim);
+      position: absolute;
+      left: 0;
+      top: 8px;
+      font-size: 10px;
+    }
+    .tier-cta {
+      display: block;
+      text-align: center;
+      padding: 14px;
+      font-family: var(--ff-body);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      border-radius: var(--r-sm);
+      transition: background var(--dur-med) var(--ease-out),
+                  transform var(--dur-fast) var(--ease-out),
+                  color var(--dur-med) var(--ease-out);
+      font-weight: 500;
+    }
+    .tier-cta--solid {
+      background: var(--gold);
+      color: var(--bg-void);
+      border: 1px solid var(--gold);
+    }
+    .tier-cta--solid:hover {
+      transform: translateY(-1px);
+      background: var(--gold-bright);
+    }
+    .tier-cta--ghost {
+      background: transparent;
+      border: 1px solid var(--border-gold);
+      color: var(--gold);
+    }
+    .tier-cta--ghost:hover {
+      background: var(--gold-faint);
+      border-color: var(--gold);
+    }
+
+    @media (max-width: 640px) {
+      .pricing { padding: var(--s-9) var(--s-5); }
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ---------- Footer ---------- */
+    .footer {
+      padding: var(--s-9) var(--s-7) var(--s-6);
+      border-top: 1px solid var(--border-faint);
+      background: var(--bg-void);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--s-7);
+      max-width: 1640px;
+      margin: 0 auto;
+    }
+    .footer-brand .nav-logo {
+      margin-bottom: var(--s-4);
+    }
+    .footer-brand .t-caption {
+      max-width: 32ch;
+    }
+    .footer-h {
+      font-family: var(--ff-body);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      color: var(--text-tertiary);
+      margin: 0 0 var(--s-4);
+      font-weight: 500;
+    }
+    .footer-col a,
+    .footer-col .footer-platform {
+      font-family: var(--ff-body);
+      font-size: 14px;
+      color: var(--text-secondary);
+      display: block;
+      padding: 6px 0;
+      transition: color var(--dur-fast) var(--ease-out);
+    }
+    .footer-col a:hover { color: var(--gold); }
+    .footer-base {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--s-6);
+      margin-top: var(--s-7);
+      border-top: 1px solid var(--border-faint);
+      max-width: 1640px;
+      margin-left: auto;
+      margin-right: auto;
+      flex-wrap: wrap;
+      gap: var(--s-3);
+    }
+
+    @media (max-width: 640px) {
+      .footer { padding: var(--s-7) var(--s-5) var(--s-5); }
+    }
+
+    /* ---------- Reveal ---------- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+    }
+    .reveal.is-visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* ---------- Focus ---------- */
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 4px;
+      border-radius: var(--r-sm);
+    }
+
+    /* ---------- Reduced motion ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+      .const-lines polyline,
+      .const-lines line,
+      .const-lines path {
+        stroke-dashoffset: 0 !important;
+        animation: none !important;
+      }
+      .constellation-panel .const-stars circle { opacity: 1 !important; }
+      .star-dot { animation: none !important; }
+    }
+
+    /* ---------- TV / large screens ---------- */
+    @media (min-width: 1600px) {
+      .hero-text .t-hero { font-size: clamp(72px, 7vw, 156px); }
+    }
+    /* ── Contact Form ── */
+    .contact { padding: var(--s-10) var(--s-7); background: var(--bg-navy-2); }
+    .contact-inner { max-width: 780px; margin: 0 auto; }
+    .contact .t-eyebrow { margin-bottom: var(--s-4); }
+    .contact .t-display { margin-bottom: var(--s-5); }
+    .contact .t-lead { margin-bottom: var(--s-8); color: var(--text-secondary); }
+    .contact-form { display: flex; flex-direction: column; gap: var(--s-5); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+    .form-group { display: flex; flex-direction: column; gap: var(--s-2); }
+    .form-group label { font-family: var(--ff-body); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+    .form-group input,
+    .form-group textarea { background: var(--bg-navy-3); border: 1px solid var(--border-faint); color: var(--text-primary); font-family: var(--ff-body); font-size: 1rem; padding: var(--s-3) var(--s-4); border-radius: var(--r-sm); outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: vertical; }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: var(--text-tertiary); }
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim); }
+    .contact-submit { align-self: flex-start; background: var(--gold); color: var(--bg-void); font-family: var(--ff-body); font-size: 0.85rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; border: none; padding: var(--s-3) var(--s-6); cursor: pointer; border-radius: var(--r-sm); display: flex; align-items: center; gap: var(--s-2); transition: opacity 0.2s; }
+    .contact-submit:hover { opacity: 0.85; }
+    .contact-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .contact-status { font-family: var(--ff-body); font-size: 0.875rem; min-height: 1.25em; color: var(--gold); }
+    .contact-status.is-error { color: #e05a3a; }
+    @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } .contact { padding: var(--s-8) var(--s-5); } }
+  </style>
+</head>
+<body>
+
+  <!-- Reusable SVG defs (filters) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="starGlow" x="-200%" y="-200%" width="500%" height="500%">
+        <feGaussianBlur stdDeviation="2.4" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <filter id="starGlowSoft" x="-200%" y="-200%" width="500%" height="500%">
+        <feGaussianBlur stdDeviation="1.2" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Nav -->
+  <nav class="nav" role="navigation">
+    <a href="/" class="nav-logo">
+      <span class="nav-glyph">✦</span>
+      <span class="nav-wordmark">StarSol</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#constellations">Constellations</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#about">About</a></li>
+    </ul>
+    <a class="nav-cta" href="pricing.html">Start Watching</a>
+  </nav>
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero">
+    <div class="star-field" aria-hidden="true"></div>
+
+    <div class="hero-const-wrap" aria-hidden="true">
+      <svg viewBox="0 0 200 200" class="const-svg">
+        <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+           stroke-linecap="round" fill="none">
+          <!-- Shoulders -->
+          <line x1="58" y1="62"  x2="142" y2="68" style="--i:0"/>
+          <!-- R arm to belt (Betelgeuse → Alnitak) -->
+          <line x1="58" y1="62"  x2="100" y2="116" style="--i:1"/>
+          <!-- L arm to belt (Bellatrix → Mintaka) -->
+          <line x1="142" y1="68" x2="148" y2="104" style="--i:2"/>
+          <!-- Belt -->
+          <polyline points="148,104 124,110 100,116" style="--i:3"/>
+          <!-- R leg (Alnitak → Saiph) -->
+          <line x1="100" y1="116" x2="88"  y2="158" style="--i:4"/>
+          <!-- L leg (Mintaka → Rigel) -->
+          <line x1="148" y1="104" x2="168" y2="152" style="--i:5"/>
+          <!-- Skirt (Saiph → Rigel) -->
+          <line x1="88"  y1="158" x2="168" y2="152" style="--i:6"/>
+          <!-- Sword (Alnilam → Hatsya) -->
+          <line x1="124" y1="110" x2="94"  y2="144" style="--i:7"/>
+          <!-- Head triangle -->
+          <line x1="58"  y1="62"  x2="100" y2="30" style="--i:8"/>
+          <line x1="142" y1="68"  x2="100" y2="30" style="--i:9"/>
+        </g>
+        <g class="const-stars">
+          <!-- Betelgeuse α -->
+          <circle cx="58"  cy="62"  r="3.6" fill="var(--gold)" filter="url(#starGlow)"/>
+          <!-- Rigel β -->
+          <circle cx="168" cy="152" r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+          <!-- Bellatrix γ -->
+          <circle cx="142" cy="68"  r="2.4" fill="var(--gold-bright)"/>
+          <!-- Belt: Mintaka, Alnilam, Alnitak -->
+          <circle cx="148" cy="104" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+          <circle cx="124" cy="110" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+          <circle cx="100" cy="116" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+          <!-- Saiph κ -->
+          <circle cx="88"  cy="158" r="2.0" fill="var(--star-white)"/>
+          <!-- Meissa λ (head) -->
+          <circle cx="100" cy="30"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+          <!-- Hatsya ι (sword) -->
+          <circle cx="94"  cy="144" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+          <!-- Nair al-Saif -->
+          <circle cx="90"  cy="156" r="1.0" fill="var(--star-white)" opacity="0.6"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="hero-text">
+      <span class="t-eyebrow">A planetarium for the living room</span>
+      <h1 class="t-hero">Every star, drawn by hand. Named in <em>quiet gold.</em></h1>
+      <p class="t-lead">StarSol traces 88 constellations across the night. Tonight, look up.</p>
+    </div>
+  </section>
+
+  <!-- ===================== FEATURES ===================== -->
+  <section id="features" class="features">
+    <header class="section-header reveal">
+      <span class="t-eyebrow">What you'll see</span>
+      <h2 class="t-display">Four windows onto the night.</h2>
+    </header>
+    <div class="features-grid">
+      <article class="feature reveal">
+        <span class="feature-num">01</span>
+        <h3 class="t-h4">Ambient Mode</h3>
+        <p class="t-body">Turn your television into an observatory window. Drift through Hubble and JWST imagery at the pace of starlight — no narration, no captions, just the quiet light of distant things.</p>
+      </article>
+      <article class="feature reveal">
+        <span class="feature-num">02</span>
+        <h3 class="t-h4">JWST Gallery</h3>
+        <p class="t-body">Every public James Webb release, in native 4K. Pillars of Creation. Carina. Cosmic Cliffs. Curated, annotated, and updated within hours of each new image drop.</p>
+      </article>
+      <article class="feature reveal">
+        <span class="feature-num">03</span>
+        <h3 class="t-h4">Sky Events Calendar</h3>
+        <p class="t-body">Meteor showers, eclipses, planetary conjunctions, lunar phases. Filtered for your hemisphere, your latitude, your bortle class. Tomorrow night, the Perseids peak at 2:14am.</p>
+      </article>
+      <article class="feature reveal">
+        <span class="feature-num">04</span>
+        <h3 class="t-h4">Geolocated Alerts</h3>
+        <p class="t-body">A push when the ISS passes overhead. An alert when the aurora forecast crosses Kp 6 for your latitude. Notice given in minutes, not hours. Step outside. Look up.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===================== CONSTELLATIONS ===================== -->
+  <section id="constellations" class="constellations">
+    <header class="section-header center reveal">
+      <span class="t-eyebrow">Catalogued</span>
+      <h2 class="t-display">Eight you can find <em>tonight.</em></h2>
+    </header>
+
+    <div class="const-grid">
+
+      <!-- ORION -->
+      <article class="constellation-panel" data-constellation="orion">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <line x1="58" y1="62"  x2="142" y2="68" style="--i:0"/>
+            <line x1="58" y1="62"  x2="100" y2="116" style="--i:1"/>
+            <line x1="142" y1="68" x2="148" y2="104" style="--i:2"/>
+            <polyline points="148,104 124,110 100,116" style="--i:3"/>
+            <line x1="100" y1="116" x2="88"  y2="158" style="--i:4"/>
+            <line x1="148" y1="104" x2="168" y2="152" style="--i:5"/>
+            <line x1="88"  y1="158" x2="168" y2="152" style="--i:6"/>
+            <line x1="124" y1="110" x2="94"  y2="144" style="--i:7"/>
+            <line x1="58"  y1="62"  x2="100" y2="30" style="--i:8"/>
+            <line x1="142" y1="68"  x2="100" y2="30" style="--i:9"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="58"  cy="62"  r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="168" cy="152" r="3.0" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="142" cy="68"  r="2.4" fill="var(--gold-bright)"/>
+            <circle cx="148" cy="104" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="124" cy="110" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="100" cy="116" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="88"  cy="158" r="2.0" fill="var(--star-white)"/>
+            <circle cx="100" cy="30"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="94"  cy="144" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="90"  cy="156" r="1.0" fill="var(--star-white)" opacity="0.6"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">ORION</h3>
+          <p class="const-myth t-caption">The Hunter — visible November through March. Betelgeuse, his shoulder, is a dying red supergiant 642 light-years away.</p>
+        </header>
+      </article>
+
+      <!-- URSA MAJOR -->
+      <article class="constellation-panel" data-constellation="ursa-major">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <polyline points="42,62 42,92 78,102 82,72 42,62" style="--i:0"/>
+            <polyline points="82,72 112,68 142,58 172,48" style="--i:1"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="42"  cy="62"  r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="42"  cy="92"  r="2.4" fill="var(--gold-bright)"/>
+            <circle cx="78"  cy="102" r="2.0" fill="var(--star-white)"/>
+            <circle cx="82"  cy="72"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="112" cy="68"  r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="142" cy="58"  r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="172" cy="48"  r="2.0" fill="var(--star-white)"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">URSA MAJOR</h3>
+          <p class="const-myth t-caption">The Great Bear — circumpolar, visible year-round. The Big Dipper's handle traces an arc to Arcturus.</p>
+        </header>
+      </article>
+
+      <!-- CASSIOPEIA -->
+      <article class="constellation-panel" data-constellation="cassiopeia">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <polyline points="40,80 78,120 100,68 130,110 168,78" style="--i:0"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="40"  cy="80"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="78"  cy="120" r="2.4" fill="var(--gold-bright)"/>
+            <circle cx="100" cy="68"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="130" cy="110" r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="168" cy="78"  r="2.4" fill="var(--gold-bright)"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">CASSIOPEIA</h3>
+          <p class="const-myth t-caption">The Queen — a W against the northern sky, year-round circumpolar. Vain enough to be tied to her throne for eternity.</p>
+        </header>
+      </article>
+
+      <!-- CYGNUS -->
+      <article class="constellation-panel" data-constellation="cygnus">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <polyline points="100,30 100,60 100,96 100,168" style="--i:0"/>
+            <polyline points="42,92 100,96 158,92" style="--i:1"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="100" cy="30"  r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="100" cy="60"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="100" cy="96"  r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="100" cy="168" r="2.4" fill="var(--gold-bright)"/>
+            <circle cx="158" cy="92"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="42"  cy="92"  r="2.0" fill="var(--star-white)"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">CYGNUS</h3>
+          <p class="const-myth t-caption">The Swan — soaring down the summer Milky Way. Deneb, the tail, anchors the Summer Triangle.</p>
+        </header>
+      </article>
+
+      <!-- SCORPIUS -->
+      <article class="constellation-panel" data-constellation="scorpius">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <polyline points="42,44 62,52 50,62 42,44" style="--i:0"/>
+            <polyline points="62,52 80,68 88,78" style="--i:1"/>
+            <polyline points="88,78 98,88 112,98 122,112 132,128 142,144 152,154 160,162 168,152 176,140 168,124 172,110" style="--i:2"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="42"  cy="44"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="62"  cy="52"  r="2.4" fill="var(--gold-bright)"/>
+            <circle cx="50"  cy="62"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="88"  cy="78"  r="3.6" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="98"  cy="88"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="112" cy="98"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="122" cy="112" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="132" cy="128" r="2.0" fill="var(--star-white)"/>
+            <circle cx="142" cy="144" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="152" cy="154" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="160" cy="162" r="1.0" fill="var(--star-white)" opacity="0.6"/>
+            <circle cx="168" cy="152" r="2.0" fill="var(--star-white)"/>
+            <circle cx="176" cy="140" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="168" cy="124" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="172" cy="110" r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="80"  cy="68"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="58"  cy="50"  r="1.0" fill="var(--star-white)" opacity="0.6"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">SCORPIUS</h3>
+          <p class="const-myth t-caption">The Scorpion — low in the southern summer sky. Antares, its red heart, rivals Mars in brilliance and color.</p>
+        </header>
+      </article>
+
+      <!-- LEO -->
+      <article class="constellation-panel" data-constellation="leo">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <polyline points="52,130 62,110 74,88 72,70 82,56 62,56 72,70" style="--i:0"/>
+            <polyline points="74,88 132,72 142,92 52,130" style="--i:1"/>
+            <line x1="132" y1="72"  x2="172" y2="82" style="--i:2"/>
+            <line x1="142" y1="92"  x2="172" y2="82" style="--i:3"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="52"  cy="130" r="3.6" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="62"  cy="110" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="74"  cy="88"  r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="72"  cy="70"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="82"  cy="56"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="62"  cy="56"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="132" cy="72"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="142" cy="92"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="172" cy="82"  r="2.4" fill="var(--gold-bright)"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">LEO</h3>
+          <p class="const-myth t-caption">The Lion — striding the spring sky. Regulus, the little king, sits almost exactly on the ecliptic.</p>
+        </header>
+      </article>
+
+      <!-- GEMINI -->
+      <article class="constellation-panel" data-constellation="gemini">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <polyline points="58,40 62,68 74,88 68,108 54,132 82,124 90,142 112,158" style="--i:0"/>
+            <polyline points="132,52 118,90 124,110 146,122 152,156" style="--i:1"/>
+            <line x1="58" y1="40" x2="132" y2="52" style="--i:2"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="58"  cy="40"  r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="132" cy="52"  r="3.2" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="62"  cy="68"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="74"  cy="88"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="68"  cy="108" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="82"  cy="124" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="90"  cy="142" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="112" cy="158" r="2.0" fill="var(--star-white)"/>
+            <circle cx="54"  cy="132" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="118" cy="90"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="124" cy="110" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="146" cy="122" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="152" cy="156" r="2.0" fill="var(--star-white)"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">GEMINI</h3>
+          <p class="const-myth t-caption">The Twins — Castor and Pollux, brothers half-mortal, half-divine, fixed forever in winter's eastern sky.</p>
+        </header>
+      </article>
+
+      <!-- TAURUS -->
+      <article class="constellation-panel" data-constellation="taurus">
+        <svg viewBox="0 0 200 200" class="const-svg" aria-hidden="true">
+          <g class="const-lines" stroke="var(--gold-line)" stroke-width="0.9"
+             stroke-linecap="round" fill="none">
+            <polyline points="78,102 86,110 98,118 108,110 118,102 78,102" style="--i:0"/>
+            <line x1="78" y1="102" x2="42" y2="48" style="--i:1"/>
+            <polyline points="118,102 132,86 158,72" style="--i:2"/>
+            <polyline points="98,118 68,138 54,152" style="--i:3"/>
+          </g>
+          <g class="const-stars">
+            <circle cx="98"  cy="118" r="3.6" fill="var(--gold)" filter="url(#starGlow)"/>
+            <circle cx="78"  cy="102" r="2.0" fill="var(--star-white)"/>
+            <circle cx="118" cy="102" r="2.0" fill="var(--star-white)"/>
+            <circle cx="86"  cy="110" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="108" cy="110" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="42"  cy="48"  r="2.4" fill="var(--gold-bright)" filter="url(#starGlowSoft)"/>
+            <circle cx="158" cy="72"  r="2.0" fill="var(--star-white)"/>
+            <circle cx="132" cy="86"  r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="68"  cy="138" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <circle cx="54"  cy="152" r="1.5" fill="var(--star-white)" opacity="0.85"/>
+            <!-- Pleiades cluster -->
+            <circle cx="50"  cy="70"  r="0.9" fill="var(--star-faint)"/>
+            <circle cx="54"  cy="66"  r="0.9" fill="var(--star-faint)"/>
+            <circle cx="58"  cy="72"  r="0.9" fill="var(--star-faint)"/>
+            <circle cx="52"  cy="76"  r="0.9" fill="var(--star-faint)"/>
+            <circle cx="60"  cy="68"  r="0.9" fill="var(--star-faint)"/>
+            <circle cx="56"  cy="74"  r="0.9" fill="var(--star-faint)"/>
+          </g>
+        </svg>
+        <header class="const-meta">
+          <h3 class="const-name t-h4">TAURUS</h3>
+          <p class="const-myth t-caption">The Bull — Aldebaran his red eye, the Pleiades on his shoulder. The Hyades V opens toward Orion across the winter sky.</p>
+        </header>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ===================== PRICING ===================== -->
+  <section id="pricing" class="pricing">
+    <header class="section-header center reveal">
+      <span class="t-eyebrow">Pricing</span>
+      <h2 class="t-display">Begin freely. Stay if it <em>moves you.</em></h2>
+    </header>
+    <div class="pricing-grid">
+
+      <article class="tier tier--free reveal">
+        <h3 class="tier-name">Free</h3>
+        <div class="tier-price">
+          <span class="tier-price-num">$0</span>
+          <span class="tier-price-sub">two days, no signup</span>
+        </div>
+        <ul class="tier-feats">
+          <li>Full browse + watch</li>
+          <li>Standard library</li>
+          <li>No account required</li>
+          <li>Locks after 48 hours</li>
+        </ul>
+        <a class="tier-cta tier-cta--ghost" href="pricing.html">Start free</a>
+      </article>
+
+      <article class="tier tier--explorer is-featured reveal">
+        <span class="tier-badge">Most chosen</span>
+        <h3 class="tier-name">Explorer</h3>
+        <div class="tier-price">
+          <span class="tier-price-num">$4.99</span>
+          <span class="tier-price-sub">/ month — or $39.99/yr</span>
+        </div>
+        <ul class="tier-feats">
+          <li>Full library, unlimited</li>
+          <li>4K JWST gallery</li>
+          <li>Ambient mode</li>
+          <li>Sky alerts</li>
+        </ul>
+        <a class="tier-cta tier-cta--solid" href="pricing.html">Start Watching</a>
+      </article>
+
+      <article class="tier tier--observer reveal">
+        <h3 class="tier-name">Observer</h3>
+        <div class="tier-price">
+          <span class="tier-price-num">$7.99</span>
+          <span class="tier-price-sub">/ month — or $64.99/yr</span>
+        </div>
+        <ul class="tier-feats">
+          <li>Everything in Explorer</li>
+          <li>Geolocated ISS &amp; aurora alerts</li>
+          <li>Early JWST drops</li>
+          <li>8K wallpaper downloads</li>
+        </ul>
+        <a class="tier-cta tier-cta--ghost" href="pricing.html">Choose Observer</a>
+      </article>
+
+      <article class="tier tier--inst reveal">
+        <h3 class="tier-name">Institutional</h3>
+        <div class="tier-price">
+          <span class="tier-price-num">$1,500&ndash;5,000</span>
+          <span class="tier-price-sub">/ year — custom</span>
+        </div>
+        <ul class="tier-feats">
+          <li>Planetariums, K&ndash;12 STEM, museums</li>
+          <li>Multi-screen license</li>
+          <li>Curriculum playlists</li>
+          <li>Dedicated support</li>
+        </ul>
+        <a class="tier-cta tier-cta--ghost" href="#contact">Talk to us</a>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ===================== CONTACT ===================== -->
+  <section id="contact" class="contact reveal">
+    <div class="contact-inner">
+      <p class="t-eyebrow">Institutions &amp; Partnerships</p>
+      <h2 class="t-display">Talk to us.</h2>
+      <p class="t-lead">Planetariums, school districts, science museums, and research institutions &mdash; we&rsquo;d love to hear what you&rsquo;re building.</p>
+      <form class="contact-form" id="contactForm" novalidate>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cf-name">Name</label>
+            <input type="text" id="cf-name" name="name" placeholder="Your name" required autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label for="cf-org">Organization</label>
+            <input type="text" id="cf-org" name="organization" placeholder="Planetarium, school, museum&hellip;" autocomplete="organization">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cf-email">Email</label>
+          <input type="email" id="cf-email" name="email" placeholder="you@organization.org" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="cf-message">Message</label>
+          <textarea id="cf-message" name="message" rows="5" placeholder="Tell us about your institution and what you&rsquo;re looking for." required></textarea>
+        </div>
+        <button type="submit" class="contact-submit" id="contactSubmit">
+          Send message <span aria-hidden="true">&#10022;</span>
+        </button>
+        <p class="contact-status" id="contactStatus" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer id="about" class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-logo">
+          <span class="nav-glyph">✦</span>
+          <span class="nav-wordmark">StarSol</span>
+        </div>
+        <p class="t-caption">A quiet window onto the universe, for the largest screen in your home.</p>
+      </div>
+      <nav class="footer-col">
+        <h4 class="footer-h">Product</h4>
+        <a href="pricing.html">Pricing</a>
+        <a href="account.html">Account</a>
+        <a href="pair.html">Pair a TV</a>
+      </nav>
+      <nav class="footer-col">
+        <h4 class="footer-h">Platforms</h4>
+        <span class="footer-platform">Google TV</span>
+        <span class="footer-platform">Android TV</span>
+      </nav>
+      <div class="footer-col">
+        <h4 class="footer-h">Credit</h4>
+        <p class="t-caption">Imagery: NASA / ESA / CSA / STScI. Public domain.</p>
+      </div>
+    </div>
+    <div class="footer-base">
+      <span class="t-caption">© 2026 StarSol. StarSol.app</span>
+      <span class="t-caption">Available on Google TV &amp; Android TV</span>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+      var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // ----- Star field (200 ambient dots on hero) -----
+      var layer = document.querySelector('.star-field');
+      if (layer) {
+        var frag = document.createDocumentFragment();
+        var count = 200;
+        for (var i = 0; i < count; i++) {
+          var s = document.createElement('span');
+          s.className = 'star-dot';
+          var rand = Math.random();
+          var size = rand < 0.85 ? 1 : (rand < 0.97 ? 2 : 3);
+          s.style.width = size + 'px';
+          s.style.height = size + 'px';
+          s.style.left = (Math.random() * 100) + '%';
+          s.style.top = (Math.random() * 100) + '%';
+          var op = (0.25 + Math.random() * 0.65);
+          s.style.opacity = op.toFixed(2);
+          s.style.setProperty('--start', op.toFixed(2));
+          if (!reduced) {
+            s.style.animationDelay = (Math.random() * 6).toFixed(2) + 's';
+            s.style.animationDuration = (3 + Math.random() * 5).toFixed(2) + 's';
+          }
+          frag.appendChild(s);
+        }
+        layer.appendChild(frag);
+      }
+
+      // ----- Nav scroll state -----
+      var nav = document.querySelector('.nav');
+      function onScroll() {
+        if (!nav) return;
+        if (window.scrollY > 40) nav.classList.add('nav--scrolled');
+        else nav.classList.remove('nav--scrolled');
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      // ----- IntersectionObserver: reveal + constellation draw-on -----
+      if ('IntersectionObserver' in window) {
+        var revealObs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              revealObs.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.reveal').forEach(function (el) { revealObs.observe(el); });
+
+        var constObs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              constObs.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.3 });
+        document.querySelectorAll('.constellation-panel').forEach(function (el) { constObs.observe(el); });
+      } else {
+        // Fallback — show everything
+        document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-visible'); });
+        document.querySelectorAll('.constellation-panel').forEach(function (el) { el.classList.add('is-visible'); });
+      }
+    })();
+
+    // Contact form
+    (function () {
+      var form = document.getElementById('contactForm');
+      if (!form) return;
+      var btn = document.getElementById('contactSubmit');
+      var status = document.getElementById('contactStatus');
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        status.className = 'contact-status';
+        status.textContent = '';
+        try {
+          var res = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.fromEntries(new FormData(form)))
+          });
+          if (res.ok) {
+            status.textContent = 'Message sent. We'll be in touch within two business days.';
+            form.reset();
+          } else { throw new Error(); }
+        } catch {
+          status.className = 'contact-status is-error';
+          status.textContent = 'Something went wrong. Email us directly at institutions@starsol.app';
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = 'Send message <span aria-hidden="true">&#10022;</span>';
+        }
+      });
+    }());
+  </script>
+</body>
+</html>
