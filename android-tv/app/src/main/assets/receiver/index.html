@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" />
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <style>
 /* ========================================================================
    STARSOL — Design Tokens
@@ -1452,7 +1453,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 #pricing .starfield-bg { opacity: 0.3; }
 #pricing .price-wrap {
   position: absolute; inset: 0;
-  padding: 80px 120px;
+  padding: 72px 120px 64px;
   display: flex; flex-direction: column; align-items: center;
   z-index: 2;
 }
@@ -1462,7 +1463,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   color: var(--ss-star500);
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 #pricing h1 {
   font-family: var(--ff-serif);
@@ -1472,12 +1473,71 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   color: var(--ss-star100);
   letter-spacing: -0.02em;
   text-align: center;
-  margin-bottom: 56px;
+  margin-bottom: 16px;
+}
+#pricing .pricing-lede {
+  max-width: 820px;
+  text-align: center;
+  font-family: var(--ff-sans);
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--ss-star300);
+  margin-bottom: 28px;
+}
+#pricing .billing-toggle {
+  display: inline-flex;
+  gap: 8px;
+  padding: 6px;
+  margin-bottom: 18px;
+  border: 1px solid var(--ss-space4);
+  border-radius: 8px;
+  background: rgba(17, 21, 28, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+#pricing .billing-pill {
+  min-width: 208px;
+  height: 52px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ss-star300);
+  font-family: var(--ff-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+#pricing .billing-pill.focused {
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 28px rgba(212, 164, 74, 0.35);
+}
+#pricing .billing-pill.active {
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+}
+#pricing .billing-pill.active.focused {
+  background: var(--ss-star600);
+  color: var(--ss-space0);
+}
+#pricing .pricing-note {
+  margin-bottom: 28px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ss-star300);
 }
 #pricing .plans {
   display: flex; gap: 32px;
   align-items: stretch;
-  margin-bottom: 32px;
+  margin-bottom: 30px;
 }
 .plan-card {
   background: var(--ss-space2);
@@ -1491,11 +1551,19 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
 }
 .plan-card.primary {
-  width: 460px;
-  background: rgba(212, 164, 74, 0.06);
+  width: 476px;
+  background: linear-gradient(180deg, rgba(212, 164, 74, 0.1) 0%, rgba(17, 21, 28, 0.95) 65%);
   border-color: rgba(212, 164, 74, 0.5);
 }
-.plan-card.secondary { width: 380px; }
+.plan-card.secondary { width: 384px; }
+.plan-card .plan-kicker {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ss-star500);
+  margin-bottom: 12px;
+}
 .plan-card.focused {
   border-color: var(--ss-star500);
   box-shadow:
@@ -1525,7 +1593,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 .plan-card .price-main {
   font-family: var(--ff-sans);
   font-weight: 500;
-  font-size: 28px;
+  font-size: 30px;
   color: var(--ss-star100);
   margin-bottom: 6px;
 }
@@ -1535,6 +1603,14 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   color: var(--ss-star300);
   letter-spacing: 0.1em;
   margin-bottom: 28px;
+}
+.plan-card .plan-note {
+  font-family: var(--ff-sans);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.55;
+  color: var(--ss-star300);
+  margin: -16px 0 22px;
 }
 .plan-card .features {
   list-style: none;
@@ -1747,6 +1823,60 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 /* Filter pill interactivity */
 .sky-pills .ss-pill { cursor: pointer; }
 .sky-pills .ss-pill.focused { outline: 2px solid var(--ss-star500); outline-offset: 2px; }
+
+/* ── Video Player ─────────────────────────────────────────────────────── */
+#player { background: #000; overflow: hidden; }
+#player-video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.player-spinner {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.player-spinner::after {
+  content: ''; width: 56px; height: 56px; border-radius: 50%;
+  border: 3px solid rgba(212,164,74,0.25); border-top-color: var(--ss-star500);
+  animation: spin 0.9s linear infinite;
+}
+.player-spinner.hidden { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.player-controls {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(5,6,8,0.75) 0%, transparent 22%, transparent 68%, rgba(5,6,8,0.9) 100%);
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 48px 72px; opacity: 0; transition: opacity 280ms ease;
+}
+.player-controls.visible { opacity: 1; }
+.player-top { display: flex; flex-direction: column; gap: 8px; }
+.player-video-title { font-family: var(--ff-serif); font-style: italic; font-size: 36px; color: var(--ss-star100); line-height: 1.15; }
+.player-video-credit { font-family: var(--ff-mono); font-size: 13px; letter-spacing: .1em; color: var(--ss-star300); }
+.player-bottom { display: flex; flex-direction: column; gap: 16px; }
+.player-progress-row { display: flex; align-items: center; gap: 20px; }
+.player-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.18); border-radius: 2px; overflow: hidden; }
+.player-fill { height: 100%; background: var(--ss-star500); border-radius: 2px; width: 0%; transition: width 0.5s linear; }
+.player-time { font-family: var(--ff-mono); font-size: 13px; color: var(--ss-star300); white-space: nowrap; min-width: 100px; text-align: right; }
+.player-hint { font-family: var(--ff-mono); font-size: 12px; letter-spacing: .08em; color: rgba(200,184,134,0.6); }
+.player-paused-badge {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(5,6,8,0.8); border: 1px solid rgba(212,164,74,0.3);
+  border-radius: 50%; width: 96px; height: 96px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 200ms; pointer-events: none;
+}
+.player-paused-badge.show { opacity: 1; }
+.player-paused-badge svg { width: 40px; height: 40px; color: var(--ss-star500); }
+.player-tap-to-play, .player-error-msg {
+  position: absolute; inset: 0; display: none; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  background: rgba(5,6,8,0.85); pointer-events: none;
+}
+.player-tap-to-play.show, .player-error-msg.show { display: flex; }
+
+/* Video tiles in browse */
+.media-tile.video-tile .tile-img { position: relative; }
+.media-tile.video-tile .play-badge {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+}
+.media-tile.video-tile .play-badge svg { width: 36px; height: 36px; color: rgba(212,164,74,0.85); filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7)); }
+.media-tile.video-tile .tile-meta::before { content: '▶  '; color: var(--ss-star500); font-size: 10px; }
 
 </style>
 </head>
@@ -2027,7 +2157,10 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       <div class="meta">17,000+ images · updated within hours of every release · 4K HDR</div>
       <p>Every image the James Webb Space Telescope has released to the public. Sorted by release date. Searchable by target, instrument, and distance from Earth.</p>
       <div class="btn-row">
-        <button class="btn btn-primary focusable" data-action="go-gallery" tabindex="0">Browse gallery</button>
+        <button class="btn btn-primary focusable" data-action="play-featured" tabindex="0">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="vertical-align:-2px;margin-right:6px"><path d="M8 5v14l11-7z"/></svg>Watch documentary
+        </button>
+        <button class="btn btn-secondary focusable" data-action="go-gallery" tabindex="0">Browse gallery</button>
         <button class="btn btn-secondary focusable" data-action="go-ambient" tabindex="0">Ambient mode</button>
       </div>
     </div>
@@ -2062,6 +2195,35 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
             <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');"></div>
             <div class="tile-title">SMACS 0723 — First Deep Field</div>
             <div class="tile-meta">Galaxy cluster · NIRCam · 2022</div>
+          </button>
+        </div>
+      </div>
+      <div class="media-row">
+        <div class="row-header">
+          <div class="row-label">JWST Documentaries</div>
+          <div class="row-count">3 videos ▶</div>
+        </div>
+        <div class="row-tiles">
+          <button class="media-tile video-tile focusable" data-video="jwst-first-light" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');background-size:cover;background-position:center;">
+              <div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+            </div>
+            <div class="tile-title">JWST — First Light</div>
+            <div class="tile-meta">NASA · 24 min · 2022</div>
+          </button>
+          <button class="media-tile video-tile focusable" data-video="cosmic-cliffs-tour" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2205a.jpg');background-size:cover;background-position:center;">
+              <div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+            </div>
+            <div class="tile-title">Cosmic Cliffs — A Tour</div>
+            <div class="tile-meta">NASA · ESA · CSA · 8 min · 2022</div>
+          </button>
+          <button class="media-tile video-tile focusable" data-video="stephan-quintet" tabindex="0">
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310a.jpg');background-size:cover;background-position:center;">
+              <div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+            </div>
+            <div class="tile-title">Stephan's Quintet Deep Dive</div>
+            <div class="tile-meta">NASA · ESA · CSA · 12 min · 2022</div>
           </button>
         </div>
       </div>
@@ -2215,35 +2377,43 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 <section class="screen" id="pricing">
   <div class="starfield starfield-bg"></div>
   <div class="price-wrap">
-    <div class="eyebrow">One-time unlock · No subscription</div>
-    <h1>Own it forever.</h1>
+    <div class="eyebrow">Subscription access · 7-day free trial</div>
+    <h1>Choose the plan that fits the night sky.</h1>
+    <p class="pricing-lede">Explorer unlocks the full library and ambient mode. Observer adds geolocated alerts and early drops for people who use the app as a nightly ritual.</p>
+    <div class="billing-toggle" role="tablist" aria-label="Billing period">
+      <button class="billing-pill active focusable" data-action="billing-annual" tabindex="0">Annual · best value</button>
+      <button class="billing-pill focusable" data-action="billing-monthly" tabindex="0">Monthly</button>
+    </div>
+    <div class="pricing-note" id="billing-note">Annual is the primary CTA. Monthly stays flexible.</div>
     <div class="plans">
       <div class="plan-card primary focusable" data-action="buy-explorer" tabindex="0">
         <span class="primary-pill">Best value</span>
-        <div class="plan-name">StarSol</div>
-        <div class="price-main">$9.99</div>
-        <div class="price-sub">One-time · Yours forever</div>
+        <div class="plan-name">Explorer</div>
+        <div class="price-main" id="price-explorer">$39.99 / yr</div>
+        <div class="price-sub" id="sub-explorer">or $4.99 / mo</div>
+        <div class="plan-note">A cinematic astronomy library for the largest screen in the house.</div>
         <ul class="features">
-          <li>Full JWST + Hubble + ESO gallery (1,200+ images)</li>
-          <li>Ambient mode — 4K cinematic image cycling</li>
+          <li>Full JWST + Hubble + ESO gallery</li>
+          <li>Ambient mode — full image collection</li>
           <li>Sky event calendar — 365 days ahead</li>
           <li>Constellation guide — 88 charts with mythology</li>
-          <li>ISS pass alerts for your location</li>
-          <li>New JWST drops added weekly, free forever</li>
+          <li>Live events — launches, eclipses, JWST drops</li>
         </ul>
-        <button class="cta">Unlock StarSol — $9.99</button>
+        <button class="cta" id="explorer-cta">Start 7-day trial</button>
       </div>
       <div class="plan-card secondary focusable" data-action="buy-observer" tabindex="0">
-        <div class="plan-name">Gift</div>
-        <div class="price-main">$9.99</div>
-        <div class="price-sub">Send to someone who loves the sky</div>
+        <div class="plan-name">Observer</div>
+        <div class="price-main" id="price-observer">$64.99 / yr</div>
+        <div class="price-sub" id="sub-observer">or $7.99 / mo</div>
+        <div class="plan-note">Built for enthusiasts who want the sky to keep talking back.</div>
         <ul class="features">
-          <li>Everything in the full unlock</li>
-          <li>Delivered as a digital gift code</li>
-          <li>Works on any Android TV or Google TV</li>
-          <li>No account required for the recipient</li>
+          <li>Everything in Explorer</li>
+          <li>Geolocated ISS pass alerts</li>
+          <li>Aurora alert when KP index spikes</li>
+          <li>Early JWST image drops</li>
+          <li>8K wallpaper downloads</li>
         </ul>
-        <button class="cta">Buy a gift</button>
+        <button class="cta" id="observer-cta">Start 7-day trial</button>
       </div>
     </div>
     <button class="continue-free focusable" data-action="continue-free" tabindex="0">Continue browsing free →</button>
@@ -2312,6 +2482,38 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   </div>
 </section>
 
+<!-- =====================================================================
+     SCREEN: VIDEO PLAYER
+     ===================================================================== -->
+<section class="screen" id="player">
+  <video id="player-video" playsinline autoplay></video>
+  <div class="player-spinner" id="player-spinner"></div>
+  <div class="player-paused-badge" id="player-paused-badge">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+  </div>
+  <div class="player-tap-to-play" id="player-tap-to-play">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M8 5v14l11-7z"/></svg>
+    <div style="font-family:var(--ff-mono);font-size:13px;letter-spacing:.1em;color:var(--ss-star300);margin-top:12px">Press OK to play</div>
+  </div>
+  <div class="player-error-msg" id="player-error-msg">
+    <div style="font-family:var(--ff-serif);font-style:italic;font-size:28px;color:var(--ss-star100);margin-bottom:8px">Unable to play</div>
+    <div style="font-family:var(--ff-mono);font-size:13px;color:var(--ss-star300)">Check your connection and press BACK</div>
+  </div>
+  <div class="player-controls" id="player-controls">
+    <div class="player-top">
+      <div class="player-video-title" id="player-title"></div>
+      <div class="player-video-credit" id="player-credit"></div>
+    </div>
+    <div class="player-bottom">
+      <div class="player-progress-row">
+        <div class="player-bar"><div class="player-fill" id="player-fill"></div></div>
+        <div class="player-time" id="player-time">0:00 / 0:00</div>
+      </div>
+      <div class="player-hint">OK — pause &nbsp;·&nbsp; ◄► — seek 10s &nbsp;·&nbsp; BACK — exit</div>
+    </div>
+  </div>
+</section>
+
 <!-- Exit toast -->
 <div class="exit-toast" id="exit-toast">Press BACK again to exit</div>
 
@@ -2361,6 +2563,11 @@ const APP = {
   constFilter: 'all',
   searchQuery: '',
   viewerIdx: 0,
+  playerHls: null,
+  playerContent: null,
+  playerControlsTimer: null,
+  playerProgressInterval: null,
+  playerOrigin: null, // element that triggered playback — restored on BACK
 };
 
 if (!localStorage.getItem('ss-first-seen')) {
@@ -2442,6 +2649,8 @@ function navigate(name) {
   if (name === 'gallery') initGallery();
   if (name === 'ambient') initAmbient();
   if (name !== 'ambient') stopAmbient();
+  if (name === 'player') initPlayer();
+  if (name !== 'player') stopPlayer();
 
   // Focus first focusable on the new screen.
   // For Tonight, default to the primary hero button (not sidebar) so sidebar starts collapsed.
@@ -2462,8 +2671,10 @@ function navigate(name) {
       first = null;
     } else if (name === 'pricing') {
       first = el.querySelector('.plan-card.primary.focusable');
+    } else if (name === 'player') {
+      first = null; // player handles its own key events
     }
-    if (!first && name !== 'ambient') first = el.querySelector('.focusable');
+    if (!first && name !== 'ambient' && name !== 'player') first = el.querySelector('.focusable');
     if (first) focusEl(first);
   }, 80);
 }
@@ -2556,6 +2767,9 @@ function activateFocused() {
     openConstellationDetail(focused.dataset.const);
   } else if (focused.dataset.stype) {
     activateSearchResult(focused);
+  } else if (focused.dataset.video) {
+    APP.playerOrigin = focused;
+    openVideoPlayer(focused.dataset.video);
   } else if (focused.dataset.gallery) {
     openImageViewer(focused.dataset.gallery);
   } else if (focused.dataset.sky) {
@@ -2589,6 +2803,9 @@ function handleAction(action) {
       openSkyDetail('iss-pass');
       break;
     case 'play-featured':
+      APP.playerOrigin = focused;
+      playVideo(VIDEO_CATALOG['jwst-first-light']);
+      break;
     case 'add-list':
     case 'details-featured':
       console.log('[action]', action, '— (mock)');
@@ -2598,12 +2815,16 @@ function handleAction(action) {
     case 'go-sky':        navigate('sky'); break;
     case 'go-constellations': navigate('constellations'); break;
     case 'buy-explorer':
-      API.post('/api/billing/checkout', { plan: 'explorer_annual' });
-      console.log('[buy] explorer_annual');
+      startCheckout('explorer');
       break;
     case 'buy-observer':
-      API.post('/api/billing/checkout', { plan: 'observer_monthly' });
-      console.log('[buy] observer_monthly');
+      startCheckout('observer');
+      break;
+    case 'billing-annual':
+      setBillingPeriod('annual');
+      break;
+    case 'billing-monthly':
+      setBillingPeriod('monthly');
       break;
     case 'continue-free':
       navigate('tonight');
@@ -2623,6 +2844,86 @@ function handleAction(action) {
       cycleAmbSetting(action);
       break;
   }
+}
+
+const BILLING_COPY = {
+  annual: {
+    explorerMain: '$39.99 / yr',
+    explorerSub: 'or $4.99 / mo',
+    observerMain: '$64.99 / yr',
+    observerSub: 'or $7.99 / mo',
+    note: 'Annual saves you 17% — the best value.',
+    explorerCta: 'Start 7-day trial',
+    observerCta: 'Start 7-day trial',
+  },
+  monthly: {
+    explorerMain: '$4.99 / mo',
+    explorerSub: 'or $39.99 / yr',
+    observerMain: '$7.99 / mo',
+    observerSub: 'or $64.99 / yr',
+    note: 'Monthly billing keeps the door open while you try the full library.',
+    explorerCta: 'Start 7-day trial',
+    observerCta: 'Start 7-day trial',
+  }
+};
+
+let billingPeriod = 'annual';
+
+function setBillingPeriod(nextPeriod) {
+  billingPeriod = nextPeriod === 'monthly' ? 'monthly' : 'annual';
+  const copy = BILLING_COPY[billingPeriod];
+  const note = document.getElementById('billing-note');
+  if (note) note.textContent = copy.note;
+  const annual = document.querySelector('[data-action="billing-annual"]');
+  const monthly = document.querySelector('[data-action="billing-monthly"]');
+  if (annual) annual.classList.toggle('active', billingPeriod === 'annual');
+  if (monthly) monthly.classList.toggle('active', billingPeriod === 'monthly');
+  const priceExplorer = document.getElementById('price-explorer');
+  const subExplorer = document.getElementById('sub-explorer');
+  const priceObserver = document.getElementById('price-observer');
+  const subObserver = document.getElementById('sub-observer');
+  const explorerCta = document.getElementById('explorer-cta');
+  const observerCta = document.getElementById('observer-cta');
+  if (priceExplorer) priceExplorer.textContent = copy.explorerMain;
+  if (subExplorer) subExplorer.textContent = copy.explorerSub;
+  if (priceObserver) priceObserver.textContent = copy.observerMain;
+  if (subObserver) subObserver.textContent = copy.observerSub;
+  if (explorerCta) explorerCta.textContent = copy.explorerCta;
+  if (observerCta) observerCta.textContent = copy.observerCta;
+}
+
+async function startCheckout(plan) {
+  if (!APP.token) {
+    showWhisper(
+      'Pair your TV to start checkout',
+      'Billing runs through your StarSol account.',
+      5000
+    );
+    setTimeout(() => navigate('pair'), 450);
+    return;
+  }
+  const planKey = plan + '_' + billingPeriod;
+  const current = focused && focused.querySelector ? focused.querySelector('.cta') : null;
+  const original = current ? current.textContent : '';
+  if (current) current.textContent = 'Opening secure checkout…';
+  showWhisper(
+    'Opening secure checkout…',
+    billingPeriod === 'annual'
+      ? 'Annual is the best value. Trial included.'
+      : 'Monthly billing selected. Trial included.',
+    4000
+  );
+  const res = await API.post('/api/billing/checkout', { plan: planKey });
+  if (current) current.textContent = original || 'Start 7-day trial';
+  if (res && res.url) {
+    window.location.href = res.url;
+    return;
+  }
+  showWhisper(
+    'Checkout could not be opened',
+    'Please try again from a signed-in account.',
+    6000
+  );
 }
 
 /* ============================================================
@@ -2691,6 +2992,13 @@ window.starsolBack = function () {
     return false; // root — let shell background the app
   }
   // For all other inner screens, go back to Tonight (hierarchy).
+  if (APP.currentScreen === 'player') {
+    const origin = APP.playerOrigin;
+    navigate(APP.prevScreen || 'browse');
+    if (origin && document.contains(origin)) setTimeout(() => focusEl(origin), 150);
+    APP.playerOrigin = null;
+    return true;
+  }
   const innerScreens = ['browse', 'sky', 'constellations', 'gallery', 'ambient', 'pricing'];
   if (innerScreens.includes(APP.currentScreen)) {
     navigate('tonight');
@@ -2710,6 +3018,19 @@ document.addEventListener('keydown', (e) => {
   if (isBack) {
     e.preventDefault();
     window.starsolBack();
+    return;
+  }
+
+  // Player screen: OK=pause/play, LEFT/RIGHT=seek, any key shows controls
+  if (APP.currentScreen === 'player') {
+    e.preventDefault();
+    const isEnterP = k === 13 || k === 32 || key === 'Enter' || key === ' ';
+    const isLeftP  = k === 37 || key === 'ArrowLeft';
+    const isRightP = k === 39 || key === 'ArrowRight';
+    showPlayerControls();
+    if (isEnterP) togglePlayerPause();
+    if (isLeftP)  seekVideo(-10);
+    if (isRightP) seekVideo(10);
     return;
   }
 
@@ -3160,6 +3481,11 @@ function buildSearchIndex() {
     label: e.name, sub: e.date + ' · ' + e.time,
     text: (e.name + ' ' + e.desc).toLowerCase()
   }));
+  Object.entries(VIDEO_CATALOG).forEach(([slug, v]) => idx.push({
+    type: 'video', id: slug,
+    label: v.title, sub: v.credit,
+    text: (v.title + ' ' + v.credit + ' jwst documentary space').toLowerCase()
+  }));
   return idx;
 }
 let _searchIndex = null;
@@ -3219,6 +3545,7 @@ function activateSearchResult(el) {
   if (type === 'constellation') { navigate('constellations'); setTimeout(() => openConstellationDetail(id), 300); }
   else if (type === 'gallery')   { navigate('gallery'); setTimeout(() => openImageViewer(id), 300); }
   else if (type === 'sky')       { navigate('sky'); setTimeout(() => openSkyDetail(id), 300); }
+  else if (type === 'video')     { openVideoPlayer(id); } // playerOrigin intentionally not set — search button is hidden on closeOverlay
 }
 
 /* ============================================================
@@ -3789,10 +4116,6 @@ async function fetchISSPass() {
 /* ============================================================
    OVERLAY MANAGEMENT (detail / image viewer / search)
    ============================================================ */
-function openSearch() {
-  document.getElementById('search-overlay').classList.add('show');
-  APP.overlayOpen = 'search';
-}
 function closeOverlay() {
   if (!APP.overlayOpen) return;
   if (APP.overlayOpen === 'detail') document.getElementById('detail-overlay').classList.remove('show');
@@ -3811,6 +4134,218 @@ function checkFreeWindow() {
   if (APP.token) return false; // signed-in: never lock
   if (!APP.guest) return false;  // not yet committed to guest
   return (Date.now() - APP.firstSeen) > FREE_WINDOW_MS;
+}
+
+/* ============================================================
+   VIDEO PLAYER
+   ============================================================ */
+const VIDEO_CATALOG = {
+  'jwst-first-light':  { playback_id: 'VZtzUzGRv02OhRnZCxcNg3', title: 'JWST — First Light',             credit: 'NASA · ESA · CSA · STScI' },
+  'cosmic-cliffs-tour':{ playback_id: 'VZtzUzGRv02OhRnZCxcNg3', title: 'Cosmic Cliffs — A Tour',          credit: 'NASA · ESA · CSA · STScI · CC BY 4.0' },
+  'stephan-quintet':   { playback_id: 'VZtzUzGRv02OhRnZCxcNg3', title: "Stephan's Quintet Deep Dive",     credit: 'NASA · ESA · CSA · STScI · CC BY 4.0' },
+};
+
+function openVideoPlayer(slug) {
+  const content = VIDEO_CATALOG[slug];
+  if (!content) return;
+  playVideo(content);
+}
+
+function playVideo(content) {
+  APP.playerContent = content;
+  navigate('player');
+}
+
+function _playerOnWaiting() {
+  const s = document.getElementById('player-spinner');
+  if (s) s.classList.remove('hidden');
+}
+function _playerOnPlaying() {
+  const s = document.getElementById('player-spinner');
+  if (s) s.classList.add('hidden');
+  document.getElementById('player-tap-to-play')?.classList.remove('show');
+}
+function _playerOnEnded() {
+  const origin = APP.playerOrigin;
+  navigate(APP.prevScreen || 'browse');
+  if (origin && document.contains(origin)) setTimeout(() => focusEl(origin), 150);
+  APP.playerOrigin = null;
+  APP.playerContent = null;
+}
+function _playerOnError() {
+  document.getElementById('player-spinner')?.classList.add('hidden');
+  document.getElementById('player-error-msg')?.classList.add('show');
+}
+
+function _playerAttachListeners(video) {
+  video.addEventListener('waiting', _playerOnWaiting);
+  video.addEventListener('playing', _playerOnPlaying);
+  video.addEventListener('ended',   _playerOnEnded);
+  video.addEventListener('error',   _playerOnError);
+}
+function _playerRemoveListeners(video) {
+  video.removeEventListener('waiting', _playerOnWaiting);
+  video.removeEventListener('playing', _playerOnPlaying);
+  video.removeEventListener('ended',   _playerOnEnded);
+  video.removeEventListener('error',   _playerOnError);
+}
+
+function initPlayer() {
+  const video   = document.getElementById('player-video');
+  const spinner = document.getElementById('player-spinner');
+  const titleEl = document.getElementById('player-title');
+  const creditEl= document.getElementById('player-credit');
+  if (!video || !APP.playerContent) return;
+
+  titleEl.textContent  = APP.playerContent.title  || '';
+  creditEl.textContent = APP.playerContent.credit || '';
+
+  // Reset all overlay state
+  spinner.classList.remove('hidden');
+  document.getElementById('player-tap-to-play')?.classList.remove('show');
+  document.getElementById('player-error-msg')?.classList.remove('show');
+  document.getElementById('player-paused-badge')?.classList.remove('show');
+  const fill = document.getElementById('player-fill');
+  if (fill) fill.style.width = '0%';
+  const timeEl = document.getElementById('player-time');
+  if (timeEl) timeEl.textContent = '0:00 / 0:00';
+
+  // Tear down previous session
+  if (APP.playerHls) { APP.playerHls.destroy(); APP.playerHls = null; }
+  _playerRemoveListeners(video);
+
+  const src = 'https://stream.mux.com/' + APP.playerContent.playback_id + '.m3u8';
+
+  function _tryPlay() {
+    video.play().catch(() => {
+      // Autoplay blocked — show tap-to-play prompt
+      spinner.classList.add('hidden');
+      document.getElementById('player-tap-to-play')?.classList.add('show');
+    });
+  }
+
+  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+    APP.playerHls = new Hls({ lowLatencyMode: false });
+    APP.playerHls.loadSource(src);
+    APP.playerHls.attachMedia(video);
+    APP.playerHls.on(Hls.Events.MANIFEST_PARSED, () => {
+      spinner.classList.add('hidden');
+      _tryPlay();
+    });
+    APP.playerHls._recoverAttempts = 0;
+    APP.playerHls.on(Hls.Events.ERROR, (_, data) => {
+      if (!data.fatal) return;
+      console.error('[player] HLS fatal error', data.type, data.details);
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        APP.playerHls.startLoad();
+      } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        APP.playerHls._recoverAttempts = (APP.playerHls._recoverAttempts || 0) + 1;
+        if (APP.playerHls._recoverAttempts === 1) {
+          APP.playerHls.recoverMediaError();
+        } else if (APP.playerHls._recoverAttempts === 2) {
+          APP.playerHls.swapAudioCodec();
+          APP.playerHls.recoverMediaError();
+        } else {
+          _playerOnError();
+        }
+      } else {
+        _playerOnError();
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = src;
+    video.addEventListener('canplay', () => { spinner.classList.add('hidden'); }, { once: true });
+    _tryPlay();
+  } else {
+    _playerOnError();
+    return;
+  }
+
+  _playerAttachListeners(video);
+  showPlayerControls();
+
+  if (APP.playerProgressInterval) clearInterval(APP.playerProgressInterval);
+  APP.playerProgressInterval = setInterval(updatePlayerProgress, 500);
+}
+
+function stopPlayer() {
+  const video = document.getElementById('player-video');
+  if (APP.playerHls) { APP.playerHls.destroy(); APP.playerHls = null; }
+  if (video) {
+    video.pause();
+    _playerRemoveListeners(video);
+    video.removeAttribute('src');
+    video.load();
+  }
+  if (APP.playerControlsTimer) { clearTimeout(APP.playerControlsTimer); APP.playerControlsTimer = null; }
+  if (APP.playerProgressInterval) { clearInterval(APP.playerProgressInterval); APP.playerProgressInterval = null; }
+  // Reset all overlay state so next session starts clean
+  document.getElementById('player-controls')?.classList.remove('visible');
+  document.getElementById('player-paused-badge')?.classList.remove('show');
+  document.getElementById('player-tap-to-play')?.classList.remove('show');
+  document.getElementById('player-error-msg')?.classList.remove('show');
+  document.getElementById('player-spinner')?.classList.add('hidden');
+  const fill = document.getElementById('player-fill');
+  if (fill) fill.style.width = '0%';
+  const timeEl = document.getElementById('player-time');
+  if (timeEl) timeEl.textContent = '0:00 / 0:00';
+  APP.playerContent = null;
+}
+
+function showPlayerControls() {
+  const ctrl = document.getElementById('player-controls');
+  if (ctrl) ctrl.classList.add('visible');
+  if (APP.playerControlsTimer) clearTimeout(APP.playerControlsTimer);
+  APP.playerControlsTimer = setTimeout(() => {
+    const video = document.getElementById('player-video');
+    if (video && !video.paused) {
+      const ctrl2 = document.getElementById('player-controls');
+      if (ctrl2) ctrl2.classList.remove('visible');
+    }
+  }, 3500);
+}
+
+function togglePlayerPause() {
+  const video = document.getElementById('player-video');
+  const badge = document.getElementById('player-paused-badge');
+  const tapEl = document.getElementById('player-tap-to-play');
+  if (!video) return;
+  if (video.paused) {
+    if (tapEl) tapEl.classList.remove('show');
+    if (badge) badge.classList.remove('show');
+    video.play().catch(() => {
+      if (tapEl) tapEl.classList.add('show');
+    });
+  } else {
+    video.pause();
+    if (badge) badge.classList.add('show');
+  }
+  showPlayerControls();
+}
+
+function seekVideo(deltaSec) {
+  const video = document.getElementById('player-video');
+  if (!video || !isFinite(video.duration)) return;
+  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + deltaSec));
+  updatePlayerProgress();
+}
+
+function updatePlayerProgress() {
+  const video   = document.getElementById('player-video');
+  const fill    = document.getElementById('player-fill');
+  const timeEl  = document.getElementById('player-time');
+  if (!video || !fill || !timeEl) return;
+  const cur = video.currentTime || 0;
+  const dur = video.duration   || 0;
+  fill.style.width = dur > 0 ? ((cur / dur) * 100).toFixed(2) + '%' : '0%';
+  timeEl.textContent = fmtTime(cur) + ' / ' + fmtTime(dur);
+}
+
+function fmtTime(s) {
+  if (!isFinite(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + String(sec).padStart(2, '0');
 }
 
 /* ============================================================

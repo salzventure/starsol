@@ -1453,7 +1453,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 #pricing .starfield-bg { opacity: 0.3; }
 #pricing .price-wrap {
   position: absolute; inset: 0;
-  padding: 80px 120px;
+  padding: 72px 120px 64px;
   display: flex; flex-direction: column; align-items: center;
   z-index: 2;
 }
@@ -1463,7 +1463,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   color: var(--ss-star500);
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 #pricing h1 {
   font-family: var(--ff-serif);
@@ -1473,12 +1473,71 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   color: var(--ss-star100);
   letter-spacing: -0.02em;
   text-align: center;
-  margin-bottom: 56px;
+  margin-bottom: 16px;
+}
+#pricing .pricing-lede {
+  max-width: 820px;
+  text-align: center;
+  font-family: var(--ff-sans);
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--ss-star300);
+  margin-bottom: 28px;
+}
+#pricing .billing-toggle {
+  display: inline-flex;
+  gap: 8px;
+  padding: 6px;
+  margin-bottom: 18px;
+  border: 1px solid var(--ss-space4);
+  border-radius: 8px;
+  background: rgba(17, 21, 28, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+#pricing .billing-pill {
+  min-width: 208px;
+  height: 52px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ss-star300);
+  font-family: var(--ff-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+#pricing .billing-pill.focused {
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 28px rgba(212, 164, 74, 0.35);
+}
+#pricing .billing-pill.active {
+  background: var(--ss-star500);
+  color: var(--ss-space0);
+}
+#pricing .billing-pill.active.focused {
+  background: var(--ss-star600);
+  color: var(--ss-space0);
+}
+#pricing .pricing-note {
+  margin-bottom: 28px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ss-star300);
 }
 #pricing .plans {
   display: flex; gap: 32px;
   align-items: stretch;
-  margin-bottom: 32px;
+  margin-bottom: 30px;
 }
 .plan-card {
   background: var(--ss-space2);
@@ -1492,11 +1551,19 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
 }
 .plan-card.primary {
-  width: 460px;
-  background: rgba(212, 164, 74, 0.06);
+  width: 476px;
+  background: linear-gradient(180deg, rgba(212, 164, 74, 0.1) 0%, rgba(17, 21, 28, 0.95) 65%);
   border-color: rgba(212, 164, 74, 0.5);
 }
-.plan-card.secondary { width: 380px; }
+.plan-card.secondary { width: 384px; }
+.plan-card .plan-kicker {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ss-star500);
+  margin-bottom: 12px;
+}
 .plan-card.focused {
   border-color: var(--ss-star500);
   box-shadow:
@@ -1526,7 +1593,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 .plan-card .price-main {
   font-family: var(--ff-sans);
   font-weight: 500;
-  font-size: 28px;
+  font-size: 30px;
   color: var(--ss-star100);
   margin-bottom: 6px;
 }
@@ -1536,6 +1603,14 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   color: var(--ss-star300);
   letter-spacing: 0.1em;
   margin-bottom: 28px;
+}
+.plan-card .plan-note {
+  font-family: var(--ff-sans);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.55;
+  color: var(--ss-star300);
+  margin: -16px 0 22px;
 }
 .plan-card .features {
   list-style: none;
@@ -2302,35 +2377,43 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 <section class="screen" id="pricing">
   <div class="starfield starfield-bg"></div>
   <div class="price-wrap">
-    <div class="eyebrow">One-time unlock · No subscription</div>
-    <h1>Own it forever.</h1>
+    <div class="eyebrow">Subscription access · 7-day free trial</div>
+    <h1>Choose the plan that fits the night sky.</h1>
+    <p class="pricing-lede">Explorer unlocks the full library and ambient mode. Observer adds geolocated alerts and early drops for people who use the app as a nightly ritual.</p>
+    <div class="billing-toggle" role="tablist" aria-label="Billing period">
+      <button class="billing-pill active focusable" data-action="billing-annual" tabindex="0">Annual · best value</button>
+      <button class="billing-pill focusable" data-action="billing-monthly" tabindex="0">Monthly</button>
+    </div>
+    <div class="pricing-note" id="billing-note">Annual is the primary CTA. Monthly stays flexible.</div>
     <div class="plans">
       <div class="plan-card primary focusable" data-action="buy-explorer" tabindex="0">
         <span class="primary-pill">Best value</span>
-        <div class="plan-name">StarSol</div>
-        <div class="price-main">$9.99</div>
-        <div class="price-sub">One-time · Yours forever</div>
+        <div class="plan-name">Explorer</div>
+        <div class="price-main" id="price-explorer">$39.99 / yr</div>
+        <div class="price-sub" id="sub-explorer">or $4.99 / mo</div>
+        <div class="plan-note">A cinematic astronomy library for the largest screen in the house.</div>
         <ul class="features">
-          <li>Full JWST + Hubble + ESO gallery (1,200+ images)</li>
-          <li>Ambient mode — 4K cinematic image cycling</li>
+          <li>Full JWST + Hubble + ESO gallery</li>
+          <li>Ambient mode — full image collection</li>
           <li>Sky event calendar — 365 days ahead</li>
           <li>Constellation guide — 88 charts with mythology</li>
-          <li>ISS pass alerts for your location</li>
-          <li>New JWST drops added weekly, free forever</li>
+          <li>Live events — launches, eclipses, JWST drops</li>
         </ul>
-        <button class="cta">Unlock StarSol — $9.99</button>
+        <button class="cta" id="explorer-cta">Start 7-day trial</button>
       </div>
       <div class="plan-card secondary focusable" data-action="buy-observer" tabindex="0">
-        <div class="plan-name">Gift</div>
-        <div class="price-main">$9.99</div>
-        <div class="price-sub">Send to someone who loves the sky</div>
+        <div class="plan-name">Observer</div>
+        <div class="price-main" id="price-observer">$64.99 / yr</div>
+        <div class="price-sub" id="sub-observer">or $7.99 / mo</div>
+        <div class="plan-note">Built for enthusiasts who want the sky to keep talking back.</div>
         <ul class="features">
-          <li>Everything in the full unlock</li>
-          <li>Delivered as a digital gift code</li>
-          <li>Works on any Android TV or Google TV</li>
-          <li>No account required for the recipient</li>
+          <li>Everything in Explorer</li>
+          <li>Geolocated ISS pass alerts</li>
+          <li>Aurora alert when KP index spikes</li>
+          <li>Early JWST image drops</li>
+          <li>8K wallpaper downloads</li>
         </ul>
-        <button class="cta">Buy a gift</button>
+        <button class="cta" id="observer-cta">Start 7-day trial</button>
       </div>
     </div>
     <button class="continue-free focusable" data-action="continue-free" tabindex="0">Continue browsing free →</button>
@@ -2732,12 +2815,16 @@ function handleAction(action) {
     case 'go-sky':        navigate('sky'); break;
     case 'go-constellations': navigate('constellations'); break;
     case 'buy-explorer':
-      API.post('/api/billing/checkout', { plan: 'explorer_annual' });
-      console.log('[buy] explorer_annual');
+      startCheckout('explorer');
       break;
     case 'buy-observer':
-      API.post('/api/billing/checkout', { plan: 'observer_monthly' });
-      console.log('[buy] observer_monthly');
+      startCheckout('observer');
+      break;
+    case 'billing-annual':
+      setBillingPeriod('annual');
+      break;
+    case 'billing-monthly':
+      setBillingPeriod('monthly');
       break;
     case 'continue-free':
       navigate('tonight');
@@ -2757,6 +2844,86 @@ function handleAction(action) {
       cycleAmbSetting(action);
       break;
   }
+}
+
+const BILLING_COPY = {
+  annual: {
+    explorerMain: '$39.99 / yr',
+    explorerSub: 'or $4.99 / mo',
+    observerMain: '$64.99 / yr',
+    observerSub: 'or $7.99 / mo',
+    note: 'Annual saves you 17% — the best value.',
+    explorerCta: 'Start 7-day trial',
+    observerCta: 'Start 7-day trial',
+  },
+  monthly: {
+    explorerMain: '$4.99 / mo',
+    explorerSub: 'or $39.99 / yr',
+    observerMain: '$7.99 / mo',
+    observerSub: 'or $64.99 / yr',
+    note: 'Monthly billing keeps the door open while you try the full library.',
+    explorerCta: 'Start 7-day trial',
+    observerCta: 'Start 7-day trial',
+  }
+};
+
+let billingPeriod = 'annual';
+
+function setBillingPeriod(nextPeriod) {
+  billingPeriod = nextPeriod === 'monthly' ? 'monthly' : 'annual';
+  const copy = BILLING_COPY[billingPeriod];
+  const note = document.getElementById('billing-note');
+  if (note) note.textContent = copy.note;
+  const annual = document.querySelector('[data-action="billing-annual"]');
+  const monthly = document.querySelector('[data-action="billing-monthly"]');
+  if (annual) annual.classList.toggle('active', billingPeriod === 'annual');
+  if (monthly) monthly.classList.toggle('active', billingPeriod === 'monthly');
+  const priceExplorer = document.getElementById('price-explorer');
+  const subExplorer = document.getElementById('sub-explorer');
+  const priceObserver = document.getElementById('price-observer');
+  const subObserver = document.getElementById('sub-observer');
+  const explorerCta = document.getElementById('explorer-cta');
+  const observerCta = document.getElementById('observer-cta');
+  if (priceExplorer) priceExplorer.textContent = copy.explorerMain;
+  if (subExplorer) subExplorer.textContent = copy.explorerSub;
+  if (priceObserver) priceObserver.textContent = copy.observerMain;
+  if (subObserver) subObserver.textContent = copy.observerSub;
+  if (explorerCta) explorerCta.textContent = copy.explorerCta;
+  if (observerCta) observerCta.textContent = copy.observerCta;
+}
+
+async function startCheckout(plan) {
+  if (!APP.token) {
+    showWhisper(
+      'Pair your TV to start checkout',
+      'Billing runs through your StarSol account.',
+      5000
+    );
+    setTimeout(() => navigate('pair'), 450);
+    return;
+  }
+  const planKey = plan + '_' + billingPeriod;
+  const current = focused && focused.querySelector ? focused.querySelector('.cta') : null;
+  const original = current ? current.textContent : '';
+  if (current) current.textContent = 'Opening secure checkout…';
+  showWhisper(
+    'Opening secure checkout…',
+    billingPeriod === 'annual'
+      ? 'Annual is the best value. Trial included.'
+      : 'Monthly billing selected. Trial included.',
+    4000
+  );
+  const res = await API.post('/api/billing/checkout', { plan: planKey });
+  if (current) current.textContent = original || 'Start 7-day trial';
+  if (res && res.url) {
+    window.location.href = res.url;
+    return;
+  }
+  showWhisper(
+    'Checkout could not be opened',
+    'Please try again from a signed-in account.',
+    6000
+  );
 }
 
 /* ============================================================
