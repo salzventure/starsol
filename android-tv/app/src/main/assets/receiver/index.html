@@ -3087,12 +3087,19 @@ document.addEventListener('keydown', (e) => {
    ============================================================ */
 async function startPairing() {
   // 1. Register a new device pairing code.
-  const res = await API.post('/api/devices/register', { client: 'starsol-androidtv', version: '0.1.0' });
+  const res = await API.post('/api/devices/register', {
+    platform: 'google_tv',
+    client: 'starsol-androidtv',
+    version: '0.1.0',
+    device_fingerprint: stableDeviceFingerprint(),
+    device_name: 'StarSol Google TV'
+  });
   let code, deviceId, expiresAt;
-  if (res && res.code) {
-    code = res.code;
+  if (res && (res.code || res.pairing_code)) {
+    code = res.code || res.pairing_code;
     deviceId = res.deviceId || res.id;
-    expiresAt = res.expiresAt ? new Date(res.expiresAt).getTime() : Date.now() + 10 * 60_000;
+    expiresAt = res.expiresAt || res.expires_at || Date.now() + 10 * 60_000;
+    expiresAt = typeof expiresAt === 'number' ? expiresAt : new Date(expiresAt).getTime();
   } else {
     // Fallback: synthesize a code so the screen looks real during dev.
     code = randomCode();
@@ -3181,6 +3188,16 @@ function randomCode() {
   let s = '';
   for (let i = 0; i < 6; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
   return s;
+}
+
+function stableDeviceFingerprint() {
+  const key = 'ss-device-fingerprint';
+  let value = localStorage.getItem(key);
+  if (!value) {
+    value = 'stv-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
+    localStorage.setItem(key, value);
+  }
+  return value;
 }
 
 /* ============================================================

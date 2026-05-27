@@ -34,7 +34,7 @@ async function createCheckoutSession(user, planKey, successUrl, cancelUrl) {
     const appUrl = process.env.APP_URL || 'https://starsol.app';
     const session = await stripe.checkout.sessions.create({
         customer: customerId,
-        payment_method_types: ['card', 'google_pay'],
+        payment_method_types: ['card'],
         mode: 'subscription',
         line_items: [{ price: PRICES[planKey], quantity: 1 }],
         subscription_data: {
@@ -48,6 +48,10 @@ async function createCheckoutSession(user, planKey, successUrl, cancelUrl) {
     });
 
     return session.url;
+}
+
+function isEntitledStatus(status) {
+    return status === 'active' || status === 'trialing';
 }
 
 async function createPortalSession(user, returnUrl) {
@@ -105,7 +109,7 @@ async function syncSubscription(stripeSub, userIdOverride) {
         stripeCustomerId: customerId,
         stripeSubscriptionId: stripeSub.id,
         stripePriceId: priceId,
-        plan,
+        plan: isEntitledStatus(stripeSub.status) ? plan : 'free',
         status: stripeSub.status,
         periodStart: stripeSub.current_period_start * 1000,
         periodEnd: stripeSub.current_period_end * 1000,

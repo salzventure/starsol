@@ -136,7 +136,7 @@ const subscriptions = {
                 updated_at             = VALUES(updated_at)
         `, [userId, stripeCustomerId, stripeSubscriptionId, stripePriceId, plan, status,
             periodStart, periodEnd, cancelAtPeriodEnd ? 1 : 0, Date.now()]);
-        await users.updatePlan(userId, plan);
+        await users.updatePlan(userId, ['active', 'trialing'].includes(status) ? plan : 'free');
     },
     cancel: async (stripeSubId) => {
         const sub = await subscriptions.findByStripeSubId(stripeSubId);
@@ -145,9 +145,13 @@ const subscriptions = {
             [Date.now(), stripeSubId]);
         await users.updatePlan(sub.user_id, 'free');
     },
-    setPastDue: stripeSubId =>
-        execute('UPDATE subscriptions SET status = "past_due", updated_at = ? WHERE stripe_subscription_id = ?',
-            [Date.now(), stripeSubId]),
+    setPastDue: async (stripeSubId) => {
+        const sub = await subscriptions.findByStripeSubId(stripeSubId);
+        if (!sub) return;
+        await execute('UPDATE subscriptions SET plan = "free", status = "past_due", updated_at = ? WHERE stripe_subscription_id = ?',
+            [Date.now(), stripeSubId]);
+        await users.updatePlan(sub.user_id, 'free');
+    },
 };
 
 // ── Devices (TV pairing) ─────────────────────────────────────────────────
@@ -172,8 +176,7 @@ const devices = {
         const device = await devices.findByPairingCode(code);
         if (!device) return null;
         if (device.user_id && device.user_id !== userId) return null;
-        await execute(`UPDATE devices SET user_id = ?, pairing_code = NULL, pairing_expires_at = NULL,
-            paired_at = ?, last_seen_at = ? WHERE id = ?`,
+        await execute(`UPDATE devices SET user_id = ?, paired_at = ?, last_seen_at = ? WHERE id = ?`,
             [userId, Date.now(), Date.now(), device.id]);
         return device;
     },

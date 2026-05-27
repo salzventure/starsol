@@ -5,6 +5,8 @@ const router = express.Router();
 const crypto = require('crypto');
 
 const store = require('./store');
+const email = require('./email');
+const emailTemplates = require('./email_templates');
 const { issueToken, hashPassword, verifyPassword, authMiddleware, requirePlan } = require('./auth');
 const billing = require('./billing');
 const admin = require('./admin');
@@ -12,6 +14,7 @@ const oauth = require('./oauth');
 const siwa  = require('./siwa');
 
 const FREE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000; // 2 days before requiring account
+const PLAN_ORDER = ['free', 'explorer', 'observer', 'institutional'];
 
 // ── Auth ─────────────────────────────────────────────────────────────────
 
@@ -40,6 +43,7 @@ router.post('/auth/login', async (req, res) => {
         const { email, password } = req.body;
         const user = await store.users.findByEmail(email);
         if (!user) return res.status(401).json({ error: 'invalid_credentials' });
+        if (!user.password_hash) return res.status(401).json({ error: 'password_login_unavailable' });
 
         if (user.locked_until && user.locked_until > Date.now()) {
             return res.status(429).json({ error: 'account_locked', retry_after: user.locked_until });
@@ -155,6 +159,7 @@ router.post('/auth/oauth/apple/callback', async (req, res) => {
   <script>
     try {
       localStorage.setItem('ss-token', ${JSON.stringify(token)});
+      localStorage.setItem('ss-pair-token', ${JSON.stringify(token)});
       location.replace(${JSON.stringify(safeNext)});
     } catch (e) {
       document.body.innerText = 'Could not finish sign-in. Try again from /login.';
@@ -172,14 +177,26 @@ router.post('/auth/oauth/apple/callback', async (req, res) => {
 // TV calls this on startup to get a pairing code (before user has account)
 router.post('/devices/register', async (req, res) => {
     try {
-        const { platform = 'google_tv', device_fingerprint, device_name } = req.body;
-        if (!device_fingerprint) return res.status(400).json({ error: 'missing_fingerprint' });
+        const { platform = 'google_tv', device_fingerprint, device_name, client, version } = req.body || {};
+        const rawFingerprint = device_fingerprint || [
+            req.ip,
+            req.get('user-agent') || '',
+            platform,
+            client || '',
+            version || '',
+        ].join('|');
+        if (!rawFingerprint.trim()) return res.status(400).json({ error: 'missing_fingerprint' });
 
-        const fingerprint = crypto.createHash('sha256').update(device_fingerprint).digest('hex');
-        const deviceName = device_name || platform.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const fingerprint = crypto.createHash('sha256').update(rawFingerprint).digest('hex');
+        const deviceName = device_name || client || platform.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
 
         const { code, expiresAt } = await store.devices.register({ platform, fingerprint, deviceName });
-        res.json({ pairing_code: code, expires_at: expiresAt });
+        res.json({
+            pairing_code: code,
+            expires_at: expiresAt,
+            code,
+            expiresAt,
+        });
     } catch (err) {
         console.error('/devices/register', err);
         res.status(500).json({ error: 'server_error' });
@@ -216,7 +233,7 @@ router.get('/devices/pair/status', async (req, res) => {
         // Issue a device-scoped token for the paired user
         const user = await store.users.findById(device.user_id);
         const token = issueToken(user);
-        return res.json({ paired: true, token });
+        return res.json({ paired: true, token, user: safeUser(user) });
     }
     res.json({ paired: false });
 });
@@ -260,18 +277,22 @@ router.post('/devices/check-access', async (req, res) => {
 
 router.get('/content', async (req, res) => {
     const { type, tier, tag, limit = 20, offset = 0 } = req.query;
+    const plan = await planFromOptionalAuth(req);
     const items = await store.content.list({
         type, tier, tag,
         limit: Math.min(parseInt(limit), 100),
         offset: parseInt(offset),
     });
-    // Filter by user's plan if auth header present (optional auth)
-    res.json({ content: items });
+    res.json({ content: items.filter(item => canAccessTier(plan, item.tier)) });
 });
 
 router.get('/content/:slug', async (req, res) => {
     const item = await store.content.findBySlug(req.params.slug);
     if (!item) return res.status(404).json({ error: 'not_found' });
+    const plan = await planFromOptionalAuth(req);
+    if (!canAccessTier(plan, item.tier)) {
+        return res.status(403).json({ error: 'upgrade_required', required_plan: item.tier });
+    }
     res.json({ content: item });
 });
 
@@ -392,6 +413,30 @@ router.post('/history', authMiddleware, async (req, res) => {
     res.json({ success: true });
 });
 
+// ── Contact / institutional inquiry ──────────────────────────────────────
+
+router.post('/contact', async (req, res) => {
+    const { name, email: from, organization, message } = req.body || {};
+    if (!from || !message) return res.status(400).json({ error: 'missing_fields' });
+    try {
+        const safeName = escapeHtml(name || '—');
+        const safeFrom = escapeHtml(from);
+        const safeOrg = escapeHtml(organization || '—');
+        const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+        await email.sendEmail({
+            to: process.env.EMAIL_SUPPORT || 'starsol@salzventure.com',
+            from: process.env.EMAIL_NOREPLY || 'starsol-noreply@salzventure.com',
+            subject: sanitizeSubject(`StarSol institutional inquiry from ${name || from}`),
+            html: `<p><strong>Name:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeFrom}</p><p><strong>Organization:</strong> ${safeOrg}</p><p><strong>Message:</strong><br>${safeMessage}</p>`,
+            campaign: 'contact_inquiry',
+        });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('/contact', err);
+        res.status(500).json({ error: 'send_failed' });
+    }
+});
+
 // ── Admin ─────────────────────────────────────────────────────────────────
 
 router.use('/admin', admin);
@@ -401,6 +446,39 @@ router.use('/admin', admin);
 function safeUser(user) {
     const { password_hash, ...safe } = user;
     return safe;
+}
+
+async function planFromOptionalAuth(req) {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return 'free';
+    try {
+        const jwt = require('jsonwebtoken');
+        const payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+        const user = await store.users.findById(payload.sub);
+        return user?.plan || 'free';
+    } catch {
+        return 'free';
+    }
+}
+
+function canAccessTier(plan, tier) {
+    const planIdx = PLAN_ORDER.indexOf(plan || 'free');
+    const tierIdx = PLAN_ORDER.indexOf(tier || 'free');
+    return planIdx >= 0 && tierIdx >= 0 && planIdx >= tierIdx;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[c]));
+}
+
+function sanitizeSubject(value) {
+    return String(value ?? '').replace(/[\r\n]+/g, ' ').slice(0, 180);
 }
 
 module.exports = router;

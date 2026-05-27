@@ -13,8 +13,21 @@ const PORT = parseInt(process.env.PORT || '3402', 10);
 const app = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: process.env.CORS_ORIGINS?.split(',') ?? '*', credentials: true }));
-app.use(express.json({ limit: '1mb' }));
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) ?? [];
+app.use(cors({
+    origin(origin, callback) {
+        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+}));
+const jsonParser = express.json({ limit: '1mb' });
+app.use((req, res, next) => {
+    if (req.originalUrl === '/api/billing/webhook') return next();
+    return jsonParser(req, res, next);
+});
 
 // Health check (unauthenticated, used by deploy scripts)
 app.get('/api/health', (_req, res) => {
