@@ -1,24 +1,42 @@
 package app.starsol.tv
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import com.android.billingclient.api.AcknowledgePurchaseParams
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
 
     private lateinit var webView: WebView
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var destroyed = false
+    private var pixelShiftRunnable: Runnable? = null
+    private var billingClient: BillingClient? = null
+    private val productDetailsById = mutableMapOf<String, ProductDetails>()
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,13 +98,22 @@ class MainActivity : AppCompatActivity() {
                     request: WebResourceRequest?
                 ): Boolean {
                     val url = request?.url?.toString() ?: return false
-                    return !url.startsWith("https://starsol.app/")
+                    if (url.startsWith("https://starsol.app/")) return false
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        runCatching {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                        return true
+                    }
+                    return true
                 }
             }
+            addJavascriptInterface(StarSolBillingBridge(), "StarSolBilling")
         }
 
         setContentView(webView)
         if (BuildConfig.DEBUG) webView.clearCache(true)
+        initPlayBilling()
 
         // Hot-fix override: check remote config (2.5s timeout). If the backend
         // returns an overrideUrl on the starsol.app domain we load that instead
@@ -100,7 +127,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadReceiverWithOverrideCheck() {
-        val mainHandler = Handler(Looper.getMainLooper())
         Thread {
             val url = try {
                 val conn = URL(RECEIVER_CONFIG_URL).openConnection() as HttpURLConnection
@@ -113,15 +139,17 @@ class MainActivity : AppCompatActivity() {
                 val override = json.optString("overrideUrl", "")
                 if (override.startsWith("https://starsol.app/")) override else null
             } catch (_: Exception) { null }
-            mainHandler.post { webView.loadUrl(url ?: BUNDLED_RECEIVER_URL) }
+            mainHandler.post {
+                if (!destroyed) webView.loadUrl(url ?: BUNDLED_RECEIVER_URL)
+            }
         }.start()
     }
 
     private fun startPixelShift() {
-        val handler = Handler(Looper.getMainLooper())
         val shiftRunnable = object : Runnable {
             private var phase = 0
             override fun run() {
+                if (destroyed) return
                 val (dx, dy) = when (phase % 4) {
                     0 -> 3f to 0f
                     1 -> 0f to 3f
@@ -130,10 +158,159 @@ class MainActivity : AppCompatActivity() {
                 }
                 webView.animate().translationX(dx).translationY(dy).setDuration(800).start()
                 phase++
-                handler.postDelayed(this, 180_000L) // 3 minutes
+                mainHandler.postDelayed(this, 180_000L) // 3 minutes
             }
         }
-        handler.postDelayed(shiftRunnable, 180_000L)
+        pixelShiftRunnable = shiftRunnable
+        mainHandler.postDelayed(shiftRunnable, 180_000L)
+    }
+
+    private fun initPlayBilling() {
+        billingClient = BillingClient.newBuilder(this)
+            .setListener(this)
+            .enablePendingPurchases()
+            .build()
+        billingClient?.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(result: BillingResult) {
+                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    queryProducts()
+                    restorePlayPurchases(false)
+                    notifyBilling("ready", "Google Play Billing ready")
+                } else {
+                    notifyBilling("unavailable", result.debugMessage.ifBlank { "Google Play Billing unavailable" })
+                }
+            }
+
+            override fun onBillingServiceDisconnected() {
+                notifyBilling("disconnected", "Google Play Billing disconnected")
+            }
+        })
+    }
+
+    private fun queryProducts() {
+        val client = billingClient ?: return
+        if (!client.isReady) return
+        val products = PLAY_PRODUCT_IDS.map { id ->
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(id)
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
+        }
+        val params = QueryProductDetailsParams.newBuilder().setProductList(products).build()
+        client.queryProductDetailsAsync(params) { result, productDetails ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                notifyBilling("products_error", result.debugMessage)
+                return@queryProductDetailsAsync
+            }
+            productDetailsById.clear()
+            productDetails.forEach { productDetailsById[it.productId] = it }
+            notifyBilling("products", productDetailsById.keys.joinToString(","))
+        }
+    }
+
+    private fun launchPlayPurchase(productId: String) {
+        val client = billingClient
+        if (client == null || !client.isReady) {
+            notifyBilling("unavailable", "Google Play Billing is not ready")
+            return
+        }
+        val details = productDetailsById[productId]
+        if (details == null) {
+            queryProducts()
+            notifyBilling("products_loading", "Loading Google Play products")
+            return
+        }
+        val offerToken = details.subscriptionOfferDetails?.firstOrNull()?.offerToken
+        if (offerToken.isNullOrBlank()) {
+            notifyBilling("offer_missing", "Google Play subscription offer is missing")
+            return
+        }
+        val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(details)
+            .setOfferToken(offerToken)
+            .build()
+        val flowParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(listOf(productParams))
+            .build()
+        val result = client.launchBillingFlow(this, flowParams)
+        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+            notifyBilling("launch_error", result.debugMessage)
+        }
+    }
+
+    private fun restorePlayPurchases(showMessage: Boolean) {
+        val client = billingClient
+        if (client == null || !client.isReady) {
+            if (showMessage) notifyBilling("unavailable", "Google Play Billing is not ready")
+            return
+        }
+        val params = QueryPurchasesParams.newBuilder()
+            .setProductType(BillingClient.ProductType.SUBS)
+            .build()
+        client.queryPurchasesAsync(params) { result, purchases ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                if (showMessage) notifyBilling("restore_error", result.debugMessage)
+                return@queryPurchasesAsync
+            }
+            purchases.forEach { handlePurchase(it) }
+            if (showMessage) notifyBilling("restore_complete", "${purchases.size} Google Play subscription(s) found")
+        }
+    }
+
+    override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK -> purchases?.forEach { handlePurchase(it) }
+            BillingClient.BillingResponseCode.USER_CANCELED -> notifyBilling("canceled", "Purchase canceled")
+            else -> notifyBilling("purchase_error", result.debugMessage)
+        }
+    }
+
+    private fun handlePurchase(purchase: Purchase) {
+        if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) {
+            notifyBilling("pending", "Purchase is pending")
+            return
+        }
+        val productId = purchase.products.firstOrNull() ?: return
+        val payload = JSONObject()
+            .put("productId", productId)
+            .put("purchaseToken", purchase.purchaseToken)
+            .toString()
+        mainHandler.post {
+            if (!destroyed) {
+                webView.evaluateJavascript("window.starsolPlayPurchase && window.starsolPlayPurchase($payload);", null)
+            }
+        }
+        if (!purchase.isAcknowledged) {
+            val params = AcknowledgePurchaseParams.newBuilder()
+                .setPurchaseToken(purchase.purchaseToken)
+                .build()
+            billingClient?.acknowledgePurchase(params) { result ->
+                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                    notifyBilling("ack_error", result.debugMessage)
+                }
+            }
+        }
+    }
+
+    private fun notifyBilling(status: String, message: String) {
+        val payload = JSONObject().put("status", status).put("message", message).toString()
+        mainHandler.post {
+            if (!destroyed) {
+                webView.evaluateJavascript("window.starsolPlayBillingMessage && window.starsolPlayBillingMessage($payload);", null)
+            }
+        }
+    }
+
+    inner class StarSolBillingBridge {
+        @JavascriptInterface
+        fun purchase(productId: String) {
+            mainHandler.post { launchPlayPurchase(productId) }
+        }
+
+        @JavascriptInterface
+        fun restore() {
+            mainHandler.post { restorePlayPurchases(true) }
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -183,11 +360,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        destroyed = true
+        pixelShiftRunnable?.let { mainHandler.removeCallbacks(it) }
+        billingClient?.endConnection()
         webView.destroy()
         super.onDestroy()
     }
 
     companion object {
+        private val PLAY_PRODUCT_IDS = listOf(
+            "explorer_monthly",
+            "explorer_annual",
+            "observer_monthly",
+            "observer_annual"
+        )
         private const val BUNDLED_RECEIVER_URL =
             "file:///android_asset/receiver/index.html"
         private const val CLIENT_VALUE = "starsol-androidtv/1.0.0"

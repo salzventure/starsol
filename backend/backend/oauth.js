@@ -54,7 +54,7 @@ function callbackUrl(provider) {
 
 function signState({ provider, next, nonce }) {
     return jwt.sign(
-        { provider, next: next || '/dashboard/', nonce: nonce || crypto.randomBytes(16).toString('hex') },
+        { provider, next: next || '/account', nonce: nonce || crypto.randomBytes(16).toString('hex') },
         JWT_SECRET,
         { expiresIn: '15m' },
     );

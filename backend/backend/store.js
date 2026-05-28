@@ -296,6 +296,18 @@ const ambientImages = {
     delete: id => execute('DELETE FROM ambient_images WHERE id = ?', [id]),
 };
 
+// ── Password resets ───────────────────────────────────────────────────────
+const passwordResets = {
+    create: (userId, tokenHash, expiresAt) =>
+        execute('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)', [userId, tokenHash, expiresAt]),
+    findValid: tokenHash =>
+        queryOne('SELECT * FROM password_resets WHERE token_hash = ? AND expires_at > ? AND used_at IS NULL', [tokenHash, Date.now()]),
+    markUsed: id =>
+        execute('UPDATE password_resets SET used_at = ? WHERE id = ?', [Date.now(), id]),
+    clearForUser: userId =>
+        execute('DELETE FROM password_resets WHERE user_id = ?', [userId]),
+};
+
 // ── Events log ────────────────────────────────────────────────────────────
 const events = {
     log: ({ userId, type, event, data, source, ip } = {}) =>
@@ -307,5 +319,5 @@ const events = {
 module.exports = {
     runMigrations,
     query, queryOne, execute, pool,
-    users, subscriptions, devices, content, skyEvents, watchHistory, ambientImages, events,
+    users, subscriptions, devices, content, skyEvents, watchHistory, ambientImages, events, passwordResets,
 };

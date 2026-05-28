@@ -108,8 +108,8 @@ async function sendUpgraded(user, plan) {
                 ? [
                     d.featureBullet('Geolocated ISS pass alerts — push to your phone'),
                     d.featureBullet('Aurora alerts when the KP index spikes'),
-                    d.featureBullet('Early JWST image drops — before public release'),
-                    d.featureBullet('8K ambient images — the full gallery'),
+                    d.featureBullet('Curated Webb release briefings after public release'),
+                    d.featureBullet('High-resolution ambient collection with visible credits'),
                   ].join('')
                 : [
                     d.featureBullet('Full content library — documentaries, series, JWST gallery'),

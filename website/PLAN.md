@@ -8,6 +8,14 @@ This document is the single source of truth for three parallel build agents. Eac
 
 ---
 
+## Launch Quality Notes
+
+- Do not present static astronomy, finance, sports, flight, crypto, or billing values as live/current data. Any fallback data must render as unavailable, loading, or clearly labeled sample content.
+- StarSol TV must not show exact ISS pass times, planet altitudes, directions, or “visible tonight” claims unless those values are calculated for the current date and user location.
+- Cross-app hardcoded live-data audit started on May 28, 2026. Follow-up risks were found in SkorTrack, StockTV, FlightPort, CoinFrame, and StarSol; handle these before launch claims say “live.”
+
+---
+
 ## 0. File Ownership
 
 | Agent | File | Theme |
@@ -1051,6 +1059,15 @@ Pricing tier badges/order are identical. The Explorer tier is always `.is-featur
 
 ### Deployment target
 `index.html` (Agent C) is the file deployed to StarSol.app. The other two (`v1-photo.html`, `v2-illustrated.html`) are design alternates for review and live alongside as `/v1-photo.html` and `/v2-illustrated.html`. Existing `pricing.html`, `account.html`, `pair.html` are untouched.
+
+### Product backlog from the latest review
+- Keep pricing language synchronized everywhere the brand appears. The TV app must never drift back to one-time language; subscription, annual-first, and 7-day trial are the canonical terms.
+- Replace the receiver’s curated search index with backend-backed content discovery so constellation learning, free videos, and editorial rows all point at the same source of truth.
+- Seed more editorial astronomy content in the backend so the free tier feels generous without becoming noisy and the premium tiers have obvious reasons to exist.
+- Turn the sky calendar into a stronger retention loop with live event cards, “look up tonight” prompts, and a clearer free-to-paid bridge.
+- Define the institutional story more concretely for planetariums, classrooms, and science centers once the consumer tier polish is finished.
+- **Self-host compressed gallery images:** The five STScI gallery images in `index.html` are loaded directly from `stsci-opo.org` at full resolution (some exceed 100MB). Download each, resize to ~1040px wide, and convert to WebP at 85% quality. Host under `/img/` on the server and update `<img src>` in `index.html`. This is the main reason the gallery loads slowly — the CDN latency is compounded by enormous file sizes.
+- **Copyright / image usage checklist:** Before expanding the image library, establish a simple process: (1) confirm each image is NASA/ESA/CSA/STScI public domain or CC BY 4.0, (2) record the credit line and original URL in a `docs/image-credits.md` file, (3) ensure the footer credit line stays accurate as new images are added. The current five JWST images are public domain — this process is for future additions.
 
 ---
 

@@ -12,9 +12,75 @@ const billing = require('./billing');
 const admin = require('./admin');
 const oauth = require('./oauth');
 const siwa  = require('./siwa');
+const observer = require('./observer');
+const playBilling = require('./play_billing');
 
 const FREE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000; // 2 days before requiring account
 const PLAN_ORDER = ['free', 'explorer', 'observer', 'institutional'];
+
+function formatPeriodEnd(ts) {
+    if (!ts) return null;
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function presentSubscription(sub) {
+    if (!sub) return null;
+    const priceDisplayMap = {
+        explorer_annual: '$39.99 / yr',
+        explorer_monthly: '$4.99 / mo',
+        observer_annual: '$64.99 / yr',
+        observer_monthly: '$7.99 / mo',
+    };
+    const priceKey = sub.stripe_price_id || '';
+    const interval = priceKey.includes('annual') ? 'annual'
+        : priceKey.includes('monthly') ? 'monthly'
+        : null;
+    return {
+        ...sub,
+        interval,
+        priceDisplay: priceDisplayMap[priceKey] || null,
+        periodEnd: formatPeriodEnd(sub.current_period_end),
+    };
+}
+
+function presentPlaySubscription(sub) {
+    if (!sub) return null;
+    const priceDisplayMap = {
+        explorer_annual: '$39.99 / yr',
+        explorer_monthly: '$4.99 / mo',
+        observer_annual: '$64.99 / yr',
+        observer_monthly: '$7.99 / mo',
+    };
+    const key = sub.subscription_id || '';
+    const interval = key.includes('annual') ? 'annual'
+        : key.includes('monthly') ? 'monthly'
+        : null;
+    return {
+        source: 'google_play',
+        plan: sub.plan,
+        status: sub.status,
+        interval,
+        subscription_id: sub.subscription_id,
+        priceDisplay: priceDisplayMap[key] || null,
+        periodEnd: formatPeriodEnd(sub.expiry_ms),
+        autoRenewing: !!sub.auto_renewing,
+    };
+}
+
+async function activePlaySubscriptionForUser(userId) {
+    const rows = await store.query(
+        `SELECT * FROM play_subscriptions
+         WHERE user_id = ?
+           AND status IN ("active","in_grace_period")
+           AND (expiry_ms IS NULL OR expiry_ms > ?)
+         ORDER BY FIELD(plan, "observer", "explorer") ASC, COALESCE(expiry_ms, 9999999999999) DESC
+         LIMIT 1`,
+        [userId, Date.now()],
+    );
+    return rows[0] || null;
+}
 
 // ── Auth ─────────────────────────────────────────────────────────────────
 
@@ -68,7 +134,13 @@ router.post('/auth/login', async (req, res) => {
 
 router.get('/auth/me', authMiddleware, async (req, res) => {
     const sub = await store.subscriptions.findByUserId(req.user.id);
-    res.json({ user: safeUser(req.user), subscription: sub });
+    const playSub = await activePlaySubscriptionForUser(req.user.id);
+    res.json({
+        user: safeUser(req.user),
+        subscription: presentSubscription(sub) || presentPlaySubscription(playSub),
+        stripeSubscription: presentSubscription(sub),
+        playSubscription: presentPlaySubscription(playSub),
+    });
 });
 
 router.post('/auth/google', async (req, res) => {
@@ -103,6 +175,49 @@ router.post('/auth/google', async (req, res) => {
     }
 });
 
+// ── Forgot password ───────────────────────────────────────────────────────────
+router.post('/auth/forgot', async (req, res) => {
+    const { email: addr } = req.body || {};
+    if (!addr) return res.status(400).json({ error: 'missing_email' });
+    // Always return 200 — never reveal whether an email exists
+    res.json({ ok: true });
+    try {
+        const user = await store.users.findByEmail(addr.toLowerCase().trim());
+        if (!user) return;
+        const token = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        await store.passwordResets.clearForUser(user.id);
+        await store.passwordResets.create(user.id, tokenHash, Date.now() + 60 * 60 * 1000);
+        await emailTemplates.sendPasswordReset(user, token);
+        store.events.log({ userId: user.id, type: 'auth', event: 'password_reset_requested' });
+    } catch (err) {
+        console.error('/auth/forgot', err);
+    }
+});
+
+router.post('/auth/reset', async (req, res) => {
+    const { token, password } = req.body || {};
+    if (!token || !password || password.length < 8) {
+        return res.status(400).json({ error: 'invalid_request' });
+    }
+    try {
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const reset = await store.passwordResets.findValid(tokenHash);
+        if (!reset) return res.status(400).json({ error: 'token_invalid_or_expired' });
+        const newHash = await hashPassword(password);
+        await store.users.setPasswordHash(reset.user_id, newHash);
+        await store.passwordResets.markUsed(reset.id);
+        await store.users.incrementSessionVersion(reset.user_id);
+        const user = await store.users.findById(reset.user_id);
+        const authToken = issueToken(user);
+        store.events.log({ userId: user.id, type: 'auth', event: 'password_reset_completed' });
+        res.json({ ok: true, token: authToken });
+    } catch (err) {
+        console.error('/auth/reset', err);
+        res.status(500).json({ error: 'server_error' });
+    }
+});
+
 // ── Auth config ───────────────────────────────────────────────────────────────
 router.get('/auth/config', (req, res) => {
     res.json({ google: oauth.googleConfigured(), apple: oauth.appleConfigured() });
@@ -117,7 +232,7 @@ router.get('/auth/oauth/apple/start', async (req, res) => {
         return res.status(501).json({ error: 'Apple sign-in is not configured on this server.' });
     }
     const rawNext = (req.query.next || '').toString();
-    const next = (rawNext.startsWith('/') && !rawNext.startsWith('//')) ? rawNext : '/dashboard/';
+    const next = (rawNext.startsWith('/') && !rawNext.startsWith('//')) ? rawNext : '/account';
     const state = oauth.signState({ provider: 'apple', next });
     res.redirect(302, oauth.appleAuthUrl({ state }));
 });
@@ -125,7 +240,7 @@ router.get('/auth/oauth/apple/start', async (req, res) => {
 router.post('/auth/oauth/apple/callback', async (req, res) => {
     const code  = (req.body?.code  || '').toString();
     const state = (req.body?.state || '').toString();
-    const sendError = (msg) => res.redirect(302, `/login/?oauth_error=${encodeURIComponent(msg)}`);
+    const sendError = (msg) => res.redirect(302, `/account?oauth_error=${encodeURIComponent(msg)}`);
 
     const decoded = oauth.verifyState(state);
     if (!decoded || decoded.provider !== 'apple') return sendError('invalid state');
@@ -148,13 +263,13 @@ router.post('/auth/oauth/apple/callback', async (req, res) => {
             [user.id, 'auth', created ? 'apple_register' : 'apple_login', Date.now()]).catch(() => {});
         const token = issueToken(user);
         const safeNext = (decoded.next && decoded.next.startsWith('/') && !decoded.next.startsWith('//'))
-            ? decoded.next : '/dashboard/';
+            ? decoded.next : '/account';
         res.set('Cache-Control', 'no-store');
         res.send(`<!doctype html><meta charset=utf-8><title>Signing in…</title>
 <body style="font-family:sans-serif;background:#050608;color:#fbf3df;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
   <div style="text-align:center">
     <div style="font-size:18px;font-weight:600;margin-bottom:8px">Signing you in…</div>
-    <div style="font-size:13px;color:#c8b886">If this hangs, <a href="/login/" style="color:#d4a44a">click here</a>.</div>
+    <div style="font-size:13px;color:#c8b886">If this hangs, <a href="/account" style="color:#d4a44a">click here</a>.</div>
   </div>
   <script>
     try {
@@ -162,7 +277,7 @@ router.post('/auth/oauth/apple/callback', async (req, res) => {
       localStorage.setItem('ss-pair-token', ${JSON.stringify(token)});
       location.replace(${JSON.stringify(safeNext)});
     } catch (e) {
-      document.body.innerText = 'Could not finish sign-in. Try again from /login.';
+      document.body.innerText = 'Could not finish sign-in. Try again from /account.';
     }
   </script>
 </body>`);
@@ -173,6 +288,17 @@ router.post('/auth/oauth/apple/callback', async (req, res) => {
 });
 
 // ── Devices (TV pairing — no auth required on register) ──────────────────
+
+router.get('/receiver-config', (req, res) => {
+    const overrideUrl = (process.env.RECEIVER_OVERRIDE_URL || '').trim();
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+        overrideUrl: overrideUrl.startsWith('https://starsol.app/') ? overrideUrl : null,
+        forceUpdate: process.env.FORCE_APP_UPDATE === 'true',
+        maintenanceMessage: (process.env.MAINTENANCE_MESSAGE || '').trim() || null,
+        ts: Date.now(),
+    });
+});
 
 // TV calls this on startup to get a pairing code (before user has account)
 router.post('/devices/register', async (req, res) => {
@@ -359,6 +485,9 @@ router.get('/sky-events', async (req, res) => {
     res.json({ events });
 });
 
+router.get('/observer/summary', authMiddleware, requirePlan('observer'), observer.observerSummary);
+router.get('/observer/iss-passes', authMiddleware, requirePlan('observer'), observer.issPasses);
+
 // ── Billing ───────────────────────────────────────────────────────────────
 
 router.post('/billing/checkout', authMiddleware, async (req, res) => {
@@ -480,5 +609,9 @@ function escapeHtml(value) {
 function sanitizeSubject(value) {
     return String(value ?? '').replace(/[\r\n]+/g, ' ').slice(0, 180);
 }
+
+// ── Google Play Billing ────────────────────────────────────────────────────
+router.post("/play-billing/rtdn",   playBilling.handleRtdn);
+router.post("/play-billing/verify", authMiddleware, playBilling.handleVerify);
 
 module.exports = router;

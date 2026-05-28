@@ -41,6 +41,9 @@ app.get('/pair', (_req, res) => res.sendFile(path.join(__dirname, 'web/pair.html
 app.get('/pricing', (_req, res) => res.sendFile(path.join(__dirname, 'web/pricing.html')));
 app.get('/account', (_req, res) => res.sendFile(path.join(__dirname, 'web/account.html')));
 app.get('/terms', (_req, res) => res.sendFile(path.join(__dirname, 'web/terms.html')));
+app.get('/privacy', (_req, res) => res.sendFile(path.join(__dirname, 'web/privacy.html')));
+app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, 'web/reset-password.html')));
+app.get('/tv', (_req, res) => res.sendFile(path.join(__dirname, 'web/tv.html')));
 
 async function main() {
     await store.runMigrations();

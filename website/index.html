@@ -4,12 +4,38 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>StarSol — Astronomy for your TV</title>
-  <meta name="description" content="StarSol streams ambient cosmos, 4K JWST imagery, and live sky events to Google TV and Android TV.">
+  <meta name="description" content="StarSol brings JWST imagery, sky events, and ambient cosmos to Google TV and Android TV.">
+  <link rel="canonical" href="https://starsol.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="StarSol — Astronomy for your TV">
+  <meta property="og:description" content="JWST imagery, sky events, and ambient cosmos for your biggest screen.">
+  <meta property="og:url" content="https://starsol.app/">
+  <meta property="og:image" content="https://stsci-opo.org/STScI-01GA76Q01D09HFEV174SVMQDMV.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="StarSol — Astronomy for your TV">
+  <meta name="twitter:description" content="JWST imagery, sky events, and ambient cosmos for your biggest screen.">
+  <meta name="twitter:image" content="https://stsci-opo.org/STScI-01GA76Q01D09HFEV174SVMQDMV.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28' fill='%23e2b96f'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap">
+  <link rel="preload" as="image" href="/img/carina.jpg" fetchpriority="high">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "StarSol",
+    "url": "https://starsol.app/",
+    "description": "StarSol brings JWST imagery, sky events, and ambient cosmos to Google TV and Android TV.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "StarSol",
+      "url": "https://starsol.app/"
+    }
+  }
+  </script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
-
     :root {
       /* Backgrounds — deep space */
       --bg-void:        #05070d;
@@ -272,7 +298,7 @@
         radial-gradient(ellipse at 28% 38%, rgba(226,185,111,0.16), transparent 50%),
         radial-gradient(ellipse at 72% 62%, rgba(138,31,31,0.20), transparent 55%),
         radial-gradient(ellipse at 50% 50%, rgba(15,20,34,0.65), var(--bg-void) 80%),
-        url('https://stsci-opo.org/STScI-01GA6KKWHJBKPK8T9B3W6FKQRS.png');
+        url('/img/carina.jpg');
       background-size: cover, cover, cover, cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -771,6 +797,21 @@
       .nav-links { gap: var(--s-4); }
     }
 
+    /* ===== Hamburger (desktop: hidden) ===== */
+    .nav-hamburger {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px 8px;
+      color: var(--text-secondary);
+      font-size: 22px;
+      line-height: 1;
+      border-radius: var(--r-md);
+      transition: color var(--dur-fast) var(--ease-out);
+    }
+    .nav-hamburger:hover { color: var(--gold); }
+
     @media (max-width: 760px) {
       .hero-const { width: 80vw; height: 80vw; right: 50%; top: auto; bottom: 14vh; transform: translateX(50%); opacity: 0.4; }
       .hero-content { padding: 0 var(--s-5); }
@@ -778,6 +819,23 @@
       .nav { padding: var(--s-4) var(--s-5); }
       .nav--scrolled { padding: var(--s-3) var(--s-5); }
       .nav-links { display: none; }
+      .nav-links.is-open {
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-4);
+        position: fixed;
+        top: 56px;
+        left: 0; right: 0;
+        background: rgba(5,7,13,0.96);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        padding: var(--s-5) var(--s-5) var(--s-6);
+        border-bottom: 1px solid var(--border-faint);
+        z-index: 99;
+      }
+      .nav-links.is-open a { font-size: 15px; letter-spacing: 0.1em; }
+      .nav-hamburger { display: flex; align-items: center; justify-content: center; }
+      .nav-cta { display: none; }
       .photo-card { flex-basis: 86vw; height: 540px; }
       .footer { padding: var(--s-7) var(--s-5) var(--s-5); }
       .gallery .section-header, .gallery-row { padding-left: var(--s-5); padding-right: var(--s-5); }
@@ -900,21 +958,27 @@
       <span class="nav-glyph">✦</span>
       <span class="nav-wordmark">StarSol</span>
     </a>
-    <ul class="nav-links">
+    <ul class="nav-links" id="nav-links-list">
       <li><a href="#features">Features</a></li>
       <li><a href="#constellations">Constellations</a></li>
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#about">About</a></li>
+      <li><a href="tonight.html">Tonight</a></li>
+      <li><a href="constellations.html">Learn constellations</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="/account" class="nav-cta" style="border:none;color:var(--gold);padding:0;font-size:13px;letter-spacing:.14em;">Sign In</a></li>
     </ul>
-    <a class="nav-cta" href="pricing.html">Start Watching</a>
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-list">☰</button>
+    <a class="nav-cta" href="/account">Sign In</a>
   </nav>
 
   <!-- ============== HERO ============== -->
   <header class="hero" id="top">
     <div class="hero-photo" aria-hidden="true">
-      <img src="https://stsci-opo.org/STScI-01GA6KKWHJBKPK8T9B3W6FKQRS.png"
+      <img src="/img/carina.jpg"
            alt=""
            style="display:none"
+           fetchpriority="high"
            onload="this.parentElement.style.backgroundImage = `radial-gradient(ellipse at 28% 38%, rgba(226,185,111,0.16), transparent 50%), radial-gradient(ellipse at 72% 62%, rgba(138,31,31,0.20), transparent 55%), url('${this.src}')`; this.parentElement.style.backgroundSize='cover'; this.parentElement.style.backgroundPosition='center';"
            onerror="this.remove()">
     </div>
@@ -960,11 +1024,11 @@
     </svg>
 
     <div class="hero-content">
-      <span class="t-eyebrow hero-eyebrow">Premium astronomy for Google TV</span>
-      <h1 class="t-hero">The night sky deserves<br><em>your largest screen.</em></h1>
-      <p class="t-lead">StarSol streams ambient cosmos, 4K JWST imagery, and live sky alerts to your Google TV or Android TV. Two days free. No signup.</p>
+      <span class="t-eyebrow hero-eyebrow">Astronomy made for your TV</span>
+      <h1 class="t-hero">Bring the night sky<br><em>into the room.</em></h1>
+      <p class="t-lead">StarSol puts JWST imagery, sky events, and ambient space scenes on your biggest screen. Try it free for two days. No signup.</p>
       <div class="cta-row">
-        <a class="btn btn-solid" href="pricing.html">Start Watching</a>
+        <a class="btn btn-solid" href="/account">Start Watching</a>
         <a class="btn btn-ghost" href="#constellations">Browse Constellations</a>
       </div>
     </div>
@@ -976,7 +1040,7 @@
   <section id="features" class="features">
     <header class="section-header reveal">
       <span class="t-eyebrow">What you'll see</span>
-      <h2 class="t-display">Four windows onto the night.</h2>
+      <h2 class="t-display">Four ways to spend time with the sky.</h2>
     </header>
 
     <div class="features-grid">
@@ -998,7 +1062,7 @@
           </svg>
         </div>
         <h3 class="t-h4">Ambient Mode</h3>
-        <p class="t-body">Turn your television into an observatory window. Drift through Hubble and JWST imagery at the pace of starlight — no narration, no captions, just the quiet light of distant things.</p>
+        <p class="t-body">Use the TV like a framed window. Public mission images drift by quietly, with source credits available in the experience.</p>
       </article>
 
       <article class="feature reveal">
@@ -1025,7 +1089,7 @@
           </svg>
         </div>
         <h3 class="t-h4">JWST Gallery</h3>
-        <p class="t-body">Every public James Webb release, in native 4K. Pillars of Creation. Carina. Cosmic Cliffs. Curated, annotated, and updated within hours of each new image drop.</p>
+        <p class="t-body">A curated Webb gallery for large screens, with enough context to enjoy the images without feeling lectured.</p>
       </article>
 
       <article class="feature reveal">
@@ -1049,7 +1113,7 @@
           </svg>
         </div>
         <h3 class="t-h4">Sky Events Calendar</h3>
-        <p class="t-body">Meteor showers, eclipses, planetary conjunctions, lunar phases. Filtered for your hemisphere, your latitude, your bortle class. Tomorrow night, the Perseids peak at 2:14am.</p>
+        <p class="t-body">Use the sky guide for moon phases, seasonal events, and ISS live-position context. Exact local alerting belongs in the planned Observer tools.</p>
       </article>
 
       <article class="feature reveal">
@@ -1071,8 +1135,8 @@
             </g>
           </svg>
         </div>
-        <h3 class="t-h4">Geolocated Alerts</h3>
-        <p class="t-body">A push when the ISS passes overhead. An alert when the aurora forecast crosses Kp 6 for your latitude. Notice given in minutes, not hours. Step outside. Look up.</p>
+        <h3 class="t-h4">ISS Live Position</h3>
+        <p class="t-body">Track where the Station is now. Precise local pass alerts are planned for Observer once location-based predictions are wired in.</p>
       </article>
     </div>
   </section>
@@ -1081,7 +1145,7 @@
   <section id="constellations" class="const-showcase">
     <header class="section-header reveal">
       <span class="t-eyebrow">Catalogued</span>
-      <h2 class="t-display">Eight you can find <em>tonight.</em></h2>
+      <h2 class="t-display">Eight constellations you can find <em>tonight.</em></h2>
     </header>
 
     <div class="const-grid">
@@ -1317,14 +1381,16 @@
   <section class="gallery">
     <header class="section-header reveal">
       <span class="t-eyebrow">From the gallery</span>
-      <h2 class="t-display">Light that left <em>before us.</em></h2>
+      <h2 class="t-display">Images from far away, and long ago.</h2>
     </header>
 
     <div class="gallery-row" role="list">
       <article class="photo-card" role="listitem">
-        <img src="https://stsci-opo.org/STScI-01GA76Q01D09HFEV174SVMQDMV.png"
+        <img src="/img/pillars.jpg"
+             srcset="/img/pillars-sm.jpg 640w, /img/pillars.jpg 2048w"
+             sizes="(max-width: 760px) 86vw, 520px"
              alt="Pillars of Creation, JWST NIRCam"
-             loading="lazy"
+             loading="lazy" decoding="async"
              onerror="this.remove()">
         <div class="caption">
           <span class="caption-label">PILLARS OF CREATION · M16 EAGLE NEBULA</span>
@@ -1333,9 +1399,11 @@
       </article>
 
       <article class="photo-card" role="listitem">
-        <img src="https://stsci-opo.org/STScI-01GA6KKWG229M41KWK6K6HMNJM.png"
+        <img src="/img/carina.jpg"
+             srcset="/img/carina-sm.jpg 640w, /img/carina.jpg 2048w"
+             sizes="(max-width: 760px) 86vw, 520px"
              alt="Carina Nebula"
-             loading="lazy"
+             loading="lazy" decoding="async"
              onerror="this.remove()">
         <div class="caption">
           <span class="caption-label">CARINA NEBULA · COSMIC CLIFFS</span>
@@ -1344,9 +1412,11 @@
       </article>
 
       <article class="photo-card" role="listitem">
-        <img src="https://stsci-opo.org/STScI-01GA6KNK1JJAHFP8Y0KS8YPYGY.png"
+        <img src="/img/southern-ring.jpg"
+             srcset="/img/southern-ring-sm.jpg 640w, /img/southern-ring.jpg 2048w"
+             sizes="(max-width: 760px) 86vw, 520px"
              alt="Southern Ring Nebula"
-             loading="lazy"
+             loading="lazy" decoding="async"
              onerror="this.remove()">
         <div class="caption">
           <span class="caption-label">SOUTHERN RING NEBULA · NGC 3132</span>
@@ -1355,9 +1425,11 @@
       </article>
 
       <article class="photo-card" role="listitem">
-        <img src="https://stsci-opo.org/STScI-01GA6KKWKBKK2JKZQMHFQX09AF.png"
+        <img src="/img/stephans.png"
+             srcset="/img/stephans-sm.png 640w, /img/stephans.png 2048w"
+             sizes="(max-width: 760px) 86vw, 520px"
              alt="Stephan's Quintet"
-             loading="lazy"
+             loading="lazy" decoding="async"
              onerror="this.remove()">
         <div class="caption">
           <span class="caption-label">STEPHAN'S QUINTET · HCG 92</span>
@@ -1366,9 +1438,11 @@
       </article>
 
       <article class="photo-card" role="listitem">
-        <img src="https://stsci-opo.org/STScI-01GA6KKWHJBKPK8T9B3W6FKQRS.png"
+        <img src="/img/carina.jpg"
+             srcset="/img/carina-sm.jpg 640w, /img/carina.jpg 2048w"
+             sizes="(max-width: 760px) 86vw, 520px"
              alt="Cosmic Cliffs"
-             loading="lazy"
+             loading="lazy" decoding="async"
              onerror="this.remove()">
         <div class="caption">
           <span class="caption-label">COSMIC CLIFFS · NGC 3324</span>
@@ -1376,13 +1450,14 @@
         </div>
       </article>
     </div>
+    <p style="text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text-tertiary,#4f4a3e);margin-top:20px;padding:0 var(--s-7)">Images: NASA, ESA, CSA, STScI — James Webb Space Telescope First Images</p>
   </section>
 
   <!-- ============== PRICING ============== -->
   <section id="pricing" class="pricing">
     <header class="section-header center reveal">
       <span class="t-eyebrow">Pricing</span>
-      <h2 class="t-display">Begin freely. Stay if it <em>moves you.</em></h2>
+      <h2 class="t-display">Start free. Keep it if it <em>fits your nights.</em></h2>
     </header>
 
     <div class="pricing-grid">
@@ -1390,53 +1465,53 @@
         <h3 class="tier-name">Free</h3>
         <div class="tier-price">
           <span class="tier-price-num">$0</span>
-          <span class="tier-price-sub">two days, no signup</span>
+          <span class="tier-price-sub">two days free, no signup</span>
         </div>
         <ul class="tier-feats">
-          <li>Full browse + watch</li>
-          <li>Standard library</li>
+          <li>Browse and watch freely</li>
+          <li>A starter set of images and videos</li>
           <li>No account required</li>
           <li>Locks after 48 hours</li>
         </ul>
-        <a class="tier-cta tier-cta--ghost" href="pricing.html">Start free</a>
+        <a class="tier-cta tier-cta--ghost" href="/account">Start free</a>
       </article>
 
       <article class="tier tier--explorer is-featured reveal">
-        <span class="tier-badge">Most chosen</span>
+        <span class="tier-badge">Launch plan</span>
         <h3 class="tier-name">Explorer</h3>
         <div class="tier-price">
           <span class="tier-price-num">$4.99</span>
-          <span class="tier-price-sub">/ month — or $39.99/yr</span>
+          <span class="tier-price-sub">/ month · or $39.99/yr</span>
         </div>
         <ul class="tier-feats">
-          <li>Full library, unlimited</li>
-          <li>4K JWST gallery</li>
+          <li>Full library, always on</li>
+          <li>TV-optimized JWST gallery</li>
           <li>Ambient mode</li>
-          <li>Sky alerts</li>
+          <li>ISS live position tracking</li>
         </ul>
-        <a class="tier-cta tier-cta--solid" href="pricing.html">Start Watching</a>
+        <a class="tier-cta tier-cta--solid" href="/pricing">Start Watching</a>
       </article>
 
       <article class="tier tier--observer reveal">
         <h3 class="tier-name">Observer</h3>
         <div class="tier-price">
-          <span class="tier-price-num">$7.99</span>
-          <span class="tier-price-sub">/ month — or $64.99/yr</span>
+          <span class="tier-price-num">Soon</span>
+          <span class="tier-price-sub">location-aware tools</span>
         </div>
         <ul class="tier-feats">
           <li>Everything in Explorer</li>
-          <li>Geolocated ISS &amp; aurora alerts</li>
-          <li>Early JWST drops</li>
-          <li>8K wallpaper downloads</li>
+          <li>Location-based ISS and aurora alerts</li>
+          <li>Expanded constellation lessons</li>
+          <li>Downloads where licenses allow</li>
         </ul>
-        <a class="tier-cta tier-cta--ghost" href="pricing.html">Choose Observer</a>
+        <a class="tier-cta tier-cta--ghost" href="/account">Get Explorer</a>
       </article>
 
       <article class="tier tier--inst reveal">
         <h3 class="tier-name">Institutional</h3>
         <div class="tier-price">
           <span class="tier-price-num">$1,500&ndash;5,000</span>
-          <span class="tier-price-sub">/ year — custom</span>
+          <span class="tier-price-sub">/ year · custom</span>
         </div>
         <ul class="tier-feats">
           <li>Planetariums, K&ndash;12 STEM, museums</li>
@@ -1453,8 +1528,8 @@
   <section id="about" class="about">
     <div class="about-inner reveal">
       <span class="t-eyebrow">About</span>
-      <h2 class="t-display">StarSol is a <em>quiet thing.</em></h2>
-      <p class="about-body">We built StarSol because the most beautiful images of our universe deserve more than a phone screen and a thumb-scroll. On your television, in a dimmed room, they become what they are: windows. We update the gallery within hours of every public JWST release. We do not show ads. We will never show ads.</p>
+      <h2 class="t-display">StarSol is built to be <em>watched slowly.</em></h2>
+      <p class="about-body">We built StarSol because the most beautiful images of our universe deserve more than a phone screen and a thumb-scroll. On your television, in a dimmed room, they become what they are: windows. New public releases are added after source and credit review. We do not show ads. We will never show ads.</p>
     </div>
   </section>
 
@@ -1503,9 +1578,9 @@
       </div>
       <nav class="footer-col">
         <h4 class="footer-h">Product</h4>
-        <a href="pricing.html">Pricing</a>
-        <a href="account.html">Account</a>
-        <a href="pair.html">Pair a TV</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/account">Account</a>
+        <a href="/pair">Pair a TV</a>
       </nav>
       <nav class="footer-col">
         <h4 class="footer-h">Platforms</h4>
@@ -1514,7 +1589,7 @@
       </nav>
       <div class="footer-col">
         <h4 class="footer-h">Credit</h4>
-        <p class="t-caption">Imagery: NASA / ESA / CSA / STScI. Public domain.</p>
+        <p class="t-caption">Credits shown per asset. NASA media and ESA/Webb CC BY 4.0 material used where applicable.</p>
       </div>
     </div>
     <div class="footer-base">
@@ -1530,9 +1605,10 @@
 
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      // ----- Ambient star field on hero -----
-      const layer = document.querySelector('.star-field');
-      if (layer) {
+      // ----- Ambient star field on hero (deferred to idle) -----
+      (window.requestIdleCallback || function(cb){ setTimeout(cb, 1); })(function() {
+        const layer = document.querySelector('.star-field');
+        if (!layer) return;
         const count = 200;
         const frag = document.createDocumentFragment();
         for (let i = 0; i < count; i++) {
@@ -1549,7 +1625,7 @@
           frag.appendChild(s);
         }
         layer.appendChild(frag);
-      }
+      });
 
       // ----- Nav scrolled state + parallax (rAF debounced) -----
       const nav = document.querySelector('.nav');
@@ -1557,34 +1633,21 @@
       const heroConst = document.querySelector('.hero-const');
       let ticking = false;
 
-      function onScroll() {
-        const y = window.scrollY;
-        if (nav) nav.classList.toggle('nav--scrolled', y > 40);
-        if (!prefersReducedMotion) {
-          if (heroPhoto) heroPhoto.style.transform = 'translate3d(0,' + (y * 0.3) + 'px,0)';
-          if (heroConst) heroConst.style.transform = 'translate3d(0,' + (y * -0.15) + 'px,-50%)';
-        }
-        ticking = false;
-      }
-      function requestTick() {
-        if (!ticking) {
-          window.requestAnimationFrame(onScroll);
-          ticking = true;
-        }
-      }
       // Patch heroConst transform: it uses translateY(-50%) in CSS — apply via inline override.
       if (heroConst) {
         heroConst.style.top = '50%';
         heroConst.style.transform = 'translate3d(0,0,0) translateY(-50%)';
       }
+      const heroHeight = window.innerHeight;
       window.addEventListener('scroll', () => {
-        if (nav) nav.classList.toggle('nav--scrolled', window.scrollY > 40);
-        if (prefersReducedMotion) return;
+        const y = window.scrollY;
+        if (nav) nav.classList.toggle('nav--scrolled', y > 40);
+        if (prefersReducedMotion || y >= heroHeight) return;
         if (!ticking) {
           window.requestAnimationFrame(() => {
-            const y = window.scrollY;
-            if (heroPhoto) heroPhoto.style.transform = 'translate3d(0,' + (y * 0.3) + 'px,0)';
-            if (heroConst) heroConst.style.transform = 'translate3d(0,calc(-50% + ' + (y * -0.15) + 'px),0)';
+            const sy = window.scrollY;
+            if (heroPhoto) heroPhoto.style.transform = 'translate3d(0,' + (sy * 0.3) + 'px,0)';
+            if (heroConst) heroConst.style.transform = 'translate3d(0,calc(-50% + ' + (sy * -0.15) + 'px),0)';
             ticking = false;
           });
           ticking = true;
@@ -1605,6 +1668,28 @@
         document.querySelectorAll('.reveal, .constellation-panel').forEach(el => io.observe(el));
       } else {
         document.querySelectorAll('.reveal, .constellation-panel').forEach(el => el.classList.add('is-visible'));
+      }
+
+      // ----- Hamburger menu toggle -----
+      const hamburger = document.getElementById('nav-hamburger');
+      const navLinksList = document.getElementById('nav-links-list');
+      if (hamburger && navLinksList) {
+        function closeNav() {
+          navLinksList.classList.remove('is-open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          hamburger.textContent = '☰';
+        }
+        hamburger.addEventListener('click', e => {
+          e.stopPropagation();
+          const open = navLinksList.classList.toggle('is-open');
+          hamburger.setAttribute('aria-expanded', open);
+          hamburger.textContent = open ? '✕' : '☰';
+        });
+        navLinksList.querySelectorAll('a').forEach(a => a.addEventListener('click', closeNav));
+        document.addEventListener('click', e => {
+          if (navLinksList.classList.contains('is-open') && !navLinksList.contains(e.target)) closeNav();
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
       }
 
       // ----- Smooth anchor scrolling for nav links -----

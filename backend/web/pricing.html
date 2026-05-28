@@ -4,6 +4,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Choose your plan — StarSol</title>
+<meta name="description" content="Choose an annual or monthly StarSol plan for JWST imagery, sky events, ambient mode, and live astronomy content.">
+<link rel="canonical" href="https://starsol.app/pricing">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Choose your plan — StarSol">
+<meta property="og:description" content="Choose an annual or monthly StarSol plan for JWST imagery, sky events, ambient mode, and live astronomy content.">
+<meta property="og:url" content="https://starsol.app/pricing">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Choose your plan — StarSol">
+<meta name="twitter:description" content="Choose an annual or monthly StarSol plan for JWST imagery, sky events, ambient mode, and live astronomy content.">
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"/>
@@ -102,11 +111,11 @@ h1{font-family:var(--serif);font-style:italic;font-size:56px;line-height:1.1;col
   <span class="logo-name">StarSol</span>
 </div>
 
-<div class="header">
-  <div class="eyebrow">7 days free on any plan</div>
-  <h1>Choose your plan.</h1>
-  <p class="subtitle">Cinematic astronomy on the largest screen in your house. JWST releases, ISS pass alerts, ambient mode, and a full sky calendar.</p>
-</div>
+  <div class="header">
+    <div class="eyebrow">7 days free on Explorer</div>
+    <h1>Choose your plan.</h1>
+    <p class="subtitle">Cinematic astronomy on the largest screen in your house. Public mission imagery, educational videos, ambient mode, starter constellation guides, and ISS live-position tracking.</p>
+  </div>
 
 <div class="toggle-row">
   <button class="toggle-btn active" data-period="annual">Annual</button>
@@ -122,27 +131,27 @@ h1{font-family:var(--serif);font-style:italic;font-size:56px;line-height:1.1;col
     <div class="price-main" id="price-explorer">$39.99 / yr</div>
     <div class="price-sub" id="sub-explorer">or $4.99 / mo</div>
     <ul class="features">
-      <li>Full JWST + Hubble + ESO gallery</li>
-      <li>Complete documentary library</li>
+      <li>Curated Webb image gallery with visible credits</li>
+      <li>Astronomy video catalog from NASA and ESA/Webb sources</li>
       <li>Ambient mode — full image collection</li>
-      <li>Sky event calendar — 365 days</li>
-      <li>Live events — launches, eclipses, JWST drops</li>
+      <li>88-constellation learning atlas with mythology</li>
+      <li>ISS live position tracker</li>
     </ul>
     <button class="btn btn-primary" id="btn-explorer">Start 7-day trial</button>
   </div>
 
   <div class="plan secondary" id="plan-observer">
     <div class="plan-name">Observer</div>
-    <div class="price-main" id="price-observer">$64.99 / yr</div>
-    <div class="price-sub" id="sub-observer">or $7.99 / mo</div>
+    <div class="price-main" id="price-observer">Coming soon</div>
+    <div class="price-sub" id="sub-observer">location-aware tools</div>
     <ul class="features">
       <li>Everything in Explorer</li>
-      <li>Geolocated ISS pass alerts</li>
-      <li>Aurora alert when KP index spikes</li>
-      <li>Early JWST image drops</li>
-      <li>8K wallpaper downloads</li>
+      <li>Location-based ISS pass alerts</li>
+      <li>Aurora forecast alerts</li>
+      <li>Expanded constellation lessons</li>
+      <li>Downloadable wallpapers where licenses allow</li>
     </ul>
-    <button class="btn btn-primary" id="btn-observer">Start 7-day trial</button>
+    <button class="btn btn-primary" id="btn-observer" disabled>Coming soon</button>
   </div>
 </div>
 
@@ -160,8 +169,8 @@ const API = (typeof window !== 'undefined' && window.location.host === 'starsol.
 let period = 'annual';
 
 const PRICES = {
-  annual:  { explorerMain: '$39.99 / yr', explorerSub: 'or $4.99 / mo', observerMain: '$64.99 / yr', observerSub: 'or $7.99 / mo' },
-  monthly: { explorerMain: '$4.99 / mo',  explorerSub: 'or $39.99 / yr', observerMain: '$7.99 / mo',  observerSub: 'or $64.99 / yr' },
+  annual:  { explorerMain: '$39.99 / yr', explorerSub: 'or $4.99 / mo', observerMain: 'Coming soon', observerSub: 'location-aware tools' },
+  monthly: { explorerMain: '$4.99 / mo',  explorerSub: 'or $39.99 / yr', observerMain: 'Coming soon', observerSub: 'location-aware tools' },
 };
 function applyPeriod() {
   const p = PRICES[period];
@@ -203,10 +212,14 @@ async function startCheckout(plan) {
       body: JSON.stringify({ plan: planToPriceKey(plan) }),
     });
     const d = await r.json();
+    if (r.status === 401) {
+      window.location.href = '/account?next=/pricing?plan=' + encodeURIComponent(planToPriceKey(plan));
+      return;
+    }
     if (!r.ok || !d.url) throw new Error(d.error || 'checkout_failed');
     window.location.href = d.url;
   } catch (e) {
-    alertEl.textContent = 'Could not start checkout — please try again or sign in first.';
+    alertEl.textContent = 'Could not start checkout — please try again.';
     alertEl.style.display = 'block';
     btn.disabled = false;
     btn.innerHTML = original;
@@ -214,7 +227,7 @@ async function startCheckout(plan) {
 }
 
 document.getElementById('btn-explorer').addEventListener('click', () => startCheckout('explorer'));
-document.getElementById('btn-observer').addEventListener('click', () => startCheckout('observer'));
+document.getElementById('btn-observer').addEventListener('click', () => {});
 
 // Pre-select from URL ?plan=explorer_annual
 const url = new URLSearchParams(location.search);
@@ -225,10 +238,10 @@ if (initialPlan) {
     document.querySelectorAll('.toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.period === 'monthly'));
   }
   applyPeriod();
-  // Visually highlight
+  // Visually highlight selected plan
   if (initialPlan.startsWith('observer')) {
+    document.getElementById('plan-explorer').classList.remove('primary');
     document.getElementById('plan-observer').classList.add('primary');
-    document.getElementById('plan-observer').querySelector('.plan-name').style.color = 'var(--star100)';
   }
 } else {
   applyPeriod();
