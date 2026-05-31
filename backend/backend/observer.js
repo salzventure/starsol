@@ -101,7 +101,14 @@ function fallbackSubpoint(timestampMs) {
     };
 }
 
+const _posCache = new Map();
+const POS_TTL_MS = 2 * 60 * 1000;
+
 async function issPositions(startMs, minutesAhead) {
+    const key = Math.floor(startMs / 120000) + ':' + minutesAhead;
+    const cached = _posCache.get(key);
+    if (cached && Date.now() - cached.at < POS_TTL_MS) return cached.data;
+
     const stepSec = 120;
     const timestamps = [];
     for (let t = startMs; t <= startMs + minutesAhead * 60000; t += stepSec * 1000) {
@@ -112,12 +119,20 @@ async function issPositions(startMs, minutesAhead) {
         for (let i = 0; i < timestamps.length; i += 40) {
             const chunk = timestamps.slice(i, i + 40);
             const url = `https://api.wheretheiss.at/v1/satellites/${ISS_ID}/positions?timestamps=${chunk.join(',')}&units=kilometers`;
-            const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+            const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000) });
             if (!resp.ok) throw new Error(`iss_http_${resp.status}`);
             const data = await resp.json();
             if (Array.isArray(data)) positions.push(...data);
         }
-        if (positions.length) return positions.map(p => ({ ...p, source: 'wheretheiss.at' }));
+        if (positions.length) {
+            const result = positions.map(p => ({ ...p, source: 'wheretheiss.at' }));
+            _posCache.set(key, { data: result, at: Date.now() });
+            if (_posCache.size > 20) {
+                const oldest = [..._posCache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+                _posCache.delete(oldest[0]);
+            }
+            return result;
+        }
     } catch (err) {
         console.warn('[observer] ISS positions fallback:', err.message);
     }
@@ -173,6 +188,7 @@ async function fetchAurora(lat) {
     try {
         const resp = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', {
             headers: { Accept: 'application/json' },
+            signal: AbortSignal.timeout(5000),
         });
         if (!resp.ok) throw new Error(`kp_http_${resp.status}`);
         const rows = await resp.json();

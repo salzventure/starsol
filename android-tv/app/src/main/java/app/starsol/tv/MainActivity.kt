@@ -59,9 +59,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             )
 
-        // WARNING: remove before production release. Web contents debugging
-        // exposes the WebView JS context to any connected Chrome DevTools
-        // session on the same network.
+        // Debug builds only: expose the WebView JS context to Chrome DevTools.
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
 
         webView = WebView(this).apply {
@@ -98,7 +96,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
                     request: WebResourceRequest?
                 ): Boolean {
                     val url = request?.url?.toString() ?: return false
-                    if (url.startsWith("https://starsol.app/")) return false
+                    if (isAllowedStarSolUrl(url)) return false
                     if (url.startsWith("http://") || url.startsWith("https://")) {
                         runCatching {
                             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -137,7 +135,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
                 val json = JSONObject(conn.inputStream.bufferedReader().readText())
                 conn.disconnect()
                 val override = json.optString("overrideUrl", "")
-                if (override.startsWith("https://starsol.app/")) override else null
+                if (isAllowedStarSolUrl(override)) override else null
             } catch (_: Exception) { null }
             mainHandler.post {
                 if (!destroyed) webView.loadUrl(url ?: BUNDLED_RECEIVER_URL)
@@ -331,25 +329,39 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
             }
         }
 
-        // D-PAD: Android TV WebViews sometimes consume DPAD events via the
+        // TV remote: Android TV WebViews sometimes consume key events via the
         // native View focus system before they reach the JS keydown handler,
         // especially when loaded from file://. Intercept ACTION_DOWN here and
         // inject the event directly into JS — this is the reliable pattern for
-        // fully custom D-pad navigation in a single-WebView TV app.
+        // fully custom remote navigation in a single-WebView TV app.
         if (event.action == KeyEvent.ACTION_DOWN) {
-            val jsKey = when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP       -> "ArrowUp"
-                KeyEvent.KEYCODE_DPAD_DOWN     -> "ArrowDown"
-                KeyEvent.KEYCODE_DPAD_LEFT     -> "ArrowLeft"
-                KeyEvent.KEYCODE_DPAD_RIGHT    -> "ArrowRight"
+            val jsEvent = when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP       -> "ArrowUp" to 38
+                KeyEvent.KEYCODE_DPAD_DOWN     -> "ArrowDown" to 40
+                KeyEvent.KEYCODE_DPAD_LEFT     -> "ArrowLeft" to 37
+                KeyEvent.KEYCODE_DPAD_RIGHT    -> "ArrowRight" to 39
                 KeyEvent.KEYCODE_DPAD_CENTER,
                 KeyEvent.KEYCODE_ENTER,
-                KeyEvent.KEYCODE_NUMPAD_ENTER  -> "Enter"
+                KeyEvent.KEYCODE_NUMPAD_ENTER  -> "Enter" to 13
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> "MediaPlayPause" to 179
+                KeyEvent.KEYCODE_MEDIA_PLAY    -> "MediaPlay" to 126
+                KeyEvent.KEYCODE_MEDIA_PAUSE   -> "MediaPause" to 127
+                KeyEvent.KEYCODE_MEDIA_REWIND  -> "MediaRewind" to 89
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> "MediaFastForward" to 90
                 else                           -> null
             }
-            if (jsKey != null) {
+            if (jsEvent != null) {
+                val (jsKey, jsKeyCode) = jsEvent
                 webView.evaluateJavascript(
-                    "document.dispatchEvent(new KeyboardEvent('keydown',{key:'$jsKey',bubbles:true,cancelable:true}));",
+                    """
+                    document.dispatchEvent(new KeyboardEvent('keydown',{
+                      key:'$jsKey',
+                      keyCode:$jsKeyCode,
+                      which:$jsKeyCode,
+                      bubbles:true,
+                      cancelable:true
+                    }));
+                    """.trimIndent(),
                     null
                 )
                 return true
@@ -379,5 +391,11 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         private const val CLIENT_VALUE = "starsol-androidtv/1.0.0"
         private const val RECEIVER_CONFIG_URL =
             "https://starsol.app/api/receiver-config"
+
+        private fun isAllowedStarSolUrl(url: String): Boolean {
+            val uri = Uri.parse(url)
+            val host = uri.host ?: return false
+            return uri.scheme == "https" && host == "starsol.app"
+        }
     }
 }

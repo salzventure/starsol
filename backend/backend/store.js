@@ -107,6 +107,11 @@ const users = {
         }
     },
     setEmailVerified: id => execute('UPDATE users SET email_verified = 1 WHERE id = ?', [id]),
+    setTrialUsed: (id) => execute('UPDATE users SET trial_used_at = ? WHERE id = ?', [Date.now(), id]),
+    hasUsedTrial: async (id) => {
+        const row = await queryOne('SELECT trial_used_at FROM users WHERE id = ?', [id]);
+        return !!(row && row.trial_used_at);
+    },
     all: (limit = 500, offset = 0) =>
         query('SELECT id, name, email, plan, created_at, last_login_at, email_verified FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?', [limit, offset]),
     count: () => queryOne('SELECT COUNT(*) as total FROM users'),
@@ -136,21 +141,69 @@ const subscriptions = {
                 updated_at             = VALUES(updated_at)
         `, [userId, stripeCustomerId, stripeSubscriptionId, stripePriceId, plan, status,
             periodStart, periodEnd, cancelAtPeriodEnd ? 1 : 0, Date.now()]);
-        await users.updatePlan(userId, ['active', 'trialing'].includes(status) ? plan : 'free');
+        // Effective plan: active/trialing always entitled; canceled or past_due
+        // entitled only while we are still inside the paid period. past_due is
+        // Stripe dunning — do not demote.
+        const now = Date.now();
+        const insidePeriod = periodEnd && periodEnd > now;
+        const entitled =
+            ['active', 'trialing'].includes(status) ||
+            (status === 'past_due') ||
+            (status === 'canceled' && insidePeriod) ||
+            (cancelAtPeriodEnd && insidePeriod);
+        await users.updatePlan(userId, entitled ? plan : 'free');
     },
     cancel: async (stripeSubId) => {
+        // Honor period end: mark canceled but preserve plan until current_period_end.
         const sub = await subscriptions.findByStripeSubId(stripeSubId);
         if (!sub) return;
-        await execute('UPDATE subscriptions SET plan = "free", status = "canceled", updated_at = ? WHERE stripe_subscription_id = ?',
-            [Date.now(), stripeSubId]);
-        await users.updatePlan(sub.user_id, 'free');
+        const periodEnd = sub.current_period_end;
+        const insidePeriod = periodEnd && periodEnd > Date.now();
+        const effectivePlan = insidePeriod ? sub.plan : 'free';
+        await execute(
+            `UPDATE subscriptions
+                SET status = "canceled",
+                    plan = ?,
+                    cancel_at_period_end = 1,
+                    updated_at = ?
+              WHERE stripe_subscription_id = ?`,
+            [effectivePlan, Date.now(), stripeSubId],
+        );
+        await users.updatePlan(sub.user_id, effectivePlan);
     },
     setPastDue: async (stripeSubId) => {
+        // Stripe dunning: keep the user entitled while Stripe retries the charge.
         const sub = await subscriptions.findByStripeSubId(stripeSubId);
         if (!sub) return;
-        await execute('UPDATE subscriptions SET plan = "free", status = "past_due", updated_at = ? WHERE stripe_subscription_id = ?',
-            [Date.now(), stripeSubId]);
-        await users.updatePlan(sub.user_id, 'free');
+        await execute(
+            `UPDATE subscriptions
+                SET status = "past_due",
+                    updated_at = ?
+              WHERE stripe_subscription_id = ?`,
+            [Date.now(), stripeSubId],
+        );
+        // Intentionally do NOT downgrade users.plan — Stripe handles retries.
+    },
+    // Sweep job target: demote any subscription whose paid period has lapsed.
+    expireLapsed: async () => {
+        const now = Date.now();
+        const lapsed = await query(
+            `SELECT id, user_id
+               FROM subscriptions
+              WHERE current_period_end IS NOT NULL
+                AND current_period_end <= ?
+                AND status IN ("canceled")
+                AND plan <> "free"`,
+            [now],
+        );
+        for (const row of lapsed) {
+            await execute(
+                'UPDATE subscriptions SET plan = "free", updated_at = ? WHERE id = ?',
+                [now, row.id],
+            );
+            await users.updatePlan(row.user_id, 'free');
+        }
+        return lapsed.length;
     },
 };
 
@@ -168,7 +221,9 @@ const devices = {
             ON DUPLICATE KEY UPDATE
                 pairing_code = VALUES(pairing_code),
                 pairing_expires_at = VALUES(pairing_expires_at),
-                device_name = VALUES(device_name)
+                device_name = VALUES(device_name),
+                user_id = NULL,
+                paired_at = NULL
         `, [platform, fingerprint, deviceName, code, expiresAt, Date.now()]);
         return { code, expiresAt };
     },
@@ -180,6 +235,8 @@ const devices = {
             [userId, Date.now(), Date.now(), device.id]);
         return device;
     },
+    consumePairCode: (deviceId) =>
+        execute('UPDATE devices SET pairing_code = NULL, pairing_expires_at = NULL WHERE id = ?', [deviceId]),
     touch: id => execute('UPDATE devices SET last_seen_at = ? WHERE id = ?', [Date.now(), id]),
     remove: (id, userId) => execute('DELETE FROM devices WHERE id = ? AND user_id = ?', [id, userId]),
 };
@@ -316,8 +373,28 @@ const events = {
              data ? JSON.stringify(data) : null, source ?? null, ip ?? null, Date.now()]),
 };
 
+// ── Stripe webhook dedup ──────────────────────────────────────────────────
+// Persisted dedup of Stripe events. Stripe retries deliver duplicate event.id
+// values; we must process each at-most-once to avoid double-granting plans,
+// double-recording trial_used_at, etc.
+const stripeEvents = {
+    seen: async (eventId) => {
+        if (!eventId) return false;
+        const row = await queryOne('SELECT event_id FROM stripe_webhook_events WHERE event_id = ?', [eventId]);
+        return !!row;
+    },
+    mark: async (eventId) => {
+        if (!eventId) return;
+        await execute(
+            'INSERT IGNORE INTO stripe_webhook_events (event_id, processed_at) VALUES (?, ?)',
+            [eventId, Date.now()],
+        );
+    },
+};
+
 module.exports = {
     runMigrations,
     query, queryOne, execute, pool,
     users, subscriptions, devices, content, skyEvents, watchHistory, ambientImages, events, passwordResets,
+    stripeEvents,
 };

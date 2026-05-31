@@ -18,6 +18,19 @@ const playBilling = require('./play_billing');
 const FREE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000; // 2 days before requiring account
 const PLAN_ORDER = ['free', 'explorer', 'observer', 'institutional'];
 
+// Whitelist-only safe user fields — never expose password_hash, reset tokens, etc.
+function safeUser(u) {
+    if (!u) return null;
+    return {
+        id:              u.id,
+        email:           u.email,
+        name:            u.name,
+        plan:            u.plan,
+        trial_used_at:   u.trial_used_at,
+        created_at:      u.created_at,
+    };
+}
+
 function formatPeriodEnd(ts) {
     if (!ts) return null;
     const d = new Date(ts);
@@ -97,6 +110,9 @@ router.post('/auth/register', async (req, res) => {
         const user = await store.users.create({ name: name || null, email, passwordHash });
         const token = issueToken(user);
         store.events.log({ userId: user.id, type: 'auth', event: 'register' });
+        if (process.env.RESEND_API_KEY) {
+            emailTemplates.sendWelcome(user).catch(err => console.error('[register] welcome email failed:', err.message));
+        }
         res.json({ token, user: safeUser(user) });
     } catch (err) {
         console.error('/auth/register', err);
@@ -135,8 +151,19 @@ router.post('/auth/login', async (req, res) => {
 router.get('/auth/me', authMiddleware, async (req, res) => {
     const sub = await store.subscriptions.findByUserId(req.user.id);
     const playSub = await activePlaySubscriptionForUser(req.user.id);
+
+    // Compute effectivePlan: sub plan takes precedence when subscription is active/entitled
+    const ENTITLED_STATUSES = ['active', 'trialing', 'past_due', 'canceled'];
+    let effectivePlan = req.user.plan || 'free';
+    let entitledUntil = sub?.current_period_end ?? null;
+    if (sub && ENTITLED_STATUSES.includes(sub.status) && sub.current_period_end > Date.now()) {
+        effectivePlan = sub.plan || effectivePlan;
+    }
+
     res.json({
         user: safeUser(req.user),
+        effectivePlan,
+        entitledUntil,
         subscription: presentSubscription(sub) || presentPlaySubscription(playSub),
         stripeSubscription: presentSubscription(sub),
         playSubscription: presentPlaySubscription(playSub),
@@ -338,6 +365,8 @@ router.post('/devices/pair', authMiddleware, async (req, res) => {
         }
         const device = await store.devices.pair(pairing_code.toUpperCase(), req.user.id);
         if (!device) return res.status(404).json({ error: 'code_not_found_or_expired' });
+        // Clear the pair code so it cannot be reused after a successful claim
+        await store.devices.consumePairCode(device.id);
         res.json({ success: true, device_id: device.id });
     } catch (err) {
         console.error('/devices/pair', err);
@@ -370,7 +399,7 @@ router.get('/devices', authMiddleware, async (req, res) => {
 });
 
 router.delete('/devices/:id', authMiddleware, async (req, res) => {
-    await store.devices.remove(parseInt(req.params.id), req.user.id);
+    await store.devices.remove(parseInt(req.params.id, 10), req.user.id);
     res.json({ success: true });
 });
 
@@ -406,8 +435,8 @@ router.get('/content', async (req, res) => {
     const plan = await planFromOptionalAuth(req);
     const items = await store.content.list({
         type, tier, tag,
-        limit: Math.min(parseInt(limit), 100),
-        offset: parseInt(offset),
+        limit: Math.min(parseInt(limit, 10), 100),
+        offset: parseInt(offset, 10),
     });
     res.json({ content: items.filter(item => canAccessTier(plan, item.tier)) });
 });
@@ -481,8 +510,155 @@ router.get('/apod', async (_req, res) => {
 
 router.get('/sky-events', async (req, res) => {
     const { hours = 168 } = req.query; // default 7 days ahead
-    const events = await store.skyEvents.upcoming({ hoursAhead: parseInt(hours), limit: 50 });
+    const events = await store.skyEvents.upcoming({ hoursAhead: parseInt(hours, 10), limit: 50 });
     res.json({ events });
+});
+
+// ── Aurora forecast (NOAA SWPC, 3-day) ───────────────────────────────────
+let _auroraForecastCache = null;
+let _auroraForecastAt = 0;
+const AURORA_TTL_MS = 3 * 60 * 60 * 1000; // 3 hours
+
+// NOAA Kp scale → plain-language activity level
+function kpActivity(kp) {
+    if (kp == null || !Number.isFinite(kp)) return null;
+    if (kp >= 8) return { level: 'severe',   label: 'Severe — aurora visible far from polar regions' };
+    if (kp >= 7) return { level: 'strong',   label: 'Strong — aurora likely at mid-latitudes' };
+    if (kp >= 6) return { level: 'moderate', label: 'Moderate — aurora possible at upper-mid latitudes' };
+    if (kp >= 5) return { level: 'minor',    label: 'Minor storm — aurora possible near the auroral oval' };
+    if (kp >= 4) return { level: 'active',   label: 'Active — visible near the polar regions' };
+    if (kp >= 3) return { level: 'unsettled',label: 'Unsettled — high polar regions only' };
+    return            { level: 'quiet',    label: 'Quiet — polar regions only' };
+}
+
+// Parse NOAA's 3-day-forecast.txt into a structured peak Kp per UT day.
+function parseNoaaForecastText(text) {
+    if (!text) return [];
+    // Grab the "NOAA Kp index breakdown" block. Each row is a UT slot;
+    // we keep the maximum value per labeled day.
+    const lines = text.split('\n');
+    const headerIdx = lines.findIndex(l => /NOAA Kp index breakdown/i.test(l));
+    if (headerIdx < 0) return [];
+    // The day labels are on the line right after the breakdown header (usually blank), then a labels line.
+    let labelsLine = '';
+    for (let i = headerIdx + 1; i < Math.min(headerIdx + 4, lines.length); i++) {
+        if (/[A-Z][a-z]{2}\s+\d/.test(lines[i])) { labelsLine = lines[i]; break; }
+    }
+    if (!labelsLine) return [];
+    const dayLabels = labelsLine.trim().split(/\s{2,}/).filter(Boolean);
+    const days = dayLabels.map(d => ({ day: d, maxKp: null }));
+    // Scan subsequent rows of the form: "00-03UT       2.67         2.33         3.00"
+    for (let i = headerIdx + 1; i < Math.min(headerIdx + 16, lines.length); i++) {
+        const m = lines[i].match(/^\s*\d{2}-\d{2}UT\s+(.+)$/);
+        if (!m) continue;
+        const cols = m[1].trim().split(/\s+/).map(parseFloat);
+        cols.forEach((kp, idx) => {
+            if (!days[idx] || !Number.isFinite(kp)) return;
+            if (days[idx].maxKp == null || kp > days[idx].maxKp) days[idx].maxKp = kp;
+        });
+    }
+    return days.filter(d => d.maxKp != null);
+}
+
+router.get('/aurora/forecast', async (_req, res) => {
+    try {
+        const now = Date.now();
+        if (_auroraForecastCache && now - _auroraForecastAt < AURORA_TTL_MS) {
+            return res.json(_auroraForecastCache);
+        }
+        const [kpResp, forecastResp] = await Promise.all([
+            fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'),
+            // The .json variant of 3-day-forecast was deprecated; the .txt is the
+            // authoritative product NOAA actually maintains.
+            fetch('https://services.swpc.noaa.gov/text/3-day-forecast.txt'),
+        ]);
+        const kpData = kpResp.ok ? await kpResp.json() : [];
+        const forecastRaw = forecastResp.ok ? await forecastResp.text() : '';
+        // Latest Kp — NOAA returns either array-of-objects {time_tag,Kp} or legacy array-of-arrays
+        let latestKp = null;
+        if (Array.isArray(kpData) && kpData.length) {
+            const last = kpData[kpData.length - 1];
+            latestKp = typeof last === 'object' && !Array.isArray(last)
+                ? parseFloat(last.Kp)
+                : parseFloat(last[1]);
+            if (!Number.isFinite(latestKp)) latestKp = null;
+        }
+        const forecast = parseNoaaForecastText(forecastRaw);
+        const peakKp = forecast.length
+            ? forecast.reduce((mx, d) => Math.max(mx, d.maxKp), 0)
+            : latestKp;
+        const payload = {
+            latestKp,
+            peakKp: Number.isFinite(peakKp) ? peakKp : null,
+            activity: kpActivity(latestKp),
+            forecast,         // [{ day: 'May 29', maxKp: 3.0 }, ...]
+            source: 'NOAA SWPC',
+            fetchedAt: now,
+        };
+        _auroraForecastCache = payload;
+        _auroraForecastAt = now;
+        res.json(payload);
+    } catch (err) {
+        console.error('/aurora/forecast', err.message);
+        if (_auroraForecastCache) return res.json(_auroraForecastCache);
+        res.status(502).json({ error: 'aurora_unavailable' });
+    }
+});
+
+// ── Moon phases (USNO) ───────────────────────────────────────────────────
+let _moonCache = null;
+let _moonCachedAt = 0;
+const MOON_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// USNO returns the full calendar year. We also surface the *next* upcoming phase
+// because the TV receiver mostly cares about "what's next" rather than a yearly table.
+function nextPhaseFromUsno(data) {
+    if (!data || !Array.isArray(data.phasedata)) return null;
+    const now = Date.now();
+    // USNO times are UT. Convert each entry to a Date (UTC).
+    const upcoming = data.phasedata
+        .map(p => {
+            const [hh, mm] = (p.time || '00:00').split(':').map(Number);
+            const dt = Date.UTC(p.year, (p.month || 1) - 1, p.day, hh || 0, mm || 0);
+            return { phase: p.phase, iso: new Date(dt).toISOString(), ts: dt };
+        })
+        .filter(p => p.ts >= now)
+        .sort((a, b) => a.ts - b.ts);
+    return upcoming[0] || null;
+}
+
+router.get('/moon/phases', async (_req, res) => {
+    try {
+        const now = Date.now();
+        if (_moonCache && now - _moonCachedAt < MOON_TTL_MS) {
+            return res.json(_moonCache);
+        }
+        const yearNow = new Date().getFullYear();
+        // Always pull the current year plus the next so "next phase" still works
+        // when we're near the end of December.
+        const [a, b] = await Promise.all([
+            fetch(`https://aa.usno.navy.mil/api/moon/phases/year?year=${yearNow}`),
+            fetch(`https://aa.usno.navy.mil/api/moon/phases/year?year=${yearNow + 1}`),
+        ]);
+        if (!a.ok) throw new Error('USNO ' + a.status);
+        const cur  = await a.json();
+        const next = b.ok ? await b.json() : { phasedata: [] };
+        const merged = {
+            apiversion: cur.apiversion,
+            numphases: (cur.numphases || 0) + (next.numphases || 0),
+            phasedata: [].concat(cur.phasedata || [], next.phasedata || []),
+        };
+        merged.nextPhase = nextPhaseFromUsno(merged);
+        merged.source = 'USNO';
+        merged.fetchedAt = now;
+        _moonCache = merged;
+        _moonCachedAt = now;
+        res.json(merged);
+    } catch (err) {
+        console.error('/moon/phases', err.message);
+        if (_moonCache) return res.json(_moonCache);
+        res.status(502).json({ error: 'moon_unavailable' });
+    }
 });
 
 router.get('/observer/summary', authMiddleware, requirePlan('observer'), observer.observerSummary);
@@ -495,6 +671,14 @@ router.post('/billing/checkout', authMiddleware, async (req, res) => {
         const { plan, success_url, cancel_url } = req.body;
         const validPlans = ['explorer_monthly','explorer_annual','observer_monthly','observer_annual'];
         if (!validPlans.includes(plan)) return res.status(400).json({ error: 'invalid_plan' });
+
+        // Block users who already have an active Google Play subscription from
+        // creating a duplicate Stripe subscription via the web checkout flow.
+        const activePlaySub = await activePlaySubscriptionForUser(req.user.id);
+        if (activePlaySub) {
+            return res.status(400).json({ error: 'managed_by_play' });
+        }
+
         const url = await billing.createCheckoutSession(req.user, plan, success_url, cancel_url);
         res.json({ url });
     } catch (err) {
@@ -571,11 +755,6 @@ router.post('/contact', async (req, res) => {
 router.use('/admin', admin);
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-function safeUser(user) {
-    const { password_hash, ...safe } = user;
-    return safe;
-}
 
 async function planFromOptionalAuth(req) {
     const auth = req.headers.authorization || '';

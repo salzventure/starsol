@@ -142,21 +142,21 @@ h1{font-family:var(--serif);font-style:italic;font-size:56px;line-height:1.1;col
 
   <div class="plan secondary" id="plan-observer">
     <div class="plan-name">Observer</div>
-    <div class="price-main" id="price-observer">Coming soon</div>
-    <div class="price-sub" id="sub-observer">location-aware tools</div>
+    <div class="price-main" id="price-observer">$64.99 / yr</div>
+    <div class="price-sub" id="sub-observer">or $7.99 / mo</div>
     <ul class="features">
       <li>Everything in Explorer</li>
-      <li>Location-based ISS pass alerts</li>
-      <li>Aurora forecast alerts</li>
-      <li>Expanded constellation lessons</li>
-      <li>Downloadable wallpapers where licenses allow</li>
+      <li>Location-based ISS pass planning — know when to step outside</li>
+      <li>Live aurora forecast with Kp index and activity level</li>
+      <li>Full 90-day sky calendar with moon and cloud context</li>
+      <li>Observer-only sky events and visibility alerts</li>
     </ul>
-    <button class="btn btn-primary" id="btn-observer" disabled>Coming soon</button>
+    <button class="btn btn-primary" id="btn-observer">Get Observer</button>
   </div>
 </div>
 
 <p class="footer">
-  Cancel any time on your phone &middot;
+  Cancel anytime — web at starsol.app/account, Google Play in the Play Store app &middot;
   <a href="/account">Manage subscription</a> &middot;
   <a href="/terms">Terms of Service</a>
 </p>
@@ -169,8 +169,8 @@ const API = (typeof window !== 'undefined' && window.location.host === 'starsol.
 let period = 'annual';
 
 const PRICES = {
-  annual:  { explorerMain: '$39.99 / yr', explorerSub: 'or $4.99 / mo', observerMain: 'Coming soon', observerSub: 'location-aware tools' },
-  monthly: { explorerMain: '$4.99 / mo',  explorerSub: 'or $39.99 / yr', observerMain: 'Coming soon', observerSub: 'location-aware tools' },
+  annual:  { explorerMain: '$39.99 / yr', explorerSub: 'or $4.99 / mo',  observerMain: '$64.99 / yr', observerSub: 'or $7.99 / mo' },
+  monthly: { explorerMain: '$4.99 / mo',  explorerSub: 'or $39.99 / yr', observerMain: '$7.99 / mo',  observerSub: 'or $64.99 / yr' },
 };
 function applyPeriod() {
   const p = PRICES[period];
@@ -227,7 +227,7 @@ async function startCheckout(plan) {
 }
 
 document.getElementById('btn-explorer').addEventListener('click', () => startCheckout('explorer'));
-document.getElementById('btn-observer').addEventListener('click', () => {});
+document.getElementById('btn-observer').addEventListener('click', () => startCheckout('observer'));
 
 // Pre-select from URL ?plan=explorer_annual
 const url = new URLSearchParams(location.search);

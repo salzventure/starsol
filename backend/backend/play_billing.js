@@ -8,10 +8,19 @@
 
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const store = require('./store');
 
 const PACKAGE_NAME = process.env.PLAY_PACKAGE_NAME || 'app.starsol.tv';
 const PLAY_ENABLED = process.env.PLAY_BILLING_ENABLED === '1';
+const RTDN_AUDIENCE = process.env.PLAY_RTDN_AUDIENCE
+    || process.env.APP_URL
+    || 'https://starsol.app';
+const RTDN_ALLOWED_EMAIL = process.env.PLAY_RTDN_SERVICE_ACCOUNT_EMAIL || null;
+
+// Shared OAuth2 client used solely to verify Google-signed Pub/Sub push JWTs.
+// The client caches Google's signing keys internally.
+const pubsubAuthClient = new OAuth2Client();
 const PRODUCT_PLANS = {
     explorer_monthly: 'explorer',
     explorer_annual:  'explorer',
@@ -195,10 +204,39 @@ async function upsertPlaySubscription({ userId, purchaseToken, productId, subscr
     return { plan: effectivePlan, sourcePlan: plan, status, expiryMs };
 }
 
+async function verifyPubsubPush(req) {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+        throw new Error('missing_bearer');
+    }
+    const token = authHeader.slice('Bearer '.length).trim();
+    if (!token) throw new Error('missing_bearer');
+
+    const ticket = await pubsubAuthClient.verifyIdToken({
+        idToken: token,
+        audience: RTDN_AUDIENCE,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.email_verified) {
+        throw new Error('email_unverified');
+    }
+    if (RTDN_ALLOWED_EMAIL && payload.email !== RTDN_ALLOWED_EMAIL) {
+        throw new Error('unauthorized_publisher');
+    }
+    return payload;
+}
+
 async function handleRtdn(req, res) {
     const cfg = playConfig();
     if (!cfg.ok) return res.status(503).json({ error: cfg.error });
     try {
+        try {
+            await verifyPubsubPush(req);
+        } catch (verifyErr) {
+            console.warn('[play_billing/rtdn] auth rejected:', verifyErr.message);
+            return res.status(401).json({ error: 'invalid_pubsub_token' });
+        }
+
         const message = req.body?.message;
         if (!message?.data) return res.status(400).json({ error: 'missing_message_data' });
 

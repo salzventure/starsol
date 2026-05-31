@@ -31,6 +31,9 @@ async function createCheckoutSession(user, planKey, successUrl, cancelUrl) {
         customerId = customer.id;
     }
 
+    // Trial dedup: only grant the 7-day trial if the user has never used one.
+    const trialDays = (await store.users.hasUsedTrial(user.id)) ? 0 : 7;
+
     const appUrl = process.env.APP_URL || 'https://starsol.app';
     const session = await stripe.checkout.sessions.create({
         customer: customerId,
@@ -38,7 +41,7 @@ async function createCheckoutSession(user, planKey, successUrl, cancelUrl) {
         mode: 'subscription',
         line_items: [{ price: PRICES[planKey], quantity: 1 }],
         subscription_data: {
-            trial_period_days: 7,
+            trial_period_days: trialDays,
             metadata: { starsol_user_id: String(user.id) },
         },
         success_url: successUrl ?? `${appUrl}/account?checkout=success`,
@@ -65,32 +68,64 @@ async function createPortalSession(user, returnUrl) {
     return session.url;
 }
 
+// Extract canonical period start/end from a Stripe subscription. As of
+// API version 2025-04-30.basil, current_period_start/end live on the
+// subscription item, not the subscription root. We fall back to the legacy
+// fields for resilience against older fixtures.
+function periodFromStripeSubscription(stripeSub) {
+    const item = stripeSub.items?.data?.[0];
+    const periodStart = (item?.current_period_start ?? stripeSub.current_period_start ?? 0) * 1000;
+    const periodEnd   = (item?.current_period_end   ?? stripeSub.current_period_end   ?? 0) * 1000;
+    return { periodStart, periodEnd };
+}
+
 async function handleWebhook(rawBody, sig) {
     const event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+
+    // Idempotency: Stripe retries duplicate events. Refuse to re-process.
+    if (await store.stripeEvents.seen(event.id)) {
+        return; // already handled — treat as success
+    }
 
     switch (event.type) {
         case 'checkout.session.completed': {
             const session = event.data.object;
             if (!session.subscription) break;
             const stripeSub = await stripe.subscriptions.retrieve(session.subscription);
-            await syncSubscription(stripeSub, session.metadata?.starsol_user_id);
+            const userId = await syncSubscription(stripeSub, session.metadata?.starsol_user_id);
+            // Trial granted on this checkout? Record it so they can't farm another.
+            if (userId && stripeSub.trial_end) {
+                await store.users.setTrialUsed(userId);
+            }
             break;
         }
-        case 'customer.subscription.updated':
         case 'customer.subscription.created': {
+            const stripeSub = event.data.object;
+            const userId = await syncSubscription(stripeSub);
+            if (userId && stripeSub.trial_end) {
+                await store.users.setTrialUsed(userId);
+            }
+            break;
+        }
+        case 'customer.subscription.updated': {
             await syncSubscription(event.data.object);
             break;
         }
         case 'customer.subscription.deleted': {
+            // Honor period end — store.subscriptions.cancel preserves plan
+            // until current_period_end has elapsed.
             await store.subscriptions.cancel(event.data.object.id);
             break;
         }
         case 'invoice.payment_failed': {
             const subId = event.data.object.subscription;
+            // Keep plan active — Stripe dunning will retry.
             if (subId) await store.subscriptions.setPastDue(subId);
             break;
         }
     }
+
+    await store.stripeEvents.mark(event.id);
 }
 
 async function syncSubscription(stripeSub, userIdOverride) {
@@ -102,19 +137,39 @@ async function syncSubscription(stripeSub, userIdOverride) {
         ? parseInt(userIdOverride, 10)
         : (await store.subscriptions.findByStripeCustomerId(customerId))?.user_id;
 
-    if (!userId) return;
+    if (!userId) return null;
+
+    const { periodStart, periodEnd } = periodFromStripeSubscription(stripeSub);
+    const status = stripeSub.status;
+    const cancelAtPeriodEnd = !!stripeSub.cancel_at_period_end;
+
+    // Effective plan: active/trialing → granted; past_due → keep plan (dunning);
+    // canceled or cancel_at_period_end → keep plan until periodEnd, then free.
+    const now = Date.now();
+    const insidePeriod = periodEnd && periodEnd > now;
+    let effectivePlan;
+    if (isEntitledStatus(status)) {
+        effectivePlan = plan;
+    } else if (status === 'past_due') {
+        effectivePlan = plan;
+    } else if ((status === 'canceled' || cancelAtPeriodEnd) && insidePeriod) {
+        effectivePlan = plan;
+    } else {
+        effectivePlan = 'free';
+    }
 
     await store.subscriptions.upsert({
         userId,
         stripeCustomerId: customerId,
         stripeSubscriptionId: stripeSub.id,
         stripePriceId: priceId,
-        plan: isEntitledStatus(stripeSub.status) ? plan : 'free',
-        status: stripeSub.status,
-        periodStart: stripeSub.current_period_start * 1000,
-        periodEnd: stripeSub.current_period_end * 1000,
-        cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
+        plan: effectivePlan,
+        status,
+        periodStart,
+        periodEnd,
+        cancelAtPeriodEnd,
     });
+    return userId;
 }
 
 module.exports = { stripe, PRICES, createCheckoutSession, createPortalSession, handleWebhook };

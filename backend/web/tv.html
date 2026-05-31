@@ -333,33 +333,6 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
 }
-#pair .qr-box .qr-pattern {
-  width: 100%; height: 100%;
-  /* Pseudo-QR via repeating gradient — placeholder until real QR lib */
-  background:
-    linear-gradient(45deg, #050608 25%, transparent 25%) 0 0,
-    linear-gradient(-45deg, #050608 25%, transparent 25%) 0 0,
-    linear-gradient(45deg, transparent 75%, #050608 75%),
-    linear-gradient(-45deg, transparent 75%, #050608 75%);
-  background-size: 20px 20px;
-  background-color: #fbf3df;
-  position: relative;
-}
-#pair .qr-box .qr-pattern::before,
-#pair .qr-box .qr-pattern::after {
-  content: ''; position: absolute;
-  width: 64px; height: 64px;
-  border: 12px solid #050608;
-  background: #fbf3df;
-}
-#pair .qr-box .qr-pattern::before { top: 12px; left: 12px; }
-#pair .qr-box .qr-pattern::after { top: 12px; right: 12px; }
-#pair .qr-box .qr-pattern .qr-corner {
-  position: absolute; bottom: 12px; left: 12px;
-  width: 64px; height: 64px;
-  border: 12px solid #050608;
-  background: #fbf3df;
-}
 #pair .qr-label {
   font-family: var(--ff-mono);
   font-size: 14px;
@@ -622,14 +595,14 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   opacity: 0.85;
 }
 #tonight .cards {
-  display: flex; gap: 20px;
+  display: flex; gap: 18px;
   overflow-x: auto;
   scrollbar-width: none;
 }
 #tonight .cards::-webkit-scrollbar { display: none; }
 .sky-card {
   flex-shrink: 0;
-  width: 280px; min-height: 180px;
+  width: 264px; min-height: 180px;
   background: rgba(17, 21, 28, 0.55);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1709,6 +1682,15 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   color: rgba(251,243,223,0.58);
   text-align: right;
 }
+.iss-close {
+  position: absolute;
+  left: 72px;
+  top: 56px;
+  z-index: 4;
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+}
 .iss-help {
   position: absolute;
   right: 72px;
@@ -2355,6 +2337,87 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   font-size: 24px;
 }
 
+@media (max-height: 800px) {
+  #pair .pair-content {
+    padding: 56px 72px;
+    gap: 48px;
+    align-items: center;
+  }
+  #pair .left h2 {
+    font-size: 58px;
+    line-height: 0.98;
+    margin-bottom: 28px;
+  }
+  #pair .left .ss-eyebrow { margin-bottom: 14px; }
+  #pair .steps { margin-bottom: 28px; }
+  #pair .step {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  #pair .code-row { margin-bottom: 22px; }
+  #pair .code-box {
+    width: 54px;
+    height: 68px;
+    font-size: 34px;
+  }
+  #pair .guest-link { padding: 10px 0; }
+  #pair .qr-box {
+    width: 300px;
+    height: 300px;
+    padding: 18px;
+  }
+
+  #tonight .hero {
+    top: 42px;
+    left: 72px;
+    right: 72px;
+  }
+  .sidebar.collapsed ~ .main { left: 76px; }
+  #tonight .hero .hero-eyebrow { margin-bottom: 20px; }
+  #tonight .hero h2 {
+    font-size: 72px;
+    max-width: 860px;
+    margin-bottom: 24px;
+  }
+  #tonight .hero p.body {
+    font-size: 18px;
+    max-width: 720px;
+    margin-bottom: 28px;
+  }
+  #tonight .hero .btn-row { margin-bottom: 34px; }
+  #tonight .hero .btn {
+    height: 54px;
+    padding: 0 24px;
+  }
+  #tonight .meta-card {
+    padding: 18px 24px;
+    max-width: calc(100vw - 240px);
+  }
+  #tonight .meta-card .kv-row {
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  #tonight .also {
+    left: 72px;
+    right: 48px;
+    bottom: 28px;
+  }
+  #tonight .also .section-label { margin-bottom: 14px; }
+  .sky-card {
+    width: 240px;
+    min-height: 150px;
+    padding: 18px;
+    gap: 8px;
+  }
+  .sky-card .time,
+  .sky-card .name {
+    font-size: 21px;
+  }
+  .sky-card .sub {
+    font-size: 14px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2546,7 +2609,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       <div class="avatar">G</div>
       <div class="footer-text">
         <div class="name" id="user-name">Guest</div>
-        <div class="plan" id="user-plan">Preview</div>
+        <div class="plan" id="user-plan">Free</div>
       </div>
       <div class="clock" id="sidebar-clock">--:--</div>
     </div>
@@ -2566,16 +2629,16 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       </p>
       <div class="btn-row">
         <button class="btn btn-primary focusable" data-action="watch-iss" tabindex="0">Watch live tracker</button>
-        <button class="btn btn-secondary focusable" data-action="details-iss" tabindex="0">View details</button>
+        <button class="btn btn-secondary focusable" data-action="details-iss" tabindex="0">ISS sky pass info</button>
       </div>
       <div class="meta-card">
         <div class="kv-row">
           <div class="kv"><div class="k">Track</div><div class="v mono">Live</div></div>
           <div class="kv"><div class="k">Altitude</div><div class="v mono" id="iss-altitude">Updating</div></div>
-          <div class="kv"><div class="k">Next pass</div><div class="v mono" id="observer-next-pass">Calculating</div></div>
-          <div class="kv"><div class="k">Position</div><div class="v">Updating</div></div>
-          <div class="kv"><div class="k">Cloud cover</div><div class="v"><span id="meta-cloud">12%</span></div></div>
-          <div class="kv"><div class="k">Moon</div><div class="v"><span id="meta-moon">Waning Crescent</span></div></div>
+          <div class="kv"><div class="k">Next pass</div><div class="v mono" id="observer-next-pass">Observer required</div></div>
+          <div class="kv"><div class="k">Cloud cover</div><div class="v"><span id="meta-cloud">—</span></div></div>
+          <div class="kv"><div class="k">Moon</div><div class="v"><span id="meta-moon">—</span></div><div class="k mono" id="meta-moon-next" style="margin-top:6px;font-size:12px;letter-spacing:.06em;color:var(--ss-star300);text-transform:none">Loading next phase</div></div>
+          <div class="kv"><div class="k">Aurora</div><div class="v"><span id="meta-aurora">—</span></div><div class="k mono" id="meta-aurora-sub" style="margin-top:6px;font-size:12px;letter-spacing:.06em;color:var(--ss-star300);text-transform:none">NOAA Kp index</div></div>
         </div>
       </div>
     </div>
@@ -2611,7 +2674,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
         <button class="sky-card focusable" data-sky="alerts" tabindex="0">
           <div class="time">OBSERVER</div>
           <div class="name">Local pass planner</div>
-          <div class="sub" id="observer-pass-card">Next visible ISS window calculating</div>
+          <div class="sub" id="observer-pass-card">Observer unlocks local ISS windows</div>
         </button>
       </div>
     </div>
@@ -2647,7 +2710,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
         </div>
         <div class="row-tiles">
           <button class="media-tile focusable" data-gallery="pillars" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2316a.jpg');"></div>
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2216a.jpg');"></div>
             <div class="tile-title">The Pillars of Creation</div>
             <div class="tile-meta">Eagle Nebula · NIRCam · 2022</div>
           </button>
@@ -2657,17 +2720,17 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
             <div class="tile-meta">Carina Nebula · NIRCam + MIRI · 2022</div>
           </button>
           <button class="media-tile focusable" data-gallery="tarantula" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2212a.jpg');"></div>
             <div class="tile-title">Tarantula Nebula</div>
             <div class="tile-meta">30 Doradus · NIRCam · 2022</div>
           </button>
           <button class="media-tile focusable" data-gallery="stephans" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2310a.jpg');"></div>
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2208a.jpg');"></div>
             <div class="tile-title">Stephan's Quintet</div>
             <div class="tile-meta">HCG 92 · NIRCam + MIRI · 2022</div>
           </button>
           <button class="media-tile focusable" data-gallery="deep-field" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2218a.jpg');"></div>
+            <div class="tile-img" style="background-image:url('https://esawebb.org/media/archives/images/screen/weic2209a.jpg');"></div>
             <div class="tile-title">SMACS 0723 — First Deep Field</div>
             <div class="tile-meta">Galaxy cluster · NIRCam · 2022</div>
           </button>
@@ -2680,7 +2743,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
         </div>
         <div class="row-tiles">
           <button class="media-tile video-tile focusable" data-video="jwst-first-light" tabindex="0">
-            <div class="tile-img" style="background-image:url('https://cdn.esawebb.org/archives/images/screen/weic2218a.jpg');">
+            <div class="tile-img" style="background-image:url('https://cdn.esawebb.org/archives/images/screen/weic2205a.jpg');">
               <div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
             </div>
             <div class="tile-title">JWST — First Light</div>
@@ -3009,10 +3072,6 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       <span class="label">Channel</span>
       <span class="value" id="amb-channel-value">All JWST</span>
     </button>
-    <button class="setting focusable" data-action="amb-sound" tabindex="0">
-      <span class="label">Sound</span>
-      <span class="value" id="amb-sound-value">Off</span>
-    </button>
     <button class="setting focusable" data-action="amb-delay" tabindex="0">
       <span class="label">Idle delay</span>
       <span class="value" id="amb-delay-value">10 min</span>
@@ -3036,8 +3095,8 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       <button class="continue-free focusable" data-action="continue-free" tabindex="0">Close</button>
     </div>
     <h1>Choose your plan.</h1>
-    <p class="pricing-lede">Google Play handles checkout, renewals, cancellation, and the final confirmation screen.</p>
-    <div class="pricing-note" id="billing-note">Annual plans are billed once per year. Monthly plans are billed monthly. Purchases use Google Play.</div>
+    <p class="pricing-lede">7-day free trial. Cancel anytime. Annual is the best value.</p>
+    <div class="pricing-note" id="billing-note">Renewals, cancellation, and receipts are handled by Google Play on this TV. The same StarSol account works on every device you pair.</div>
     <div class="plans">
       <div class="plan-card primary focusable" data-action="buy-explorer-annual" tabindex="0">
         <span class="primary-pill">Best value</span>
@@ -3073,9 +3132,9 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
         <ul class="features">
           <li>Everything in Explorer</li>
           <li>Location-based ISS pass planning</li>
-          <li>Aurora forecast status where source data is available</li>
+          <li>NOAA aurora Kp + 3-day watch status</li>
           <li>Observer sky calendar with moon and cloud context</li>
-          <li>Wallpaper downloads for cleared images</li>
+          <li>Early access to new JWST drops</li>
         </ul>
         <button class="cta" id="observer-cta">Subscribe with Google Play</button>
       </div>
@@ -3093,7 +3152,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
         <button class="continue-free focusable" data-action="restore-play" tabindex="0">Restore Google Play purchase</button>
         <button class="continue-free focusable" data-action="continue-free" tabindex="0">Continue browsing free</button>
       </div>
-      <div class="pricing-terms">Subscriptions renew automatically until canceled in Google Play. Access continues through the paid period. StarSol never receives your raw payment-card details.</div>
+      <div class="pricing-terms">Subscriptions renew automatically and can be canceled anytime from Google Play. Access continues through the end of the paid period. StarSol never stores your payment-card details.</div>
     </div>
   </div>
 </section>
@@ -3135,6 +3194,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 </div>
 
 <div class="iss-overlay" id="iss-overlay">
+  <button class="btn btn-secondary focusable iss-close" id="iss-close" data-action="close-iss" tabindex="0">Close</button>
   <div class="iss-map"></div>
   <div class="iss-earth"></div>
   <div class="iss-earth-credit">Earth image: NASA Earth Observatory Blue Marble</div>
@@ -3179,10 +3239,13 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 <section class="screen" id="lock">
   <div class="starfield dim"></div>
   <div class="lock-inner">
-    <div class="ss-eyebrow">Preview ended</div>
-    <h2>Your preview has ended.</h2>
-    <p>Sign in to keep watching astronomy videos, credited mission imagery, ISS live position, and ambient sessions.</p>
-    <button class="btn btn-primary focusable" data-action="signin" tabindex="0">Sign in with phone</button>
+    <div class="ss-eyebrow">Two days · preview ended</div>
+    <h2>Keep the<br/>sky on.</h2>
+    <p>Pair your phone in under a minute to keep watching credited JWST imagery, ambient mode, the constellation atlas, and live ISS tracking — with a 7-day free trial of Explorer.</p>
+    <div class="btn-row" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary focusable" data-action="signin" tabindex="0">Pair to continue</button>
+      <button class="btn btn-secondary focusable" data-action="see-plans" tabindex="0">See plans</button>
+    </div>
   </div>
 </section>
 
@@ -3226,7 +3289,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   <div class="w-dot"></div>
   <div>
     <div class="w-text" id="whisper-text">ISS position updated</div>
-    <div class="w-sub" id="whisper-sub">Live orbital data, pass alerts coming next</div>
+    <div class="w-sub" id="whisper-sub">Live orbital data from wheretheiss.at</div>
   </div>
   <div class="w-dismiss" id="whisper-dismiss">OK</div>
 </div>
@@ -3284,6 +3347,7 @@ const APP = {
   playerProgressInterval: null,
   playerOrigin: null, // element that triggered playback — restored on BACK
   nativeAndroidTv: /starsol-androidtv/i.test(navigator.userAgent || ''),
+  userName: null,
 };
 
 if (!localStorage.getItem('ss-first-seen')) {
@@ -3334,11 +3398,48 @@ function hasPlan(plan) {
   return have >= 0 && need >= 0 && have >= need;
 }
 
+function planLabel(plan) {
+  const p = plan || 'free';
+  if (p === 'free') return 'Free';
+  if (p === 'explorer') return 'Explorer';
+  if (p === 'observer') return 'Observer';
+  if (p === 'institutional') return 'Institutional';
+  return p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+function syncSidebarUser() {
+  // Update EVERY sidebar instance across screens — buildSidebar clones the
+  // template into each screen, so there are multiple .footer blocks in DOM.
+  const label = planLabel(APP.plan);
+  const name = APP.userName || (APP.token && !APP.guest ? 'You' : 'Guest');
+  const initial = (name && name[0]) ? name[0].toUpperCase() : 'G';
+  document.querySelectorAll('aside.sidebar[data-sidebar] .footer').forEach(footer => {
+    const nameEl = footer.querySelector('.name');
+    const planEl = footer.querySelector('.plan');
+    const avatarEl = footer.querySelector('.avatar');
+    if (nameEl) nameEl.textContent = name;
+    if (planEl) planEl.textContent = label;
+    if (avatarEl) avatarEl.textContent = initial;
+  });
+  // Legacy IDs in the Tonight template — keep them in sync too.
+  const legacyName = document.getElementById('user-name');
+  const legacyPlan = document.getElementById('user-plan');
+  if (legacyName) legacyName.textContent = name;
+  if (legacyPlan) legacyPlan.textContent = label;
+}
+
 function setPlan(plan) {
   APP.plan = plan || 'free';
   try { localStorage.setItem('ss-plan', APP.plan); } catch (_) {}
-  const userPlan = document.getElementById('user-plan');
-  if (userPlan) userPlan.textContent = APP.plan === 'free' ? 'Preview' : APP.plan;
+  syncSidebarUser();
+}
+
+function setObserverLockedCopy() {
+  if (APP.token && !APP.guest && hasPlan('observer')) return;
+  const nextPass = document.getElementById('observer-next-pass');
+  if (nextPass) nextPass.textContent = 'Observer required';
+  const passCard = document.getElementById('observer-pass-card');
+  if (passCard) passCard.textContent = 'Observer unlocks local ISS windows';
 }
 
 /* ============================================================
@@ -3538,8 +3639,22 @@ function activateFocused() {
       break;
     case 'alerts':
       navigate('sky');
-      setTimeout(() => openSkyDetail('observer-iss-pass'), 250);
+      setTimeout(() => { if (APP.currentScreen === 'sky') openSkyDetail('observer-iss-pass'); }, 400);
       break;
+    case 'apod': {
+      const apodCard = document.querySelector('[data-sky="apod"]');
+      if (!apodCard) break;
+      document.getElementById('detail-eyebrow').textContent = 'NASA · Picture of the Day';
+      document.getElementById('detail-title').textContent = apodCard.dataset.apodTitle || 'Picture of the Day';
+      document.getElementById('detail-desc').textContent = apodCard.dataset.apodExplanation || '';
+      const kvs = document.getElementById('detail-kvs');
+      if (kvs) kvs.innerHTML = '<div class="kv"><div class="k">Credit</div><div class="v">' + (apodCard.dataset.apodCredit || 'NASA · Public Domain') + '</div></div>';
+      const svg = document.getElementById('detail-svg');
+      if (svg) svg.innerHTML = '';
+      document.getElementById('detail-overlay').classList.add('show');
+      APP.overlayOpen = 'detail';
+      break;
+    }
     default:
       openSkyDetail(id);
   }
@@ -3550,6 +3665,9 @@ function handleAction(action) {
     case 'signin':
       navigate('pair');
       break;
+    case 'see-plans':
+      navigate('pricing');
+      break;
     case 'guest':
       localStorage.setItem('ss-guest', 'true');
       APP.guest = true;
@@ -3558,16 +3676,16 @@ function handleAction(action) {
     case 'watch-iss':
       openISSTracker();
       break;
+    case 'close-iss':
+      closeOverlay();
+      break;
     case 'details-iss':
-      openISSTracker();
+      navigate('sky');
+      setTimeout(() => { if (APP.currentScreen === 'sky') openSkyDetail('observer-iss-pass'); }, 400);
       break;
     case 'play-featured':
       APP.playerOrigin = focused;
       playVideo(VIDEO_CATALOG['jwst-first-light']);
-      break;
-    case 'add-list':
-    case 'details-featured':
-      showWhisper('Coming soon', 'Saved lists and extended notes are planned for the full library.', 5000);
       break;
     case 'go-gallery':    navigate('gallery'); break;
     case 'gallery-play':
@@ -3579,29 +3697,17 @@ function handleAction(action) {
     case 'const-tour':
       startConstellationTour();
       break;
-    case 'buy-explorer':
-      startCheckout('explorer');
-      break;
     case 'buy-explorer-annual':
       startCheckout('explorer', 'annual');
       break;
     case 'buy-explorer-monthly':
       startCheckout('explorer', 'monthly');
       break;
-    case 'buy-observer':
-      startCheckout('observer');
-      break;
     case 'buy-observer-annual':
       startCheckout('observer', 'annual');
       break;
     case 'buy-observer-monthly':
       startCheckout('observer', 'monthly');
-      break;
-    case 'billing-annual':
-      setBillingPeriod('annual');
-      break;
-    case 'billing-monthly':
-      setBillingPeriod('monthly');
       break;
     case 'restore-play':
       restoreGooglePlayPurchase();
@@ -3626,52 +3732,6 @@ function handleAction(action) {
   }
 }
 
-const BILLING_COPY = {
-  annual: {
-    explorerMain: '$39.99 / yr',
-    explorerSub: 'or $4.99 / mo',
-    observerMain: '$64.99 / yr',
-    observerSub: 'or $7.99 / mo',
-    note: 'Annual saves you 17% — purchased and managed with Google Play.',
-    explorerCta: 'Subscribe with Google Play',
-    observerCta: 'Subscribe with Google Play',
-  },
-  monthly: {
-    explorerMain: '$4.99 / mo',
-    explorerSub: 'or $39.99 / yr',
-    observerMain: '$7.99 / mo',
-    observerSub: 'or $64.99 / yr',
-    note: 'Monthly billing stays flexible and is managed with Google Play.',
-    explorerCta: 'Subscribe with Google Play',
-    observerCta: 'Subscribe with Google Play',
-  }
-};
-
-let billingPeriod = 'annual';
-
-function setBillingPeriod(nextPeriod) {
-  billingPeriod = nextPeriod === 'monthly' ? 'monthly' : 'annual';
-  const copy = BILLING_COPY[billingPeriod];
-  const note = document.getElementById('billing-note');
-  if (note) note.textContent = copy.note;
-  const annual = document.querySelector('[data-action="billing-annual"]');
-  const monthly = document.querySelector('[data-action="billing-monthly"]');
-  if (annual) annual.classList.toggle('active', billingPeriod === 'annual');
-  if (monthly) monthly.classList.toggle('active', billingPeriod === 'monthly');
-  const priceExplorer = document.getElementById('price-explorer');
-  const subExplorer = document.getElementById('sub-explorer');
-  const priceObserver = document.getElementById('price-observer');
-  const subObserver = document.getElementById('sub-observer');
-  const explorerCta = document.getElementById('explorer-cta');
-  const observerCta = document.getElementById('observer-cta');
-  if (priceExplorer) priceExplorer.textContent = copy.explorerMain;
-  if (subExplorer) subExplorer.textContent = copy.explorerSub;
-  if (priceObserver) priceObserver.textContent = copy.observerMain;
-  if (subObserver) subObserver.textContent = copy.observerSub;
-  if (explorerCta) explorerCta.textContent = copy.explorerCta;
-  if (observerCta) observerCta.textContent = copy.observerCta;
-}
-
 async function startCheckout(plan, period) {
   if (!APP.token) {
     showWhisper(
@@ -3682,32 +3742,21 @@ async function startCheckout(plan, period) {
     setTimeout(() => navigate('pair'), 450);
     return;
   }
-  const selectedPeriod = period || billingPeriod;
-  const planKey = plan + '_' + selectedPeriod;
   if (APP.nativeAndroidTv) {
+    const selectedPeriod = period || billingPeriod;
+    const planKey = plan + '_' + selectedPeriod;
     startGooglePlayPurchase(planKey);
     return;
   }
-  const current = focused && focused.querySelector ? focused.querySelector('.cta') : null;
-  const original = current ? current.textContent : '';
-  if (current) current.textContent = 'Opening checkout…';
+  // Non-native (plain WebView / browser receiver): a window.location.href
+  // redirect to Stripe Checkout would either fail in the WebView shell or
+  // navigate the user out of the TV app entirely. Prompt them to complete
+  // the purchase on phone/desktop instead. Do NOT hit /api/billing/checkout —
+  // the returned URL can't be used here.
   showWhisper(
-    'Opening checkout…',
-    selectedPeriod === 'annual'
-      ? 'Annual is the best value. Trial included.'
-      : 'Monthly billing selected. Trial included.',
-    4000
-  );
-  const res = await API.post('/api/billing/checkout', { plan: planKey });
-  if (current) current.textContent = original || 'Subscribe with Google Play';
-  if (res && res.url) {
-    window.location.href = res.url;
-    return;
-  }
-  showWhisper(
-    'Checkout could not be opened',
-    'Please try again from a signed-in account.',
-    6000
+    'Subscribe on your phone',
+    'Open starsol.app/pricing on your phone or computer to subscribe.',
+    8000
   );
 }
 
@@ -3764,14 +3813,15 @@ window.starsolPlayPurchase = async function(payload) {
   if (result && result.ok) {
     APP.guest = false;
     localStorage.removeItem('ss-guest');
-    setPlan(result.plan || APP.plan || 'explorer');
-    showWhisper('Subscription active', (result.plan === 'observer' ? 'Observer' : 'Explorer') + ' is unlocked on this TV.', 6500);
     try {
       const me = await API.get('/api/auth/me');
-      if (me?.user?.plan) {
-        setPlan(me.user.plan);
-      }
-    } catch (_) {}
+      const plan = me?.user?.plan || result.plan || 'explorer';
+      setPlan(plan);
+      showWhisper('Subscription active', (plan === 'observer' ? 'Observer' : 'Explorer') + ' is unlocked on this TV.', 6500);
+    } catch (_) {
+      setPlan(result.plan || 'explorer');
+      showWhisper('Subscription active', 'Your plan is now unlocked on this TV.', 6500);
+    }
     setTimeout(() => navigate('tonight'), 700);
     return;
   }
@@ -3863,6 +3913,7 @@ window.starsolBack = function () {
    KEY HANDLER
    ============================================================ */
 document.addEventListener('click', (e) => {
+  resetIdleTimer();
   const el = e.target.closest('.focusable');
   if (!el) return;
   focusEl(el);
@@ -3870,6 +3921,7 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  resetIdleTimer();
   const k = e.keyCode || e.which;
   const key = e.key;
   // 461 = TV BACK, 27/Escape = ESC, 8 = Backspace
@@ -3883,9 +3935,9 @@ document.addEventListener('keydown', (e) => {
   // Player screen: OK=pause/play, LEFT/RIGHT=seek, any key shows controls
   if (APP.currentScreen === 'player') {
     e.preventDefault();
-    const isEnterP = k === 13 || k === 32 || key === 'Enter' || key === ' ';
-    const isLeftP  = k === 37 || key === 'ArrowLeft';
-    const isRightP = k === 39 || key === 'ArrowRight';
+    const isEnterP = k === 13 || k === 32 || key === 'Enter' || key === ' ' || key === 'MediaPlayPause' || key === 'MediaPlay' || key === 'MediaPause';
+    const isLeftP  = k === 37 || k === 89 || key === 'ArrowLeft' || key === 'MediaRewind';
+    const isRightP = k === 39 || k === 90 || key === 'ArrowRight' || key === 'MediaFastForward';
     showPlayerControls();
     if (isEnterP) togglePlayerPause();
     if (isLeftP)  seekVideo(-10);
@@ -4040,9 +4092,23 @@ function renderCode(code) {
   const chars = (code || '------').toUpperCase().padEnd(6, '-').split('');
   boxes.forEach((b, i) => { b.textContent = chars[i] || '-'; });
 
-  // Real QR code pointing to starsol.app/pair?code=XXXX
   const canvas = document.getElementById('qr-canvas');
-  if (canvas && typeof QRious !== 'undefined' && code && !code.startsWith('mock')) {
+  if (!canvas) return;
+  const drawPairingFallback = () => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#fbf3df';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#050608';
+    ctx.textAlign = 'center';
+    ctx.font = '700 26px Inter, sans-serif';
+    ctx.fillText('starsol.app/pair', canvas.width / 2, 150);
+    ctx.font = '700 46px monospace';
+    ctx.fillText((code || '------').toUpperCase(), canvas.width / 2, 218);
+    ctx.font = '600 18px Inter, sans-serif';
+    ctx.fillText('Enter this code on your phone', canvas.width / 2, 258);
+  };
+  if (typeof QRious !== 'undefined' && code && !code.startsWith('mock')) {
     try {
       new QRious({
         element: canvas,
@@ -4052,8 +4118,10 @@ function renderCode(code) {
         foreground: '#050608',
         level: 'M',
       });
+      return;
     } catch(e) { console.warn('[qr] render failed', e); }
   }
+  drawPairingFallback();
 }
 
 function updateCountdown() {
@@ -4084,13 +4152,6 @@ function onPaired(token, user) {
     toast.classList.add('show');
   }
   setTimeout(() => { navigate('tonight'); }, 1200);
-}
-
-function randomCode() {
-  const alphabet = 'BCDFGHJKMNPQRSTVWXYZ';
-  let s = '';
-  for (let i = 0; i < 6; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return s;
 }
 
 function stableDeviceFingerprint() {
@@ -4145,19 +4206,20 @@ function initTonight() {
     dateEl.textContent = 'Tonight · ' + months[d.getMonth()] + ' ' + d.getDate();
   }
 
-  // User state — show real name if signed in
-  const userName = document.getElementById('user-name');
-  const userPlan = document.getElementById('user-plan');
+  // User state — show real name if signed in. syncSidebarUser updates
+  // EVERY sidebar in the DOM (one per screen), not just the Tonight footer.
   if (APP.token && !APP.guest) {
-    if (userName) userName.textContent = 'You';
-    if (userPlan) userPlan.textContent = APP.plan === 'free' ? 'StarSol' : APP.plan;
+    APP.userName = APP.userName || 'You';
+    syncSidebarUser();
     API.get('/api/auth/me').then(me => {
+      if (me?.user?.name) APP.userName = me.user.name;
       if (me?.user?.plan) setPlan(me.user.plan);
+      else syncSidebarUser();
     });
   } else {
-    if (userName) userName.textContent = 'Guest';
-    if (userPlan) userPlan.textContent = 'Preview';
+    APP.userName = 'Guest';
     setPlan('free');
+    setObserverLockedCopy();
   }
 
   // Wire up whisper dismiss button (idempotent)
@@ -4167,7 +4229,7 @@ function initTonight() {
     dismissBtn.addEventListener('click', dismissWhisper);
   }
 
-  // Moon phase in meta card
+  // Moon phase in meta card (algorithm-based, refined by USNO fetch below)
   (function() {
     const mp = moonPhase(new Date());
     const el = document.getElementById('meta-moon');
@@ -4180,6 +4242,10 @@ function initTonight() {
   // ISS live position + pass prediction
   fetchISSPass();
   fetchObserverSummary();
+
+  // Aurora Kp + USNO next-moon-phase — visible to all tiers
+  fetchAuroraForecast();
+  fetchMoonPhases();
 
   // Weather + geolocation (non-blocking)
   fetchWeather();
@@ -4223,9 +4289,11 @@ async function fetchApod() {
     }
     card.className = 'sky-card focusable';
     card.tabIndex = 0;
+    card.dataset.sky = 'apod';
     card.dataset.apodUrl = data.url || '';
     card.dataset.apodExplanation = data.explanation || '';
     card.dataset.apodCredit = data.credit || '';
+    card.dataset.apodTitle = data.title || '';
     if (data.media_type === 'image' && data.url) {
       card.style.backgroundImage = "url('" + data.url + "')";
       card.style.backgroundSize = 'cover';
@@ -4300,6 +4368,9 @@ function buildSidebar(screen) {
 
 function mountAllSidebars() {
   document.querySelectorAll('aside.sidebar[data-sidebar]').forEach(s => buildSidebar(s.closest('.screen')));
+  // Once every sidebar template is in place, push the real user name + plan
+  // into every footer (not just the Tonight one).
+  syncSidebarUser();
 }
 
 /* ============================================================
@@ -4358,10 +4429,6 @@ function constVisibleNow(id) {
   if (season.includes('fall')) return [7,8,9,10,11].includes(m);
   return false;
 }
-function constIsCircumpolar(id) {
-  return ['ursa-major','cassiopeia'].includes(id);
-}
-
 /* ============================================================
    GEOLOCATION + WEATHER
    ============================================================ */
@@ -4462,7 +4529,14 @@ function renderSearchResults(results) {
   const el = document.getElementById('search-results');
   if (!el) return;
   if (!results.length) {
-    el.innerHTML = '<div class="no-results">No results for “' + _searchQuery + '”</div>';
+    // Build via textContent so a user-typed query string can never inject
+    // markup into the search panel. (_searchQuery is currently A-Z only,
+    // but the no-results path is exactly where that invariant could leak.)
+    const div = document.createElement('div');
+    div.className = 'no-results';
+    div.textContent = 'No results for “' + _searchQuery + '”';
+    el.innerHTML = '';
+    el.appendChild(div);
     return;
   }
   el.innerHTML = results.map((r, i) =>
@@ -4502,7 +4576,16 @@ function searchKeyPress(ch) {
 function activateSearchResult(el) {
   const type = el.dataset.stype;
   const id = el.dataset.sid;
-  closeOverlay();
+  // Fully dismiss the search overlay BEFORE handing off to any opener — the
+  // video player in particular reuses overlay-aware key handling, so the
+  // search overlay must be torn down and APP.overlayOpen cleared first.
+  if (APP.overlayOpen === 'search') {
+    const overlayEl = document.getElementById('search-overlay');
+    if (overlayEl) overlayEl.classList.remove('show');
+    APP.overlayOpen = null;
+  } else {
+    closeOverlay();
+  }
   if (type === 'constellation') { navigate('constellations'); setTimeout(() => openConstellationDetail(id), 300); }
   else if (type === 'gallery')   { navigate('gallery'); setTimeout(() => openImageViewer(id), 300); }
   else if (type === 'sky')       { navigate('sky'); setTimeout(() => openSkyDetail(id), 300); }
@@ -4643,6 +4726,14 @@ async function fetchObserverSummary(force) {
     applyObserverSummary(APP.observerSummary);
     return APP.observerSummary;
   }
+  if (!hasPlan('observer')) {
+    const fallback = observerSummaryFallback();
+    fallback.iss.status = 'locked';
+    fallback.iss.nextPassLabel = 'Observer required';
+    fallback.iss.caveat = 'Local pass planning unlocks with StarSol Observer';
+    applyObserverSummary(fallback);
+    return APP.observerSummary;
+  }
   const qs = '?lat=' + encodeURIComponent(APP.lat) + '&lon=' + encodeURIComponent(APP.lon);
   const data = await API.get('/api/observer/summary' + qs);
   applyObserverSummary(data && data.ok !== false ? data : observerSummaryFallback());
@@ -4737,6 +4828,7 @@ function renderSkyEvents(filter) {
 function initSky() {
   renderSkyEvents();
   fetchObserverSummary();
+  fetchAuroraForecast();
   // Wire filter pills
   document.querySelectorAll('#sky-filter-pills .ss-pill').forEach(pill => {
     if (!pill._filterWired) {
@@ -4744,6 +4836,127 @@ function initSky() {
       pill.addEventListener('click', () => renderSkyEvents(pill.dataset.filter));
     }
   });
+}
+
+async function fetchAuroraForecast() {
+  if (APP._auroraForecastAt && Date.now() - APP._auroraForecastAt < 3 * 60 * 60 * 1000) {
+    renderAuroraTonight();
+    return;
+  }
+  try {
+    const data = await API.get('/api/aurora/forecast');
+    if (!data || data.error) return;
+    APP.auroraForecast = data;
+    APP._auroraForecastAt = Date.now();
+    const kp = data.latestKp;
+    const label = (data.activity && data.activity.label) ? data.activity.label :
+                  (kp == null ? null :
+                   kp >= 7 ? 'Strong — aurora likely at mid-latitudes' :
+                   kp >= 5 ? 'Minor storm — aurora possible at the auroral oval' :
+                   kp >= 3 ? 'Unsettled — high polar regions only' :
+                             'Quiet — polar regions only');
+    if (kp != null) {
+      const auroraEvent = SKY_EVENTS.find(e => e.id === 'observer-aurora');
+      if (auroraEvent) {
+        auroraEvent.kv = Object.assign({}, auroraEvent.kv, {
+          Kp: kp.toFixed(2),
+          Activity: label,
+          Peak3day: data.peakKp != null ? data.peakKp.toFixed(2) : 'unknown',
+          Source: 'NOAA SWPC · live',
+        });
+      }
+    }
+    renderAuroraTonight();
+  } catch (_) {}
+}
+
+function renderAuroraTonight() {
+  const elMain = document.getElementById('meta-aurora');
+  const elSub  = document.getElementById('meta-aurora-sub');
+  const data = APP.auroraForecast;
+  if (!elMain || !data) return;
+  if (data.latestKp == null) {
+    elMain.textContent = 'Forecast unavailable';
+    if (elSub) elSub.textContent = 'NOAA SWPC not reporting';
+    return;
+  }
+  const kp = data.latestKp;
+  const word = kp >= 5 ? 'Storm watch' : kp >= 4 ? 'Active' : kp >= 3 ? 'Unsettled' : 'Quiet';
+  elMain.textContent = 'Kp ' + kp.toFixed(1) + ' · ' + word;
+  if (elSub) {
+    const peak = data.peakKp != null && data.peakKp > kp ? ' · 3-day peak Kp ' + data.peakKp.toFixed(1) : '';
+    elSub.textContent = (data.activity && data.activity.label || 'NOAA SWPC') + peak;
+  }
+  // Green tint when aurora is meaningfully active
+  if (kp >= 4) {
+    elMain.style.color = 'var(--ss-aurora)';
+  } else {
+    elMain.style.color = '';
+  }
+}
+
+async function fetchMoonPhases() {
+  if (APP._moonPhasesAt && Date.now() - APP._moonPhasesAt < 12 * 60 * 60 * 1000) {
+    renderMoonTonight();
+    return;
+  }
+  try {
+    const data = await API.get('/api/moon/phases');
+    if (!data || data.error) return;
+    APP.moonPhases = data;
+    APP._moonPhasesAt = Date.now();
+    renderMoonTonight();
+    // Fold the next-phase fact into the Sky Calendar 'moon-planning' detail
+    if (data.nextPhase) {
+      const np = data.nextPhase;
+      const when = new Date(np.iso);
+      const datePart = when.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const ev = SKY_EVENTS.find(e => e.id === 'moon-planning');
+      if (ev) {
+        ev.kv = Object.assign({}, ev.kv, {
+          NextPhase: np.phase + ' · ' + datePart,
+          Source: 'USNO',
+        });
+      }
+      const dark = SKY_EVENTS.find(e => e.id === 'dark-sky-window');
+      if (dark) {
+        // Try to find the next "New Moon" specifically for dark-sky windows.
+        const newMoon = (data.phasedata || [])
+          .map(p => {
+            const [hh, mm] = (p.time || '00:00').split(':').map(Number);
+            return { phase: p.phase, ts: Date.UTC(p.year, (p.month || 1) - 1, p.day, hh || 0, mm || 0) };
+          })
+          .filter(p => p.phase === 'New Moon' && p.ts >= Date.now())
+          .sort((a, b) => a.ts - b.ts)[0];
+        if (newMoon) {
+          const nd = new Date(newMoon.ts);
+          dark.kv = Object.assign({}, dark.kv, {
+            NextNewMoon: nd.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+            Source: 'USNO',
+          });
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+function renderMoonTonight() {
+  const elNext = document.getElementById('meta-moon-next');
+  if (!elNext) return;
+  const data = APP.moonPhases;
+  if (!data || !data.nextPhase) {
+    elNext.textContent = 'Next phase — checking';
+    return;
+  }
+  const np = data.nextPhase;
+  const when = new Date(np.iso);
+  if (Number.isNaN(when.getTime())) { elNext.textContent = 'Next phase — checking'; return; }
+  const daysAway = Math.max(0, Math.round((when.getTime() - Date.now()) / 86400000));
+  const dayLabel = daysAway === 0 ? 'today'
+    : daysAway === 1 ? 'tomorrow'
+    : 'in ' + daysAway + ' days';
+  const datePart = when.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  elNext.textContent = 'Next: ' + np.phase + ' · ' + datePart + ' · ' + dayLabel;
 }
 function openSkyDetail(id) {
   const base = SKY_EVENTS.find(x => x.id === id);
@@ -5173,21 +5386,23 @@ function renderConstellationImmersive(c, touring) {
 /* ============================================================
    GALLERY — 5-tile mosaic
    ============================================================ */
+// Gallery tiles. Every entry has been verified against esawebb.org:
+//   the `src` image ID is the actual headline image for the `title`.
 const GALLERY_TILES = [
-  { id: 'pillars',    title: 'The Pillars of Creation',          desc: 'Eagle Nebula · M16 · 6,500 light years away. Webb peers through the dust to find protostars hidden inside.', src: 'https://esawebb.org/media/archives/images/screen/weic2316a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022', large: true },
-  { id: 'carina',     title: 'Cosmic Cliffs · Carina',           desc: 'A 7,600-light-year edge of the Carina Nebula. New stars are born inside cliffs of cold hydrogen.', src: 'https://esawebb.org/media/archives/images/screen/weic2205a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
-  { id: 'tarantula',  title: 'Tarantula Nebula · 30 Doradus',    desc: 'The brightest star-forming region in the Local Group, inside the Large Magellanic Cloud.', src: 'https://esawebb.org/media/archives/images/screen/weic2208a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { id: 'stephans',   title: 'Stephan\'s Quintet',               desc: 'A compact galaxy group 290 million light-years away. Four members are locked in a gravitational dance.', src: 'https://esawebb.org/media/archives/images/screen/weic2310a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
-  { id: 'deep-field', title: 'SMACS 0723 · Deep Field',          desc: 'A galaxy cluster lensing the ancient universe. Nearly every point of light is a galaxy.', src: 'https://esawebb.org/media/archives/images/screen/weic2218a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { id: 'cartwheel',  title: 'Cartwheel Galaxy',                 desc: 'A ring galaxy 500 million light-years away, shaped by a high-speed collision.', src: 'https://esawebb.org/media/archives/images/screen/weic2212a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
-  { id: 'ngc1433',    title: 'NGC 1433 · Barred Spiral',         desc: 'MIRI reveals gas, dust, and star formation around a bright galactic core.', src: 'https://esawebb.org/media/archives/images/screen/weic2301a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
-  { id: 'ngc346',     title: 'NGC 346 · Star Nursery',           desc: 'Young stars forming in the Small Magellanic Cloud, 200,000 light-years away.', src: 'https://esawebb.org/media/archives/images/screen/weic2302a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
-  { id: 'wolf-rayet', title: 'Wolf-Rayet 124',                   desc: 'A massive star shedding its outer layers before a future supernova.', src: 'https://esawebb.org/media/archives/images/screen/weic2308a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2023' },
-  { id: 'horsehead',  title: 'Horsehead Nebula',                 desc: 'The iconic dark nebula in Orion, seen in infrared detail by Webb.', src: 'https://esawebb.org/media/archives/images/screen/weic2409a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2024' },
-  { id: 'southern-ring', title: 'Southern Ring Nebula',          desc: 'A dying star in Vela blowing shells of gas into space.', src: 'https://esawebb.org/media/archives/images/screen/weic2204a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { id: 'ngc7469',    title: 'NGC 7469 · Interacting Pair',      desc: 'A bright active galaxy with a ring of star formation around its center.', src: 'https://esawebb.org/media/archives/images/screen/weic2206a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { id: 'ngc5068',    title: 'NGC 5068 · Face-on Galaxy',        desc: 'Dust lanes and star-forming regions in a nearby spiral galaxy.', src: 'https://esawebb.org/media/archives/images/screen/weic2312a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
-  { id: 'ic5332',     title: 'IC 5332 · Spiral Galaxy',          desc: 'A delicate spiral galaxy about 29 million light-years away.', src: 'https://esawebb.org/media/archives/images/screen/weic2319a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
+  { id: 'pillars',       title: 'The Pillars of Creation',       desc: 'Eagle Nebula · M16 · 6,500 light years away. Webb peers through the dust to find protostars hidden inside.', src: 'https://esawebb.org/media/archives/images/screen/weic2216a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022', large: true },
+  { id: 'carina',        title: 'Cosmic Cliffs · Carina',        desc: 'A 7,600-light-year edge of the Carina Nebula. New stars are born inside cliffs of cold hydrogen.',           src: 'https://esawebb.org/media/archives/images/screen/weic2205a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { id: 'tarantula',     title: 'Tarantula Nebula · 30 Doradus', desc: 'The brightest star-forming region in the Local Group, inside the Large Magellanic Cloud.',                   src: 'https://esawebb.org/media/archives/images/screen/weic2212a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { id: 'stephans',      title: "Stephan's Quintet",             desc: 'A compact galaxy group 290 million light-years away. Four members are locked in a gravitational dance.',     src: 'https://esawebb.org/media/archives/images/screen/weic2208a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { id: 'deep-field',    title: 'SMACS 0723 · Deep Field',       desc: 'A galaxy cluster lensing the ancient universe. Nearly every point of light is a galaxy.',                    src: 'https://esawebb.org/media/archives/images/screen/weic2209a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
+  { id: 'cartwheel',     title: 'Cartwheel Galaxy',              desc: 'A ring galaxy 500 million light-years away, shaped by a high-speed collision.',                              src: 'https://esawebb.org/media/archives/images/screen/weic2211c.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { id: 'pillars-miri',  title: 'Pillars of Creation · MIRI',    desc: 'The same Pillars in mid-infrared — thousands of foreground stars fade away, and the gas and dust become the centerpiece.', src: 'https://esawebb.org/media/archives/images/screen/weic2218a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2022' },
+  { id: 'ngc346',        title: 'NGC 346 · Star Nursery',        desc: 'Young stars forming in the Small Magellanic Cloud, 210,000 light-years away.',                              src: 'https://esawebb.org/media/archives/images/screen/weic2301a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2023' },
+  { id: 'wolf-rayet',    title: 'Wolf-Rayet 124',                desc: 'A massive star in Sagitta shedding its outer layers before a future supernova.',                             src: 'https://esawebb.org/media/archives/images/screen/weic2307a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2023' },
+  { id: 'horsehead',     title: 'Horsehead Nebula',              desc: 'The iconic dark nebula in Orion, seen in infrared detail by Webb.',                                         src: 'https://esawebb.org/media/archives/images/screen/weic2411b.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2024' },
+  { id: 'southern-ring', title: 'Southern Ring Nebula',          desc: 'A dying star in Vela blowing shells of gas into space.',                                                    src: 'https://esawebb.org/media/archives/images/screen/weic2207a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
+  { id: 'crab-nebula',   title: 'Crab Nebula',                   desc: 'A supernova remnant 6,500 light-years away in Taurus, around a rapidly rotating neutron star.',             src: 'https://esawebb.org/media/archives/images/screen/weic2326a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2023' },
+  { id: 'cassiopeia-a',  title: 'Cassiopeia A',                  desc: 'A supernova remnant 11,000 light-years away, captured by MIRI across 5–25 microns.',                        src: 'https://esawebb.org/media/archives/images/screen/weic2311a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
+  { id: 'sombrero',      title: 'Sombrero Galaxy · M104',        desc: 'M104 in mid-infrared, revealing the dust ring around its bright central disk.',                             src: 'https://esawebb.org/media/archives/images/screen/weic2427a.jpg', credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2024' },
 ];
 function renderGallery() {
   const mosaic = document.getElementById('gal-mosaic');
@@ -5268,20 +5483,20 @@ function toggleGallerySlideshow() {
    AMBIENT — Ken Burns cycle + auto-hide UI + settings overlay
    ============================================================ */
 const AMB_DATA = [
-  { caption: 'Cosmic Cliffs · Carina Nebula',          credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
-  { caption: 'Pillars of Creation · Eagle Nebula M16',  credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { caption: 'Tarantula Nebula · 30 Doradus',           credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { caption: 'Stephan\'s Quintet · 290M light-years',   credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
-  { caption: 'SMACS 0723 · First JWST Deep Field',      credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { caption: 'Cartwheel Galaxy · 500M light-years',     credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022' },
-  { caption: 'NGC 346 · Star cluster in the SMC',       credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
-  { caption: 'NGC 1433 · Barred spiral galaxy',         credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
-  { caption: 'Wolf-Rayet 124 · Stellar wind nebula',   credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2023' },
-  { caption: 'Horsehead Nebula · Orion Molecular Cloud', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2024' },
-  { caption: 'Southern Ring Nebula · NGC 3132',         credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { caption: 'NGC 7469 · Interacting galaxy pair',      credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022' },
-  { caption: 'NGC 5068 · Face-on spiral galaxy',        credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
-  { caption: 'IC 5332 · Spiral galaxy at 29M ly',       credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023' },
+  { caption: 'Cosmic Cliffs · Carina Nebula',           credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022', tags: ['nebula'] },
+  { caption: 'Pillars of Creation · Eagle Nebula M16',  credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022',        tags: ['nebula'] },
+  { caption: 'Tarantula Nebula · 30 Doradus',           credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022',        tags: ['nebula'] },
+  { caption: 'Stephan\'s Quintet · 290M light-years',   credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022', tags: ['galaxy'] },
+  { caption: 'SMACS 0723 · First JWST Deep Field',      credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022',        tags: ['deep-field'] },
+  { caption: 'Cartwheel Galaxy · 500M light-years',     credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2022', tags: ['galaxy'] },
+  { caption: 'NGC 346 · Star-forming region in the SMC',credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023',          tags: ['nebula'] },
+  { caption: 'NGC 1433 · Barred spiral galaxy',         credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023',          tags: ['galaxy'] },
+  { caption: 'Wolf-Rayet 124 · Stellar wind nebula',    credit: 'NASA · ESA · CSA · STScI · JWST NIRCam + MIRI · 2023', tags: ['nebula'] },
+  { caption: 'Horsehead Nebula · Orion Molecular Cloud', credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2024',       tags: ['nebula'] },
+  { caption: 'Southern Ring Nebula · NGC 3132',         credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022',        tags: ['nebula'] },
+  { caption: 'NGC 7469 · Interacting galaxy pair',      credit: 'NASA · ESA · CSA · STScI · JWST NIRCam · 2022',        tags: ['galaxy'] },
+  { caption: 'NGC 5068 · Face-on spiral galaxy',        credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023',          tags: ['galaxy'] },
+  { caption: 'IC 5332 · Spiral galaxy at 29M ly',       credit: 'NASA · ESA · CSA · STScI · JWST MIRI · 2023',          tags: ['galaxy'] },
 ];
 
 const KB_CLASSES = ['kb-zoom-in', 'kb-zoom-out', 'kb-pan-r', 'kb-pan-l'];
@@ -5292,6 +5507,16 @@ function pickKenBurns() {
   do { idx = Math.floor(Math.random() * KB_CLASSES.length); } while (idx === _lastKbIdx && KB_CLASSES.length > 1);
   _lastKbIdx = idx;
   return KB_CLASSES[idx];
+}
+
+// Returns filtered subset of .amb-bg elements for the current channel setting
+function getAmbQueue() {
+  const allBgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
+  const tagMap = ['all', 'deep-field', 'nebula', 'galaxy', 'solar'];
+  const tag = tagMap[AMB_STATE.channel] || 'all';
+  if (tag === 'all') return allBgs;
+  const filtered = allBgs.filter((b, i) => AMB_DATA[i] && AMB_DATA[i].tags && AMB_DATA[i].tags.includes(tag));
+  return filtered.length >= 2 ? filtered : allBgs;
 }
 
 let _ambUiHideTimer = null;
@@ -5305,9 +5530,10 @@ function showAmbUI() {
   }, 8000);
 }
 
-function updateAmbCaption(idx) {
-  const safe = ((idx % AMB_DATA.length) + AMB_DATA.length) % AMB_DATA.length;
-  const d = AMB_DATA[safe];
+function updateAmbCaption(bg) {
+  const allBgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
+  const globalIdx = allBgs.indexOf(bg);
+  const d = AMB_DATA[globalIdx] || AMB_DATA[0];
   const cap = document.getElementById('amb-caption');
   const cred = document.getElementById('amb-credit');
   if (cap) cap.textContent = d.caption;
@@ -5315,31 +5541,74 @@ function updateAmbCaption(idx) {
   showAmbUI();
 }
 
+// Burn-in shift: nudge static overlay elements by a few pixels every 2 min
+let _burnShiftTimer = null;
+function applyBurnShift() {
+  const on = AMB_STATE.shift === 0;
+  const ids = ['amb-clock', 'amb-caption', 'amb-credit'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (on) {
+      const x = (Math.random() - 0.5) * 10;
+      const y = (Math.random() - 0.5) * 6;
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    } else {
+      el.style.transform = '';
+    }
+  });
+}
+
+// Idle screensaver timer — auto-navigates to ambient after inactivity
+let _idleTimer = null;
+const _IDLE_MS = { '5 min': 300000, '10 min': 600000, '30 min': 1800000 };
+// Screens where idle->ambient navigation MUST NOT fire (pair codes expire,
+// welcome/lock/pricing need explicit user action, ambient/player are no-ops).
+const IDLE_SAFE_SCREENS = new Set(['pair', 'welcome', 'lock', 'pricing', 'ambient', 'player']);
+
+function resetIdleTimer() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  if (IDLE_SAFE_SCREENS.has(APP.currentScreen)) return;
+  const delayKey = AMB_VALUES.delay[AMB_STATE.delay];
+  const delay = _IDLE_MS[delayKey] || 600000;
+  _idleTimer = setTimeout(() => {
+    // Re-check at fire time — screen or overlay state may have changed since we scheduled.
+    if (IDLE_SAFE_SCREENS.has(APP.currentScreen) || APP.overlayOpen) {
+      resetIdleTimer(); // reschedule, don't navigate
+      return;
+    }
+    navigate('ambient');
+  }, delay);
+}
+
 function initAmbient() {
-  const bgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
-  // Lazy-load background images
-  bgs.forEach(b => {
+  const allBgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
+  // Lazy-load all background images
+  allBgs.forEach(b => {
     if (!b.style.backgroundImage && b.dataset.src) {
       b.style.backgroundImage = "url('" + b.dataset.src + "')";
     }
   });
-  APP.ambBgIndex = 0;
-  // Remove all KB classes, reset opacity, activate first
-  bgs.forEach((b, i) => {
-    b.classList.remove('active', ...KB_CLASSES);
-    if (i === 0) {
-      b.classList.add('active', pickKenBurns());
-    }
-  });
-  updateAmbCaption(0);
+
+  // Reset all, then activate first item in filtered queue
+  allBgs.forEach(b => b.classList.remove('active', ...KB_CLASSES));
+  const queue = getAmbQueue();
+  APP.ambQueue = queue;
+  APP.ambQueueIndex = 0;
+  const first = queue[0];
+  if (first) {
+    first.classList.add('active', pickKenBurns());
+    updateAmbCaption(first);
+  }
 
   if (APP.ambBgInterval) clearInterval(APP.ambBgInterval);
   APP.ambBgInterval = setInterval(() => {
-    bgs[APP.ambBgIndex].classList.remove('active', ...KB_CLASSES);
-    APP.ambBgIndex = (APP.ambBgIndex + 1) % bgs.length;
-    const next = bgs[APP.ambBgIndex];
+    const q = APP.ambQueue;
+    q[APP.ambQueueIndex].classList.remove('active', ...KB_CLASSES);
+    APP.ambQueueIndex = (APP.ambQueueIndex + 1) % q.length;
+    const next = q[APP.ambQueueIndex];
     next.classList.add('active', pickKenBurns());
-    updateAmbCaption(APP.ambBgIndex);
+    updateAmbCaption(next);
   }, 30_000);
 
   function tickAmb() {
@@ -5353,6 +5622,11 @@ function initAmbient() {
   if (APP.ambClockInterval) clearInterval(APP.ambClockInterval);
   APP.ambClockInterval = setInterval(tickAmb, 60_000);
 
+  // Burn-in shift every 2 min
+  applyBurnShift();
+  if (_burnShiftTimer) clearInterval(_burnShiftTimer);
+  _burnShiftTimer = setInterval(applyBurnShift, 120_000);
+
   APP.ambSettingsOpen = false;
   const screen = document.getElementById('ambient');
   screen.classList.remove('with-settings');
@@ -5361,9 +5635,15 @@ function initAmbient() {
 function stopAmbient() {
   if (APP.ambBgInterval) { clearInterval(APP.ambBgInterval); APP.ambBgInterval = null; }
   if (APP.ambClockInterval) { clearInterval(APP.ambClockInterval); APP.ambClockInterval = null; }
+  if (_burnShiftTimer) { clearInterval(_burnShiftTimer); _burnShiftTimer = null; }
   if (_ambUiHideTimer) { clearTimeout(_ambUiHideTimer); _ambUiHideTimer = null; }
   const screen = document.getElementById('ambient');
   if (screen) screen.classList.remove('amb-ui-visible');
+  // Reset burn-in shift offsets
+  ['amb-clock', 'amb-caption', 'amb-credit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.transform = '';
+  });
 }
 
 function openAmbSettings() {
@@ -5377,17 +5657,25 @@ function openAmbSettings() {
     if (first) focusEl(first);
   }, 50);
 }
+
 function closeAmbSettings() {
   APP.ambSettingsOpen = false;
   document.getElementById('ambient').classList.remove('with-settings');
-  // Let UI auto-hide in 8s
+  // Re-build queue in case channel changed
+  const allBgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
+  allBgs.forEach(b => b.classList.remove('active', ...KB_CLASSES));
+  const queue = getAmbQueue();
+  APP.ambQueue = queue;
+  APP.ambQueueIndex = 0;
+  const first = queue[0];
+  if (first) { first.classList.add('active', pickKenBurns()); updateAmbCaption(first); }
   showAmbUI();
   if (focused) { focused.classList.remove('focused'); focused = null; }
 }
 
 const AMB_VALUES = {
-  channel: ['All JWST', 'Deep Field', 'Nebulae', 'Galaxies', 'Solar System'],
-  sound:   ['Off', 'Cosmos', 'Mission Audio'],
+  channel: ['All JWST', 'Deep Field', 'Nebulae', 'Galaxies'],
+  sound:   ['Off'],
   delay:   ['5 min', '10 min', '30 min'],
   shift:   ['On', 'Off'],
 };
@@ -5423,20 +5711,20 @@ function cycleAmbSetting(action) {
 }
 
 function advanceAmbient() {
-  const bgs = Array.from(document.querySelectorAll('#ambient .amb-bg'));
-  if (!bgs.length) return;
-  bgs[APP.ambBgIndex].classList.remove('active', ...KB_CLASSES);
-  APP.ambBgIndex = (APP.ambBgIndex + 1) % bgs.length;
-  const next = bgs[APP.ambBgIndex];
+  const q = APP.ambQueue || getAmbQueue();
+  if (!q.length) return;
+  q[APP.ambQueueIndex].classList.remove('active', ...KB_CLASSES);
+  APP.ambQueueIndex = (APP.ambQueueIndex + 1) % q.length;
+  const next = q[APP.ambQueueIndex];
   next.classList.add('active', pickKenBurns());
-  updateAmbCaption(APP.ambBgIndex);
+  updateAmbCaption(next);
   // Reset interval so dwell resets from this image
   if (APP.ambBgInterval) clearInterval(APP.ambBgInterval);
   APP.ambBgInterval = setInterval(() => {
-    bgs[APP.ambBgIndex].classList.remove('active', ...KB_CLASSES);
-    APP.ambBgIndex = (APP.ambBgIndex + 1) % bgs.length;
-    bgs[APP.ambBgIndex].classList.add('active', pickKenBurns());
-    updateAmbCaption(APP.ambBgIndex);
+    q[APP.ambQueueIndex].classList.remove('active', ...KB_CLASSES);
+    APP.ambQueueIndex = (APP.ambQueueIndex + 1) % q.length;
+    q[APP.ambQueueIndex].classList.add('active', pickKenBurns());
+    updateAmbCaption(q[APP.ambQueueIndex]);
   }, 30_000);
 }
 
@@ -5449,7 +5737,7 @@ function showWhisper(text, sub, durationMs) {
   const textEl = document.getElementById('whisper-text');
   const subEl = document.getElementById('whisper-sub');
   if (!banner) return;
-  if (textEl) textEl.innerHTML = text;
+  if (textEl) textEl.textContent = text;
   if (subEl) subEl.textContent = sub || '';
   banner.classList.add('show');
   if (_whisperTimer) clearTimeout(_whisperTimer);
@@ -5475,7 +5763,7 @@ async function updateIssNearest(pos) {
   try {
     const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' +
       encodeURIComponent(pos.latitude) + '&lon=' + encodeURIComponent(pos.longitude) + '&zoom=5';
-    const r = await fetch(url);
+    const r = await fetch(url, { headers: { 'User-Agent': 'StarSol/1.0 (starsol.app)' } });
     if (!r.ok) return;
     const data = await r.json();
     const address = data.address || {};
@@ -5516,6 +5804,7 @@ function updateISSUI(pos, silent) {
   if (status) status.textContent = 'ISS live tracker · updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const summary = document.getElementById('iss-summary');
   if (summary) summary.textContent = 'The ISS is at ' + lat + '°, ' + lng + '°, about ' + altitude + ' above Earth and moving roughly ' + speed + '. Lighting: ' + lighting + '.';
+  setObserverLockedCopy();
   const nearest = document.getElementById('iss-nearest');
   if (nearest) nearest.textContent = describeIssNearest();
   updateIssNearest(pos);
@@ -5582,6 +5871,10 @@ function openISSTracker() {
   fetchISSPosition(true);
   if (APP.issPollInterval) clearInterval(APP.issPollInterval);
   APP.issPollInterval = setInterval(() => fetchISSPosition(true), 10000);
+  // Land D-pad focus on the close button so OK/ENTER dismisses the overlay
+  // without requiring users to discover BACK.
+  const closeBtn = document.getElementById('iss-close');
+  if (closeBtn) setTimeout(() => focusEl(closeBtn), 0);
 }
 
 function closeISSTracker(clearState) {
@@ -5892,6 +6185,7 @@ function boot() {
     } else {
       navigate('welcome');
     }
+    resetIdleTimer();
   }, 2500);
 }
 
