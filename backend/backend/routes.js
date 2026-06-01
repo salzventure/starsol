@@ -50,8 +50,9 @@ function presentSubscription(sub) {
     const interval = priceKey.includes('annual') ? 'annual'
         : priceKey.includes('monthly') ? 'monthly'
         : null;
+    const { stripe_customer_id: _cid, stripe_subscription_id: _sid, ...safeSub } = sub;
     return {
-        ...sub,
+        ...safeSub,
         interval,
         priceDisplay: priceDisplayMap[priceKey] || null,
         periodEnd: formatPeriodEnd(sub.current_period_end),
@@ -99,7 +100,8 @@ async function activePlaySubscriptionForUser(userId) {
 
 router.post('/auth/register', async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        let { name, email, password } = req.body;
+        email = (email || '').trim().toLowerCase();
         if (!email || !password || password.length < 8) {
             return res.status(400).json({ error: 'invalid_input' });
         }
@@ -122,7 +124,8 @@ router.post('/auth/register', async (req, res) => {
 
 router.post('/auth/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        let { email, password } = req.body;
+        email = (email || '').trim().toLowerCase();
         const user = await store.users.findByEmail(email);
         if (!user) return res.status(401).json({ error: 'invalid_credentials' });
         if (!user.password_hash) return res.status(401).json({ error: 'password_login_unavailable' });
@@ -153,11 +156,18 @@ router.get('/auth/me', authMiddleware, async (req, res) => {
     const playSub = await activePlaySubscriptionForUser(req.user.id);
 
     // Compute effectivePlan: sub plan takes precedence when subscription is active/entitled
+    const PAST_DUE_GRACE_MS = 28 * 24 * 60 * 60 * 1000;
     const ENTITLED_STATUSES = ['active', 'trialing', 'past_due', 'canceled'];
     let effectivePlan = req.user.plan || 'free';
     let entitledUntil = sub?.current_period_end ?? null;
-    if (sub && ENTITLED_STATUSES.includes(sub.status) && sub.current_period_end > Date.now()) {
-        effectivePlan = sub.plan || effectivePlan;
+    if (sub && ENTITLED_STATUSES.includes(sub.status)) {
+        const now = Date.now();
+        const insidePeriod = sub.current_period_end > now;
+        const pastDueEntitled = sub.status === 'past_due'
+            && sub.current_period_end + PAST_DUE_GRACE_MS > now;
+        if (insidePeriod || pastDueEntitled) {
+            effectivePlan = sub.plan || effectivePlan;
+        }
     }
 
     res.json({

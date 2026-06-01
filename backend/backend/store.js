@@ -192,8 +192,11 @@ const subscriptions = {
                FROM subscriptions
               WHERE current_period_end IS NOT NULL
                 AND current_period_end <= ?
-                AND status IN ("canceled")
-                AND plan <> "free"`,
+                AND (
+                  status = 'canceled'
+                  OR (cancel_at_period_end = 1 AND status = 'active')
+                )
+                AND plan <> 'free'`,
             [now],
         );
         for (const row of lapsed) {
@@ -378,18 +381,19 @@ const events = {
 // values; we must process each at-most-once to avoid double-granting plans,
 // double-recording trial_used_at, etc.
 const stripeEvents = {
-    seen: async (eventId) => {
-        if (!eventId) return false;
-        const row = await queryOne('SELECT event_id FROM stripe_webhook_events WHERE event_id = ?', [eventId]);
-        return !!row;
-    },
-    mark: async (eventId) => {
-        if (!eventId) return;
-        await execute(
+    // Returns true if this worker now owns the event (first to claim it).
+    // INSERT IGNORE: if another concurrent worker already inserted, affectedRows=0.
+    claim: async (eventId) => {
+        if (!eventId) return true; // no dedup possible — let it through
+        const result = await execute(
             'INSERT IGNORE INTO stripe_webhook_events (event_id, processed_at) VALUES (?, ?)',
             [eventId, Date.now()],
         );
+        return result.affectedRows === 1; // true = we own it, false = duplicate
     },
+    // Keep seen/mark as no-ops for backward compat (billing.js calls seen+mark today)
+    seen: async () => false,
+    mark: async () => {},
 };
 
 module.exports = {

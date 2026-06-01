@@ -3226,7 +3226,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       <span class="search-query" id="search-query">Type to search&hellip;</span>
     </div>
     <div class="search-keys" id="search-keys">
-      <span class="sk" data-ch="A">A</span><span class="sk" data-ch="B">B</span><span class="sk" data-ch="C">C</span><span class="sk" data-ch="D">D</span><span class="sk" data-ch="E">E</span><span class="sk" data-ch="F">F</span><span class="sk" data-ch="G">G</span><span class="sk" data-ch="H">H</span><span class="sk" data-ch="I">I</span><span class="sk" data-ch="J">J</span><span class="sk" data-ch="K">K</span><span class="sk" data-ch="L">L</span><span class="sk" data-ch="M">M</span><span class="sk" data-ch="N">N</span><span class="sk" data-ch="O">O</span><span class="sk" data-ch="P">P</span><span class="sk" data-ch="Q">Q</span><span class="sk" data-ch="R">R</span><span class="sk" data-ch="S">S</span><span class="sk" data-ch="T">T</span><span class="sk" data-ch="U">U</span><span class="sk" data-ch="V">V</span><span class="sk" data-ch="W">W</span><span class="sk" data-ch="X">X</span><span class="sk" data-ch="Y">Y</span><span class="sk" data-ch="Z">Z</span><span class="sk del" data-ch="DEL">&larr;</span><span class="sk clr" data-ch="CLR">Clear</span>
+      <span class="sk focusable" tabindex="0" data-ch="A">A</span><span class="sk focusable" tabindex="0" data-ch="B">B</span><span class="sk focusable" tabindex="0" data-ch="C">C</span><span class="sk focusable" tabindex="0" data-ch="D">D</span><span class="sk focusable" tabindex="0" data-ch="E">E</span><span class="sk focusable" tabindex="0" data-ch="F">F</span><span class="sk focusable" tabindex="0" data-ch="G">G</span><span class="sk focusable" tabindex="0" data-ch="H">H</span><span class="sk focusable" tabindex="0" data-ch="I">I</span><span class="sk focusable" tabindex="0" data-ch="J">J</span><span class="sk focusable" tabindex="0" data-ch="K">K</span><span class="sk focusable" tabindex="0" data-ch="L">L</span><span class="sk focusable" tabindex="0" data-ch="M">M</span><span class="sk focusable" tabindex="0" data-ch="N">N</span><span class="sk focusable" tabindex="0" data-ch="O">O</span><span class="sk focusable" tabindex="0" data-ch="P">P</span><span class="sk focusable" tabindex="0" data-ch="Q">Q</span><span class="sk focusable" tabindex="0" data-ch="R">R</span><span class="sk focusable" tabindex="0" data-ch="S">S</span><span class="sk focusable" tabindex="0" data-ch="T">T</span><span class="sk focusable" tabindex="0" data-ch="U">U</span><span class="sk focusable" tabindex="0" data-ch="V">V</span><span class="sk focusable" tabindex="0" data-ch="W">W</span><span class="sk focusable" tabindex="0" data-ch="X">X</span><span class="sk focusable" tabindex="0" data-ch="Y">Y</span><span class="sk focusable" tabindex="0" data-ch="Z">Z</span><span class="sk del focusable" tabindex="0" data-ch="DEL">&larr;</span><span class="sk clr focusable" tabindex="0" data-ch="CLR">Clear</span>
     </div>
     <div class="search-results" id="search-results"></div>
     <div class="hint">D-pad to navigate keys &middot; BACK to close</div>
@@ -3528,11 +3528,13 @@ function focusEl(el) {
 }
 function focusables() {
   const screen = document.getElementById(APP.currentScreen);
-  if (!screen) return [];
-  return Array.from(screen.querySelectorAll('.focusable')).filter(el => {
-    if (el.offsetParent === null) return false;
-    return true;
-  });
+  const screenEls = screen ? Array.from(screen.querySelectorAll('.focusable')) : [];
+  // When the search overlay is active, include its focusable keys and results.
+  const searchOverlay = document.getElementById('search-overlay');
+  const overlayEls = (APP.overlayOpen === 'search' && searchOverlay)
+    ? Array.from(searchOverlay.querySelectorAll('.focusable'))
+    : [];
+  return [...screenEls, ...overlayEls].filter(el => el.offsetParent !== null);
 }
 
 /* ============================================================
@@ -3648,7 +3650,15 @@ function activateFocused() {
       document.getElementById('detail-title').textContent = apodCard.dataset.apodTitle || 'Picture of the Day';
       document.getElementById('detail-desc').textContent = apodCard.dataset.apodExplanation || '';
       const kvs = document.getElementById('detail-kvs');
-      if (kvs) kvs.innerHTML = '<div class="kv"><div class="k">Credit</div><div class="v">' + (apodCard.dataset.apodCredit || 'NASA · Public Domain') + '</div></div>';
+      if (kvs) {
+        kvs.innerHTML = '';
+        const row = document.createElement('div'); row.className = 'kv';
+        const k = document.createElement('div'); k.className = 'k'; k.textContent = 'Credit';
+        const v = document.createElement('div'); v.className = 'v';
+        v.textContent = apodCard.dataset.apodCredit || 'NASA · Public Domain';
+        row.appendChild(k); row.appendChild(v);
+        kvs.appendChild(row);
+      }
       const svg = document.getElementById('detail-svg');
       if (svg) svg.innerHTML = '';
       document.getElementById('detail-overlay').classList.add('show');
@@ -3982,7 +3992,17 @@ document.addEventListener('keydown', (e) => {
     }
     if (APP.overlayOpen === 'iss') {
       const isEnterI = k === 13 || k === 32 || key === 'Enter' || key === ' ';
-      if (isEnterI) { e.preventDefault(); fetchISSPosition(true); }
+      if (isEnterI) {
+        e.preventDefault();
+        // If focus is on the Close button, close the overlay.
+        // Otherwise refresh ISS position (the default OK action on this screen).
+        const closeBtn = document.getElementById('iss-close');
+        if (focused === closeBtn) {
+          closeOverlay();
+        } else {
+          fetchISSPosition(true);
+        }
+      }
       return;
     }
     if (APP.overlayOpen === 'search') {
@@ -4664,12 +4684,21 @@ function renderSkyLocationSummary() {
   const box = document.getElementById('sky-location-summary');
   if (!box) return;
   const c = skyLocationContext();
-  box.innerHTML = [
+  box.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  [
     ['Location', c.location],
     ['Conditions', c.condition],
     ['Moon', c.moon],
     ['Sky band', c.hemisphere + ' · ' + c.latitudeBand]
-  ].map(([k, v]) => `<div class="sky-loc-card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  ].forEach(([label, val]) => {
+    const card = document.createElement('div'); card.className = 'sky-loc-card';
+    const kEl = document.createElement('div'); kEl.className = 'k'; kEl.textContent = label;
+    const vEl = document.createElement('div'); vEl.className = 'v'; vEl.textContent = val;
+    card.appendChild(kEl); card.appendChild(vEl);
+    frag.appendChild(card);
+  });
+  box.appendChild(frag);
 }
 
 function formatObserverPass(pass) {
@@ -4809,21 +4838,33 @@ function renderSkyEvents(filter) {
     p.classList.toggle('gold', p.dataset.filter === f);
   });
   const events = (f === 'all' ? SKY_EVENTS : SKY_EVENTS.filter(e => e.cat === f)).map(localizeSkyEvent);
-  tbody.innerHTML = events.map((e, i) => {
-    const visCell = e.cat === 'iss' ? '<span class="ss-pill aurora">Tracker</span>'
-                  : e.vis === 'aurora' ? '<span class="ss-pill aurora">Guide</span>'
-                  : e.vis === 'live'   ? '<span class="ss-pill ember">Live</span>'
-                  : '<span style="color:var(--ss-space4);font-family:var(--ff-mono);">—</span>';
-    const accCell = e.access === 'observer' ? '<span class="ss-pill gold">Observer</span>'
-                  : '<span class="ss-pill" style="background:transparent;border-color:var(--ss-space4);">Free</span>';
-    return `<tr class="focusable ${i === 0 ? 'upcoming' : ''}" data-sky="${e.id}" tabindex="0">
-      <td class="date">${e.date}</td>
-      <td class="time">${e.time}</td>
-      <td class="event">${e.name}</td>
-      <td class="vis">${visCell}</td>
-      <td class="access">${accCell}</td>
-    </tr>`;
-  }).join('');
+  tbody.innerHTML = '';
+  const tbodyFrag = document.createDocumentFragment();
+  events.forEach((e, i) => {
+    const tr = document.createElement('tr');
+    tr.className = 'focusable' + (i === 0 ? ' upcoming' : '');
+    tr.dataset.sky = e.id;
+    tr.tabIndex = 0;
+
+    const tdDate = document.createElement('td'); tdDate.className = 'date'; tdDate.textContent = e.date;
+    const tdTime = document.createElement('td'); tdTime.className = 'time'; tdTime.textContent = e.time;
+    const tdName = document.createElement('td'); tdName.className = 'event'; tdName.textContent = e.name;
+
+    // visCell and accCell use only internal constant strings — safe to use innerHTML.
+    const tdVis = document.createElement('td'); tdVis.className = 'vis';
+    tdVis.innerHTML = e.cat === 'iss' ? '<span class="ss-pill aurora">Tracker</span>'
+                    : e.vis === 'aurora' ? '<span class="ss-pill aurora">Guide</span>'
+                    : e.vis === 'live'   ? '<span class="ss-pill ember">Live</span>'
+                    : '<span style="color:var(--ss-space4);font-family:var(--ff-mono);">—</span>';
+    const tdAcc = document.createElement('td'); tdAcc.className = 'access';
+    tdAcc.innerHTML = e.access === 'observer' ? '<span class="ss-pill gold">Observer</span>'
+                    : '<span class="ss-pill" style="background:transparent;border-color:var(--ss-space4);">Free</span>';
+
+    tr.appendChild(tdDate); tr.appendChild(tdTime); tr.appendChild(tdName);
+    tr.appendChild(tdVis); tr.appendChild(tdAcc);
+    tbodyFrag.appendChild(tr);
+  });
+  tbody.appendChild(tbodyFrag);
 }
 function initSky() {
   renderSkyEvents();
@@ -4971,9 +5012,16 @@ function openSkyDetail(id) {
   document.getElementById('detail-title').textContent = e.name;
   document.getElementById('detail-desc').textContent = e.desc;
   const kvBox = document.getElementById('detail-kvs');
-  kvBox.innerHTML = Object.entries(e.kv || {}).map(([k, v]) =>
-    `<div class="kv"><div class="k">${k}</div><div class="v">${v}</div></div>`
-  ).join('');
+  kvBox.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  Object.entries(e.kv || {}).forEach(([k, v]) => {
+    const row = document.createElement('div'); row.className = 'kv';
+    const kEl = document.createElement('div'); kEl.className = 'k'; kEl.textContent = k;
+    const vEl = document.createElement('div'); vEl.className = 'v'; vEl.textContent = v;
+    row.appendChild(kEl); row.appendChild(vEl);
+    frag.appendChild(row);
+  });
+  kvBox.appendChild(frag);
   const detailSvgEl = document.getElementById('detail-svg');
   if (detailSvgEl) {
     const constKey = (e.kv?.Constellation || '').toLowerCase().replace(/\s+/g, '-');

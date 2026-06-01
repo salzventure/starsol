@@ -82,9 +82,9 @@ function periodFromStripeSubscription(stripeSub) {
 async function handleWebhook(rawBody, sig) {
     const event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
 
-    // Idempotency: Stripe retries duplicate events. Refuse to re-process.
-    if (await store.stripeEvents.seen(event.id)) {
-        return; // already handled — treat as success
+    // Idempotency: claim returns false if another worker already processed this event.
+    if (!await store.stripeEvents.claim(event.id)) {
+        return; // duplicate — already handled
     }
 
     switch (event.type) {
@@ -125,7 +125,6 @@ async function handleWebhook(rawBody, sig) {
         }
     }
 
-    await store.stripeEvents.mark(event.id);
 }
 
 async function syncSubscription(stripeSub, userIdOverride) {

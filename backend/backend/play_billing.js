@@ -8,7 +8,6 @@
 
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { OAuth2Client } = require('google-auth-library');
 const store = require('./store');
 
 const PACKAGE_NAME = process.env.PLAY_PACKAGE_NAME || 'app.starsol.tv';
@@ -18,9 +17,6 @@ const RTDN_AUDIENCE = process.env.PLAY_RTDN_AUDIENCE
     || 'https://starsol.app';
 const RTDN_ALLOWED_EMAIL = process.env.PLAY_RTDN_SERVICE_ACCOUNT_EMAIL || null;
 
-// Shared OAuth2 client used solely to verify Google-signed Pub/Sub push JWTs.
-// The client caches Google's signing keys internally.
-const pubsubAuthClient = new OAuth2Client();
 const PRODUCT_PLANS = {
     explorer_monthly: 'explorer',
     explorer_annual:  'explorer',
@@ -205,6 +201,15 @@ async function upsertPlaySubscription({ userId, purchaseToken, productId, subscr
 }
 
 async function verifyPubsubPush(req) {
+    if (!PLAY_ENABLED) return; // short-circuit if disabled
+    let OAuth2Client;
+    try {
+        ({ OAuth2Client } = require('google-auth-library'));
+    } catch (e) {
+        console.error('[play] google-auth-library not installed — RTDN verification skipped');
+        throw new Error('rtdn_verification_unavailable');
+    }
+
     const authHeader = req.headers.authorization || '';
     if (!authHeader.startsWith('Bearer ')) {
         throw new Error('missing_bearer');
@@ -212,7 +217,8 @@ async function verifyPubsubPush(req) {
     const token = authHeader.slice('Bearer '.length).trim();
     if (!token) throw new Error('missing_bearer');
 
-    const ticket = await pubsubAuthClient.verifyIdToken({
+    const client = new OAuth2Client();
+    const ticket = await client.verifyIdToken({
         idToken: token,
         audience: RTDN_AUDIENCE,
     });
@@ -281,6 +287,17 @@ async function handleVerify(req, res) {
         }
 
         const subscription = await fetchPlaySubscription(purchaseToken);
+
+        // Dedup: reject if this purchase token is already claimed by a different user.
+        const hash = tokenHash(purchaseToken);
+        const existingRow = await store.queryOne(
+            'SELECT user_id FROM play_subscriptions WHERE purchase_token_hash = ?',
+            [hash],
+        );
+        if (existingRow && existingRow.user_id !== req.user.id) {
+            return res.status(409).json({ error: 'token_already_claimed' });
+        }
+
         const result = await upsertPlaySubscription({
             userId: req.user.id,
             purchaseToken,

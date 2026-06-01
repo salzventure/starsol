@@ -67,7 +67,7 @@ h1{font-family:var(--serif);font-style:italic;font-size:40px;line-height:1.1;col
 
 .form-group{margin-bottom:18px}
 label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:8px}
-input[type=email],input[type=password]{
+input[type=email],input[type=password],input[type=text]{
   width:100%;padding:12px 14px;background:var(--space1);border:1.5px solid var(--space4);
   border-radius:6px;color:var(--star100);font-family:var(--sans);font-size:15px;outline:none;transition:border-color .15s}
 input:focus{border-color:var(--star500)}
@@ -153,8 +153,36 @@ input:focus{border-color:var(--star500)}
       <input type="password" id="signin-password" autocomplete="current-password" placeholder="••••••••"/>
     </div>
     <button class="btn btn-primary" id="btn-signin">Sign in</button>
-    <p class="footer" style="margin-top:20px">New here? <a href="/pricing">Choose a plan →</a></p>
+    <p class="footer" style="margin-top:20px"><a href="#" id="link-show-register">New here? Create an account →</a></p>
     <p class="footer" style="margin-top:8px"><a href="/pair">Pair a TV</a> &nbsp;·&nbsp; <a href="/terms">Terms</a></p>
+  </div>
+
+  <!-- STATE: Register -->
+  <div id="state-register" class="state">
+    <a href="/" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--text2);text-decoration:none;margin-bottom:24px">← starsol.app</a>
+    <div class="eyebrow">Create account</div>
+    <h1>Join StarSol.</h1>
+    <p class="subtitle">Create your account and pair a TV to start watching.</p>
+    <div id="alert-register" class="alert error"></div>
+    <div class="form-group">
+      <label for="register-name">Name</label>
+      <input type="text" id="register-name" autocomplete="name" placeholder="Your name"/>
+    </div>
+    <div class="form-group">
+      <label for="register-email">Email</label>
+      <input type="email" id="register-email" autocomplete="email" placeholder="you@example.com"/>
+    </div>
+    <div class="form-group">
+      <label for="register-password">Password</label>
+      <input type="password" id="register-password" autocomplete="new-password" placeholder="At least 8 characters"/>
+    </div>
+    <div class="form-group">
+      <label for="register-confirm">Confirm password</label>
+      <input type="password" id="register-confirm" autocomplete="new-password" placeholder="••••••••"/>
+    </div>
+    <button class="btn btn-primary" id="btn-register">Create account</button>
+    <p class="footer" style="margin-top:20px"><a href="#" id="link-show-signin">Already have an account? Sign in</a></p>
+    <p class="footer" style="margin-top:8px"><a href="/terms">Terms</a></p>
   </div>
 </div>
 
@@ -316,6 +344,69 @@ function goState(id) {
   document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
   document.getElementById('state-' + id).classList.add('active');
 }
+
+document.getElementById('link-show-register').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('alert-register').style.display = 'none';
+  goState('register');
+});
+
+document.getElementById('link-show-signin').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('alert-signin').style.display = 'none';
+  goState('signin');
+});
+
+document.getElementById('btn-register').addEventListener('click', async () => {
+  const name = document.getElementById('register-name').value.trim();
+  const email = document.getElementById('register-email').value.trim();
+  const password = document.getElementById('register-password').value;
+  const confirm = document.getElementById('register-confirm').value;
+  const alertEl = document.getElementById('alert-register');
+  alertEl.style.display = 'none';
+
+  if (!name || !email || !password) {
+    alertEl.textContent = 'All fields are required.';
+    alertEl.style.display = 'block';
+    return;
+  }
+  if (name.length < 2) {
+    alertEl.textContent = 'Name must be at least 2 characters.';
+    alertEl.style.display = 'block';
+    return;
+  }
+  if (password.length < 8) {
+    alertEl.textContent = 'Password must be at least 8 characters.';
+    alertEl.style.display = 'block';
+    return;
+  }
+  if (password !== confirm) {
+    alertEl.textContent = 'Passwords do not match.';
+    alertEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('btn-register');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Creating account...';
+  try {
+    const r = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'register_failed');
+    localStorage.setItem('ss-pair-token', d.token);
+    window.location.href = '/pair';
+  } catch (err) {
+    alertEl.textContent = err?.message || 'Registration failed. Please try again.';
+    alertEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+});
 
 const APPLE_SVG = `<svg width="17" height="17" viewBox="0 0 814 1000" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.4-57.9-155.5-127.4C46 790.9 0 663.6 0 541c0-184.8 120.9-282.3 239.4-282.3 63.6 0 116.8 42.8 156 42.8 37.4 0 96.3-43.6 163.7-43.6 26.5 0 108.2 2.6 168.6 71.9zm-224.5-171.7c29.3-35.3 50.1-84.8 50.1-134.2 0-6.5-.6-13-1.9-18.4C564.8 40.6 493.7 73 448 126.7c-26.5 30-52.4 77.4-52.4 124.7 0 7.1 1.3 14.3 1.9 16.5 3.2.6 8.4 1.3 13.6 1.3 44.1 0 109.1-30 161.5-97.3z"/></svg>`;
 

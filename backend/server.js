@@ -12,6 +12,7 @@ const routes = require('./backend/routes');
 const PORT = parseInt(process.env.PORT || '3402', 10);
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(helmet({
     contentSecurityPolicy: {
@@ -81,8 +82,13 @@ app.use('/api/contact', contactLimiter);
 app.use('/api/billing/checkout', checkoutLimiter);
 
 // Health check (unauthenticated, used by deploy scripts)
-app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', app: 'starsol-api', ts: Date.now() });
+app.get('/api/health', async (_req, res) => {
+    try {
+        await store.query('SELECT 1');
+        res.json({ status: 'ok', app: 'starsol-api', ts: Date.now() });
+    } catch (e) {
+        res.status(503).json({ status: 'error', app: 'starsol-api', error: 'db_unreachable' });
+    }
 });
 
 app.use('/api', routes);
