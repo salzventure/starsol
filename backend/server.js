@@ -10,6 +10,7 @@ const store = require('./backend/store');
 const routes = require('./backend/routes');
 
 const PORT = parseInt(process.env.PORT || '3402', 10);
+const HOST = process.env.HOST || process.env.BIND_HOST || '127.0.0.1';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -113,8 +114,8 @@ process.on('uncaughtException', (err) => { console.error('[uncaughtException]', 
 
 async function main() {
     await store.runMigrations();
-    app.listen(PORT, () => {
-        console.log(`[StarSol] Server running on port ${PORT}`);
+    app.listen(PORT, HOST, () => {
+        console.log(`[StarSol] Server running on ${HOST}:${PORT}`);
     });
     // Daily sweep: demote canceled subscriptions whose paid period has lapsed.
     // Runs once at startup (catches any missed while server was down) then every 24h.
