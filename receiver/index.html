@@ -1900,17 +1900,17 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 }
 #pricing .plans {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
   align-items: stretch;
   margin-bottom: 12px;
-  max-width: 1180px;
+  max-width: 980px;
 }
 .plan-card {
   background: var(--ss-space2);
   border: 1px solid var(--ss-space4);
   border-radius: 8px;
-  padding: 24px 22px;
+  padding: 30px 30px 28px;
   display: flex; flex-direction: column;
   text-align: left;
   cursor: pointer;
@@ -1982,11 +1982,11 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
 }
 .plan-card .plan-note {
   font-family: var(--ff-sans);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 300;
-  line-height: 1.55;
+  line-height: 1.45;
   color: var(--ss-star300);
-  margin: -10px 0 16px;
+  margin: 0 0 20px;
 }
 .plan-card .features {
   list-style: none;
@@ -2054,7 +2054,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   justify-content: center;
 }
 #pricing .pricing-terms {
-  max-width: 980px;
+  max-width: 900px;
   text-align: center;
   color: var(--ss-star300);
   font-family: var(--ff-sans);
@@ -2067,6 +2067,59 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   outline: none;
   text-decoration: underline;
   text-underline-offset: 6px;
+}
+.billing-toggle {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0 22px;
+}
+.billing-choice {
+  min-width: 220px;
+  height: 54px;
+  border-radius: 6px;
+  border: 1px solid var(--ss-space4);
+  background: rgba(17,21,28,0.68);
+  color: var(--ss-star300);
+  font-family: var(--ff-mono);
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.billing-choice.active {
+  background: var(--ss-star500);
+  border-color: var(--ss-star500);
+  color: var(--ss-space0);
+}
+.billing-choice.focused {
+  box-shadow:
+    0 0 0 3px var(--ss-space1),
+    0 0 0 5px var(--ss-star500),
+    0 0 26px rgba(212,164,74,0.35);
+}
+.plan-card .plan-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 26px;
+  margin-bottom: 18px;
+}
+.plan-card .price-sub { margin-bottom: 0; }
+.plan-card .features.compact {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 0 0 24px;
+}
+.plan-card .features.compact li {
+  padding: 0;
+  font-size: 17px;
+  line-height: 1.35;
+}
+.plan-card .cta {
+  margin-top: auto;
 }
 
 /* ========================================================================
@@ -3095,56 +3148,52 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       <button class="continue-free focusable" data-action="continue-free" tabindex="0">Close</button>
     </div>
     <h1>Choose your plan.</h1>
-    <p class="pricing-lede">7-day free trial. Cancel anytime. Annual is the best value.</p>
+    <p class="pricing-lede">Pick a tier. Google Play handles the subscription on this TV.</p>
     <div class="pricing-note" id="billing-note">Renewals, cancellation, and receipts are handled by Google Play on this TV. The same StarSol account works on every device you pair.</div>
+    <div class="billing-toggle">
+      <button class="billing-choice active focusable" data-action="billing-annual" tabindex="0">Annual · save</button>
+      <button class="billing-choice focusable" data-action="billing-monthly" tabindex="0">Monthly</button>
+    </div>
     <div class="plans">
-      <div class="plan-card primary focusable" data-action="buy-explorer-annual" tabindex="0">
+      <div class="plan-card primary focusable" data-plan="explorer" data-action="buy-explorer" tabindex="0">
         <span class="primary-pill">Best value</span>
-        <div class="plan-kicker">Explorer · Annual</div>
-        <div class="plan-name">Explorer</div>
-        <div class="price-main" id="price-explorer">$39.99 / yr</div>
-        <div class="price-sub" id="sub-explorer">or $4.99 / mo</div>
+        <div class="plan-row">
+          <div>
+            <div class="plan-kicker">Explorer</div>
+            <div class="plan-name">Full library</div>
+          </div>
+          <div>
+            <div class="price-main" id="price-explorer">$3.33 / mo</div>
+            <div class="price-sub" id="sub-explorer">Billed $39.99 annually</div>
+          </div>
+        </div>
         <div class="plan-note">A cinematic astronomy library for the largest screen in the house.</div>
-        <ul class="features">
-          <li>Curated Webb image gallery with visible credits</li>
-          <li>Ambient mode — full image collection</li>
-          <li>Astronomy video catalog from NASA and ESA/Webb sources</li>
-          <li>88-constellation learning atlas with mythology</li>
-          <li>ISS live position tracker</li>
+        <ul class="features compact">
+          <li>Webb gallery + ambient mode</li>
+          <li>Astronomy videos and constellation guides</li>
+          <li>ISS live tracker and sky calendar</li>
         </ul>
-        <button class="cta" id="explorer-cta">Subscribe with Google Play</button>
+        <button class="cta" id="explorer-cta">Subscribe annually</button>
       </div>
-      <div class="plan-card primary monthly focusable" data-action="buy-explorer-monthly" tabindex="0">
-        <div class="plan-kicker">Explorer · Monthly</div>
-        <div class="plan-name">Explorer</div>
-        <div class="price-main">$4.99 / mo</div>
-        <div class="price-sub">billed monthly</div>
-        <div class="plan-note">Same Explorer access with monthly flexibility.</div>
-        <button class="cta">Subscribe with Google Play</button>
-      </div>
-      <div class="plan-card secondary focusable" data-action="buy-observer-annual" tabindex="0">
+      <div class="plan-card secondary focusable" data-plan="observer" data-action="buy-observer" tabindex="0">
         <span class="primary-pill">Observer</span>
-        <div class="plan-kicker">Observer · Annual</div>
-        <div class="plan-name">Observer</div>
-        <div class="price-main" id="price-observer">$64.99 / yr</div>
-        <div class="price-sub" id="sub-observer">or $7.99 / mo</div>
+        <div class="plan-row">
+          <div>
+            <div class="plan-kicker">Observer</div>
+            <div class="plan-name">Local sky tools</div>
+          </div>
+          <div>
+            <div class="price-main" id="price-observer">$5.42 / mo</div>
+            <div class="price-sub" id="sub-observer">Billed $64.99 annually</div>
+          </div>
+        </div>
         <div class="plan-note">Local sky guidance for viewers who want to know when to step outside and what to look for.</div>
-        <ul class="features">
+        <ul class="features compact">
           <li>Everything in Explorer</li>
           <li>Location-based ISS pass planning</li>
-          <li>NOAA aurora Kp + 3-day watch status</li>
-          <li>Observer sky calendar with moon and cloud context</li>
-          <li>Early access to new JWST drops</li>
+          <li>Aurora, moon, cloud, and viewing context</li>
         </ul>
-        <button class="cta" id="observer-cta">Subscribe with Google Play</button>
-      </div>
-      <div class="plan-card secondary monthly focusable" data-action="buy-observer-monthly" tabindex="0">
-        <div class="plan-kicker">Observer · Monthly</div>
-        <div class="plan-name">Observer</div>
-        <div class="price-main">$7.99 / mo</div>
-        <div class="price-sub">billed monthly</div>
-        <div class="plan-note">Same Observer tools with monthly flexibility.</div>
-        <button class="cta">Subscribe with Google Play</button>
+        <button class="cta" id="observer-cta">Subscribe annually</button>
       </div>
     </div>
     <div class="pricing-bottom">
@@ -3347,6 +3396,7 @@ const APP = {
   playerProgressInterval: null,
   playerOrigin: null, // element that triggered playback — restored on BACK
   nativeAndroidTv: /starsol-androidtv/i.test(navigator.userAgent || ''),
+  billingPeriod: 'annual',
   userName: null,
 };
 
@@ -3480,6 +3530,7 @@ function navigate(name) {
   if (name === 'gallery') initGallery();
   if (name === 'ambient') initAmbient();
   if (name !== 'ambient') stopAmbient();
+  if (name === 'pricing') updatePricingPeriod();
   if (name === 'player') initPlayer();
   if (name !== 'player') stopPlayer();
 
@@ -3707,17 +3758,17 @@ function handleAction(action) {
     case 'const-tour':
       startConstellationTour();
       break;
-    case 'buy-explorer-annual':
-      startCheckout('explorer', 'annual');
+    case 'billing-annual':
+      setBillingPeriod('annual');
       break;
-    case 'buy-explorer-monthly':
-      startCheckout('explorer', 'monthly');
+    case 'billing-monthly':
+      setBillingPeriod('monthly');
       break;
-    case 'buy-observer-annual':
-      startCheckout('observer', 'annual');
+    case 'buy-explorer':
+      startCheckout('explorer', APP.billingPeriod || 'annual');
       break;
-    case 'buy-observer-monthly':
-      startCheckout('observer', 'monthly');
+    case 'buy-observer':
+      startCheckout('observer', APP.billingPeriod || 'annual');
       break;
     case 'restore-play':
       restoreGooglePlayPurchase();
@@ -3742,18 +3793,55 @@ function handleAction(action) {
   }
 }
 
+function setBillingPeriod(period) {
+  APP.billingPeriod = period === 'monthly' ? 'monthly' : 'annual';
+  updatePricingPeriod();
+}
+
+function updatePricingPeriod() {
+  const period = APP.billingPeriod === 'monthly' ? 'monthly' : 'annual';
+  document.querySelectorAll('.billing-choice').forEach(el => {
+    const active = el.dataset.action === 'billing-' + period;
+    el.classList.toggle('active', active);
+    el.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  const prices = {
+    annual: {
+      explorer: ['$3.33 / mo', 'Billed $39.99 annually'],
+      observer: ['$5.42 / mo', 'Billed $64.99 annually'],
+      cta: 'Subscribe annually',
+      note: 'Annual is selected by default. Google Play handles renewal, cancellation, and receipts on this TV.',
+    },
+    monthly: {
+      explorer: ['$4.99 / mo', 'Billed monthly'],
+      observer: ['$7.99 / mo', 'Billed monthly'],
+      cta: 'Subscribe monthly',
+      note: 'Monthly billing is selected. Google Play handles renewal, cancellation, and receipts on this TV.',
+    },
+  }[period];
+
+  const priceExplorer = document.getElementById('price-explorer');
+  const subExplorer = document.getElementById('sub-explorer');
+  const priceObserver = document.getElementById('price-observer');
+  const subObserver = document.getElementById('sub-observer');
+  const explorerCta = document.getElementById('explorer-cta');
+  const observerCta = document.getElementById('observer-cta');
+  const billingNote = document.getElementById('billing-note');
+  if (priceExplorer) priceExplorer.textContent = prices.explorer[0];
+  if (subExplorer) subExplorer.textContent = prices.explorer[1];
+  if (priceObserver) priceObserver.textContent = prices.observer[0];
+  if (subObserver) subObserver.textContent = prices.observer[1];
+  if (explorerCta) explorerCta.textContent = prices.cta;
+  if (observerCta) observerCta.textContent = prices.cta;
+  if (billingNote) billingNote.textContent = prices.note;
+}
+
 async function startCheckout(plan, period) {
-  if (!APP.token) {
-    showWhisper(
-      'Pair your TV before subscribing',
-      'Your StarSol account receives the Google Play entitlement.',
-      5000
-    );
-    setTimeout(() => navigate('pair'), 450);
-    return;
-  }
   if (APP.nativeAndroidTv) {
-    const selectedPeriod = period || billingPeriod;
+    const accountReady = await ensureTvCheckoutAccount();
+    if (!accountReady) return;
+    const selectedPeriod = period || APP.billingPeriod || 'annual';
     const planKey = plan + '_' + selectedPeriod;
     startGooglePlayPurchase(planKey);
     return;
@@ -3770,6 +3858,29 @@ async function startCheckout(plan, period) {
   );
 }
 
+async function ensureTvCheckoutAccount() {
+  if (APP.token) return true;
+  showWhisper('Preparing checkout', 'Creating a StarSol TV account for this Google Play purchase.', 4500);
+  const result = await API.post('/api/devices/bootstrap-checkout', {
+    platform: 'google_tv',
+    client: 'starsol-androidtv',
+    version: '0.1.0',
+    device_fingerprint: stableDeviceFingerprint(),
+    device_name: 'StarSol Google TV',
+  });
+  if (result && result.token) {
+    APP.token = result.token;
+    localStorage.setItem('ss-token', result.token);
+    localStorage.removeItem('ss-guest');
+    APP.guest = false;
+    APP.userName = result.user?.name || 'Google TV';
+    setPlan(result.user?.plan || 'free');
+    return true;
+  }
+  showWhisper('Could not prepare checkout', 'Pair your TV or try again in a moment.', 7000);
+  return false;
+}
+
 function startGooglePlayPurchase(productId) {
   if (!window.StarSolBilling || typeof window.StarSolBilling.purchase !== 'function') {
     showWhisper('Google Play Billing unavailable', 'Please update StarSol from Google Play and try again.', 6500);
@@ -3784,12 +3895,9 @@ function startGooglePlayPurchase(productId) {
   }
 }
 
-function restoreGooglePlayPurchase() {
-  if (!APP.token) {
-    showWhisper('Pair your TV before restore', 'Your StarSol account receives the Google Play entitlement.', 5500);
-    setTimeout(() => navigate('pair'), 450);
-    return;
-  }
+async function restoreGooglePlayPurchase() {
+  const accountReady = await ensureTvCheckoutAccount();
+  if (!accountReady) return;
   if (!window.StarSolBilling || typeof window.StarSolBilling.restore !== 'function') {
     showWhisper('Restore unavailable', 'Google Play restore works in the installed Google TV app.', 6500);
     return;

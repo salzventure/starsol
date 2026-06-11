@@ -464,6 +464,65 @@ router.post('/devices/register', async (req, res) => {
     }
 });
 
+// Google TV checkout bootstrap: create/reuse a device-scoped account so Play
+// Billing can bind an entitlement even before the viewer pairs on the web.
+router.post('/devices/bootstrap-checkout', async (req, res) => {
+    try {
+        const { platform = 'google_tv', device_fingerprint, device_name, client, version } = req.body || {};
+        const allowedPlatforms = new Set(['google_tv', 'fire_tv', 'apple_tv', 'roku']);
+        if (!allowedPlatforms.has(platform)) return res.status(400).json({ error: 'invalid_platform' });
+
+        const rawFingerprint = device_fingerprint || [
+            req.ip,
+            req.get('user-agent') || '',
+            platform,
+            client || '',
+            version || '',
+        ].join('|');
+        if (!rawFingerprint.trim()) return res.status(400).json({ error: 'missing_fingerprint' });
+
+        const fingerprint = crypto.createHash('sha256').update(rawFingerprint).digest('hex');
+        const now = Date.now();
+        const deviceName = device_name || client || platform.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+        let device = await store.devices.findByFingerprint(fingerprint);
+        let user = device?.user_id ? await store.users.findById(device.user_id) : null;
+
+        if (!user) {
+            const email = `tv-${fingerprint.slice(0, 24)}@device.starsol.local`;
+            user = await store.users.findByEmail(email);
+            if (!user) {
+                user = await store.users.create({
+                    name: 'StarSol TV',
+                    email,
+                    passwordHash: null,
+                });
+                await store.users.setEmailVerified(user.id);
+                user = await store.users.findById(user.id);
+            }
+        }
+
+        await store.execute(`
+            INSERT INTO devices
+                (user_id, platform, device_fingerprint, device_name, pairing_code, pairing_expires_at, paired_at, last_seen_at, created_at)
+            VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                user_id = VALUES(user_id),
+                platform = VALUES(platform),
+                device_name = VALUES(device_name),
+                pairing_code = NULL,
+                pairing_expires_at = NULL,
+                paired_at = COALESCE(paired_at, VALUES(paired_at)),
+                last_seen_at = VALUES(last_seen_at)
+        `, [user.id, platform, fingerprint, deviceName, now, now, now]);
+
+        const token = issueToken(user);
+        res.json({ success: true, token, user: safeUser(user) });
+    } catch (err) {
+        console.error('/devices/bootstrap-checkout', err);
+        res.status(500).json({ error: 'server_error' });
+    }
+});
+
 // User enters code on web/phone to link TV to their account
 router.post('/devices/pair', authMiddleware, async (req, res) => {
     try {
