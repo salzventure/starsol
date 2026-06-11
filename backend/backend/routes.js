@@ -131,14 +131,18 @@ async function verifyTurnstileRegister(req) {
 }
 
 async function activePlaySubscriptionForUser(userId) {
+    const now = Date.now();
     const rows = await store.query(
         `SELECT * FROM play_subscriptions
          WHERE user_id = ?
-           AND status IN ("active","in_grace_period")
+           AND (
+             status IN ("active","in_grace_period")
+             OR (status = "canceled" AND expiry_ms > ?)
+           )
            AND (expiry_ms IS NULL OR expiry_ms > ?)
          ORDER BY FIELD(plan, "observer", "explorer") ASC, COALESCE(expiry_ms, 9999999999999) DESC
          LIMIT 1`,
-        [userId, Date.now()],
+        [userId, now, now],
     );
     return rows[0] || null;
 }
@@ -487,6 +491,10 @@ router.post('/devices/bootstrap-checkout', async (req, res) => {
         let device = await store.devices.findByFingerprint(fingerprint);
         let user = device?.user_id ? await store.users.findById(device.user_id) : null;
 
+        if (user && !String(user.email || '').endsWith('@device.starsol.local')) {
+            return res.status(409).json({ error: 'requires_pairing' });
+        }
+
         if (!user) {
             const email = `tv-${fingerprint.slice(0, 24)}@device.starsol.local`;
             user = await store.users.findByEmail(email);
@@ -532,8 +540,6 @@ router.post('/devices/pair', authMiddleware, async (req, res) => {
         }
         const device = await store.devices.pair(pairing_code.toUpperCase(), req.user.id);
         if (!device) return res.status(404).json({ error: 'code_not_found_or_expired' });
-        // Clear the pair code so it cannot be reused after a successful claim
-        await store.devices.consumePairCode(device.id);
         res.json({ success: true, device_id: device.id });
     } catch (err) {
         console.error('/devices/pair', err);
@@ -550,11 +556,12 @@ router.get('/devices/pair/status', async (req, res) => {
         // Code was consumed — check if it's a device that got paired (pairing_code becomes NULL)
         return res.json({ paired: false });
     }
-    const paired = !!device.user_id;
+    const paired = !!device.user_id && !!device.paired_at;
     if (paired) {
         // Issue a device-scoped token for the paired user
         const user = await store.users.findById(device.user_id);
         const token = issueToken(user);
+        await store.devices.consumePairCode(device.id);
         return res.json({ paired: true, token, user: safeUser(user) });
     }
     res.json({ paired: false });

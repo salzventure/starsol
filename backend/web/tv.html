@@ -2018,6 +2018,10 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
   border-radius: 6px;
   width: 100%;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 .plan-card.primary .cta {
   background: var(--ss-star500);
@@ -3173,7 +3177,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
           <li>Astronomy videos and constellation guides</li>
           <li>ISS live tracker and sky calendar</li>
         </ul>
-        <button class="cta" id="explorer-cta">Subscribe annually</button>
+        <div class="cta" id="explorer-cta" aria-hidden="true">Subscribe annually</div>
       </div>
       <div class="plan-card secondary focusable" data-plan="observer" data-action="buy-observer" tabindex="0">
         <span class="primary-pill">Observer</span>
@@ -3193,7 +3197,7 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
           <li>Location-based ISS pass planning</li>
           <li>Aurora, moon, cloud, and viewing context</li>
         </ul>
-        <button class="cta" id="observer-cta">Subscribe annually</button>
+        <div class="cta" id="observer-cta" aria-hidden="true">Subscribe annually</div>
       </div>
     </div>
     <div class="pricing-bottom">
@@ -3861,13 +3865,24 @@ async function startCheckout(plan, period) {
 async function ensureTvCheckoutAccount() {
   if (APP.token) return true;
   showWhisper('Preparing checkout', 'Creating a StarSol TV account for this Google Play purchase.', 4500);
-  const result = await API.post('/api/devices/bootstrap-checkout', {
-    platform: 'google_tv',
-    client: 'starsol-androidtv',
-    version: '0.1.0',
-    device_fingerprint: stableDeviceFingerprint(),
-    device_name: 'StarSol Google TV',
-  });
+  let result = null;
+  try {
+    const res = await fetch(API.base + '/api/devices/bootstrap-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        platform: 'google_tv',
+        client: 'starsol-androidtv',
+        version: '0.1.0',
+        device_fingerprint: stableDeviceFingerprint(),
+        device_name: 'StarSol Google TV',
+      }),
+    });
+    result = await res.json().catch(() => ({}));
+    if (!res.ok && result.error !== 'requires_pairing') result = null;
+  } catch (e) {
+    console.warn('[billing] checkout bootstrap failed', e);
+  }
   if (result && result.token) {
     APP.token = result.token;
     localStorage.setItem('ss-token', result.token);
@@ -3876,6 +3891,11 @@ async function ensureTvCheckoutAccount() {
     APP.userName = result.user?.name || 'Google TV';
     setPlan(result.user?.plan || 'free');
     return true;
+  }
+  if (result && result.error === 'requires_pairing') {
+    showWhisper('Pair this TV first', 'This TV is already linked to a StarSol account.', 6500);
+    setTimeout(() => navigate('pair'), 500);
+    return false;
   }
   showWhisper('Could not prepare checkout', 'Pair your TV or try again in a moment.', 7000);
   return false;
@@ -3888,7 +3908,7 @@ function startGooglePlayPurchase(productId) {
   }
   showWhisper('Opening Google Play', 'Complete the subscription with Google Play.', 5000);
   try {
-    window.StarSolBilling.purchase(productId);
+    window.StarSolBilling.purchase(productId, stableDeviceFingerprint());
   } catch (e) {
     console.warn('[billing] Play purchase launch failed', e);
     showWhisper('Google Play Billing unavailable', 'Please try again in a moment.', 6500);

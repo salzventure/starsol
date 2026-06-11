@@ -25,6 +25,7 @@ const PRODUCT_PLANS = {
 };
 const PLAN_ORDER = ['free', 'explorer', 'observer', 'institutional'];
 const ENTITLED_STATUSES = ['active', 'trialing', 'in_grace_period'];
+const EXPIRY_ENTITLED_STATUSES = ['canceled'];
 
 let cachedAccessToken = null;
 let cachedAccessTokenExpiresAt = 0;
@@ -64,8 +65,12 @@ function statusFromPlay(subscription) {
     return state ? state.toLowerCase() : 'unknown';
 }
 
-function entitlementFromStatus(status) {
-    return ENTITLED_STATUSES.includes(status);
+function entitlementFromStatus(status, expiryMs = null, now = Date.now()) {
+    if (ENTITLED_STATUSES.includes(status)) return true;
+    if (EXPIRY_ENTITLED_STATUSES.includes(status)) {
+        return !!expiryMs && expiryMs > now;
+    }
+    return false;
 }
 
 function betterPlan(a, b) {
@@ -74,14 +79,22 @@ function betterPlan(a, b) {
 
 async function effectivePlanForUser(userId) {
     let plan = 'free';
+    const now = Date.now();
     const stripeRows = await store.query(
         'SELECT plan FROM subscriptions WHERE user_id = ? AND status IN ("active","trialing")',
         [userId],
     );
     for (const row of stripeRows) plan = betterPlan(plan, row.plan);
     const playRows = await store.query(
-        'SELECT plan FROM play_subscriptions WHERE user_id = ? AND status IN ("active","in_grace_period") AND (expiry_ms IS NULL OR expiry_ms > ?)',
-        [userId, Date.now()],
+        `SELECT plan
+           FROM play_subscriptions
+          WHERE user_id = ?
+            AND (
+              status IN ("active","in_grace_period")
+              OR (status = "canceled" AND expiry_ms > ?)
+            )
+            AND (expiry_ms IS NULL OR expiry_ms > ?)`,
+        [userId, now, now],
     );
     for (const row of playRows) plan = betterPlan(plan, row.plan);
     return plan;

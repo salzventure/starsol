@@ -431,7 +431,6 @@ fetch(`${API}/api/auth/config`).then(r=>r.json()).then(cfg => {
 (function(){
   const params = new URLSearchParams(location.search);
   const oauthToken = params.get('token');
-  if (!oauthToken) return;
   // Restore pairing code from sessionStorage (saved before Apple redirect)
   const saved = sessionStorage.getItem('ss-pending-code');
   if (saved) {
@@ -441,13 +440,14 @@ fetch(`${API}/api/auth/config`).then(r=>r.json()).then(cfg => {
     cleaned.split('').forEach((ch,i) => { if(boxes[i]){boxes[i].value=ch;boxes[i].classList.add('filled');} });
     updateCodeBtn();
   }
-  authToken = oauthToken;
-  localStorage.setItem('ss-pair-token', authToken);
-  // Remove token from URL
-  const cleanUrl = new URL(window.location.href);
-  cleanUrl.searchParams.delete('token');
-  window.history.replaceState({}, '', cleanUrl.toString());
-  if (pendingCode.length >= 6) doPair();
+  authToken = oauthToken || localStorage.getItem('ss-pair-token') || '';
+  if (oauthToken) {
+    localStorage.setItem('ss-pair-token', authToken);
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('token');
+    window.history.replaceState({}, '', cleanUrl.toString());
+  }
+  if (authToken && pendingCode.length >= 6) doPair();
 })();
 
 // Auto-focus first box on non-touch devices only (iOS triggers unwanted scroll/zoom)

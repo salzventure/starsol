@@ -34,10 +34,12 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
     private lateinit var webView: WebView
     private val mainHandler = Handler(Looper.getMainLooper())
     private var destroyed = false
-    private var pixelShiftRunnable: Runnable? = null
+    private var receiverPageReady = false
+    private var billingReconnectAttempts = 0
     private var billingClient: BillingClient? = null
     private val productDetailsById = mutableMapOf<String, ProductDetails>()
     private val purchasesByToken = mutableMapOf<String, Purchase>()
+    private val pendingReceiverScripts = mutableListOf<String>()
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,6 +96,12 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
             isFocusable = true
             isFocusableInTouchMode = true
             webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    receiverPageReady = true
+                    flushReceiverScripts()
+                    if (billingClient?.isReady == true) restorePlayPurchases(false)
+                }
+
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
                     request: WebResourceRequest?
@@ -120,11 +128,6 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         // returns an overrideUrl on the starsol.app domain we load that instead
         // of the bundle. On network error or timeout we fall back to bundled.
         loadReceiverWithOverrideCheck()
-
-        // OLED burn-in protection: pixel-shift ±3px every 3 minutes. Done
-        // natively on the WebView translation so static elements (logomark,
-        // sidebar borders) don't bake in over multi-hour ambient sessions.
-        startPixelShift()
     }
 
     private fun loadReceiverWithOverrideCheck() {
@@ -146,34 +149,19 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         }.start()
     }
 
-    private fun startPixelShift() {
-        val shiftRunnable = object : Runnable {
-            private var phase = 0
-            override fun run() {
-                if (destroyed) return
-                val (dx, dy) = when (phase % 4) {
-                    0 -> 3f to 0f
-                    1 -> 0f to 3f
-                    2 -> -3f to 0f
-                    else -> 0f to -3f
-                }
-                webView.animate().translationX(dx).translationY(dy).setDuration(800).start()
-                phase++
-                mainHandler.postDelayed(this, 180_000L) // 3 minutes
-            }
-        }
-        pixelShiftRunnable = shiftRunnable
-        mainHandler.postDelayed(shiftRunnable, 180_000L)
-    }
-
     private fun initPlayBilling() {
         billingClient = BillingClient.newBuilder(this)
             .setListener(this)
             .enablePendingPurchases()
             .build()
+        connectPlayBilling()
+    }
+
+    private fun connectPlayBilling() {
         billingClient?.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    billingReconnectAttempts = 0
                     queryProducts()
                     restorePlayPurchases(false)
                     notifyBilling("ready", "Google Play Billing ready")
@@ -184,8 +172,19 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
 
             override fun onBillingServiceDisconnected() {
                 notifyBilling("disconnected", "Google Play Billing disconnected")
+                scheduleBillingReconnect()
             }
         })
+    }
+
+    private fun scheduleBillingReconnect() {
+        if (destroyed || billingClient?.isReady == true) return
+        val attempt = billingReconnectAttempts.coerceAtMost(5)
+        billingReconnectAttempts++
+        val delayMs = (1_000L shl attempt).coerceAtMost(30_000L)
+        mainHandler.postDelayed({
+            if (!destroyed && billingClient?.isReady != true) connectPlayBilling()
+        }, delayMs)
     }
 
     private fun queryProducts() {
@@ -209,7 +208,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         }
     }
 
-    private fun launchPlayPurchase(productId: String) {
+    private fun launchPlayPurchase(productId: String, obfuscatedAccountId: String?) {
         val client = billingClient
         if (client == null || !client.isReady) {
             notifyBilling("unavailable", "Google Play Billing is not ready")
@@ -230,9 +229,12 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
             .setProductDetails(details)
             .setOfferToken(offerToken)
             .build()
-        val flowParams = BillingFlowParams.newBuilder()
+        val flowBuilder = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(productParams))
-            .build()
+        if (!obfuscatedAccountId.isNullOrBlank()) {
+            flowBuilder.setObfuscatedAccountId(obfuscatedAccountId.take(64))
+        }
+        val flowParams = flowBuilder.build()
         val result = client.launchBillingFlow(this, flowParams)
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             notifyBilling("launch_error", result.debugMessage)
@@ -258,6 +260,24 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         }
     }
 
+    private fun evaluateInReceiver(script: String) {
+        mainHandler.post {
+            if (destroyed) return@post
+            if (receiverPageReady) {
+                webView.evaluateJavascript(script, null)
+            } else {
+                pendingReceiverScripts.add(script)
+            }
+        }
+    }
+
+    private fun flushReceiverScripts() {
+        if (pendingReceiverScripts.isEmpty()) return
+        val scripts = pendingReceiverScripts.toList()
+        pendingReceiverScripts.clear()
+        scripts.forEach { webView.evaluateJavascript(it, null) }
+    }
+
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
         when (result.responseCode) {
             BillingClient.BillingResponseCode.OK -> purchases?.forEach { handlePurchase(it) }
@@ -277,11 +297,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
             .put("productId", productId)
             .put("purchaseToken", purchase.purchaseToken)
             .toString()
-        mainHandler.post {
-            if (!destroyed) {
-                webView.evaluateJavascript("window.starsolPlayPurchase && window.starsolPlayPurchase($payload);", null)
-            }
-        }
+        evaluateInReceiver("window.starsolPlayPurchase && window.starsolPlayPurchase($payload);")
         // Acknowledge only after the web receiver confirms StarSol backend
         // verification. This avoids silently accepting payment when entitlement
         // storage failed or the token was rejected.
@@ -304,17 +320,18 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
 
     private fun notifyBilling(status: String, message: String) {
         val payload = JSONObject().put("status", status).put("message", message).toString()
-        mainHandler.post {
-            if (!destroyed) {
-                webView.evaluateJavascript("window.starsolPlayBillingMessage && window.starsolPlayBillingMessage($payload);", null)
-            }
-        }
+        evaluateInReceiver("window.starsolPlayBillingMessage && window.starsolPlayBillingMessage($payload);")
     }
 
     inner class StarSolBillingBridge {
         @JavascriptInterface
+        fun purchase(productId: String, obfuscatedAccountId: String?) {
+            mainHandler.post { launchPlayPurchase(productId, obfuscatedAccountId) }
+        }
+
+        @JavascriptInterface
         fun purchase(productId: String) {
-            mainHandler.post { launchPlayPurchase(productId) }
+            mainHandler.post { launchPlayPurchase(productId, null) }
         }
 
         @JavascriptInterface
@@ -390,7 +407,6 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
 
     override fun onDestroy() {
         destroyed = true
-        pixelShiftRunnable?.let { mainHandler.removeCallbacks(it) }
         billingClient?.endConnection()
         webView.destroy()
         super.onDestroy()

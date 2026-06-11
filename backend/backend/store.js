@@ -87,13 +87,17 @@ function betterPlan(a, b) {
 
 async function updateUserPlanPreservingPlay(userId, fallbackPlan) {
     let plan = fallbackPlan || 'free';
+    const now = Date.now();
     const rows = await query(
         `SELECT plan
            FROM play_subscriptions
           WHERE user_id = ?
-            AND status IN ("active","in_grace_period")
+            AND (
+              status IN ("active","in_grace_period")
+              OR (status = "canceled" AND expiry_ms > ?)
+            )
             AND (expiry_ms IS NULL OR expiry_ms > ?)`,
-        [userId, Date.now()],
+        [userId, now, now],
     );
     for (const row of rows) plan = betterPlan(plan, row.plan);
     await users.updatePlan(userId, plan);
@@ -247,17 +251,51 @@ const devices = {
                 pairing_code = VALUES(pairing_code),
                 pairing_expires_at = VALUES(pairing_expires_at),
                 device_name = VALUES(device_name),
-                user_id = NULL,
+                user_id = user_id,
                 paired_at = NULL
         `, [platform, fingerprint, deviceName, code, expiresAt, Date.now()]);
         return { code, expiresAt };
     },
     pair: async (code, userId) => {
-        const device = await devices.findByPairingCode(code);
-        if (!device) return null;
-        if (device.user_id && device.user_id !== userId) return null;
-        await execute(`UPDATE devices SET user_id = ?, paired_at = ?, last_seen_at = ? WHERE id = ?`,
-            [userId, Date.now(), Date.now(), device.id]);
+        const conn = await pool.getConnection();
+        let previousUserId = null;
+        let device = null;
+        try {
+            await conn.beginTransaction();
+            const [deviceRows] = await conn.query(
+                'SELECT * FROM devices WHERE pairing_code = ? AND pairing_expires_at > ? FOR UPDATE',
+                [code, Date.now()],
+            );
+            device = deviceRows[0] || null;
+            if (!device) {
+                await conn.rollback();
+                return null;
+            }
+            if (device.user_id && device.user_id !== userId) {
+                previousUserId = device.user_id;
+                const [userRows] = await conn.query('SELECT email FROM users WHERE id = ? FOR UPDATE', [device.user_id]);
+                const isDeviceAccount = String(userRows[0]?.email || '').endsWith('@device.starsol.local');
+                if (!isDeviceAccount) {
+                    await conn.rollback();
+                    return null;
+                }
+                await conn.execute('UPDATE play_subscriptions SET user_id = ? WHERE user_id = ?', [userId, device.user_id]);
+            }
+            await conn.execute(
+                'UPDATE devices SET user_id = ?, paired_at = ?, last_seen_at = ? WHERE id = ?',
+                [userId, Date.now(), Date.now(), device.id],
+            );
+            await conn.commit();
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
+        if (previousUserId) {
+            await updateUserPlanPreservingPlay(userId, 'free');
+            await updateUserPlanPreservingPlay(previousUserId, 'free');
+        }
         return device;
     },
     consumePairCode: (deviceId) =>
