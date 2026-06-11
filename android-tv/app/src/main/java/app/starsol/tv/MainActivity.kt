@@ -86,8 +86,10 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
                 // this as a native Android TV shell.
                 userAgentString = userAgentString + " starsol-androidtv/1.0.0"
             }
-            // Start at 100% to avoid viewport-flash on first paint.
-            setInitialScale(100)
+            // The receiver is authored as a 1920x1080 TV canvas. Android TV
+            // WebView reports a 960x540 CSS viewport on 1080p displays, so
+            // starting at 50% prevents a zoomed/panned first paint.
+            setInitialScale(50)
             setBackgroundColor(android.graphics.Color.parseColor("#050608"))
             isFocusable = true
             isFocusableInTouchMode = true
