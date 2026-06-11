@@ -3823,9 +3823,12 @@ window.starsolPlayPurchase = async function(payload) {
   if (result && result.ok) {
     APP.guest = false;
     localStorage.removeItem('ss-guest');
+    if (window.StarSolBilling && typeof window.StarSolBilling.acknowledge === 'function') {
+      try { window.StarSolBilling.acknowledge(payload.purchaseToken); } catch (_) {}
+    }
     try {
       const me = await API.get('/api/auth/me');
-      const plan = me?.user?.plan || result.plan || 'explorer';
+      const plan = me?.effectivePlan || me?.user?.plan || result.plan || 'explorer';
       setPlan(plan);
       showWhisper('Subscription active', (plan === 'observer' ? 'Observer' : 'Explorer') + ' is unlocked on this TV.', 6500);
     } catch (_) {
@@ -4233,7 +4236,7 @@ function initTonight() {
     syncSidebarUser();
     API.get('/api/auth/me').then(me => {
       if (me?.user?.name) APP.userName = me.user.name;
-      if (me?.user?.plan) setPlan(me.user.plan);
+      if (me?.effectivePlan || me?.user?.plan) setPlan(me.effectivePlan || me.user.plan);
       else syncSidebarUser();
     });
   } else {

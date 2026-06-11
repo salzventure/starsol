@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
     private var pixelShiftRunnable: Runnable? = null
     private var billingClient: BillingClient? = null
     private val productDetailsById = mutableMapOf<String, ProductDetails>()
+    private val purchasesByToken = mutableMapOf<String, Purchase>()
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -269,6 +270,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
             return
         }
         val productId = purchase.products.firstOrNull() ?: return
+        purchasesByToken[purchase.purchaseToken] = purchase
         val payload = JSONObject()
             .put("productId", productId)
             .put("purchaseToken", purchase.purchaseToken)
@@ -278,14 +280,22 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
                 webView.evaluateJavascript("window.starsolPlayPurchase && window.starsolPlayPurchase($payload);", null)
             }
         }
-        if (!purchase.isAcknowledged) {
-            val params = AcknowledgePurchaseParams.newBuilder()
-                .setPurchaseToken(purchase.purchaseToken)
-                .build()
-            billingClient?.acknowledgePurchase(params) { result ->
-                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                    notifyBilling("ack_error", result.debugMessage)
-                }
+        // Acknowledge only after the web receiver confirms StarSol backend
+        // verification. This avoids silently accepting payment when entitlement
+        // storage failed or the token was rejected.
+    }
+
+    private fun acknowledgePurchaseToken(purchaseToken: String) {
+        val purchase = purchasesByToken[purchaseToken] ?: return
+        if (purchase.isAcknowledged) return
+        val params = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchaseToken)
+            .build()
+        billingClient?.acknowledgePurchase(params) { result ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                notifyBilling("ack_error", result.debugMessage)
+            } else {
+                purchasesByToken.remove(purchaseToken)
             }
         }
     }
@@ -308,6 +318,11 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         @JavascriptInterface
         fun restore() {
             mainHandler.post { restorePlayPurchases(true) }
+        }
+
+        @JavascriptInterface
+        fun acknowledge(purchaseToken: String) {
+            mainHandler.post { acknowledgePurchaseToken(purchaseToken) }
         }
     }
 

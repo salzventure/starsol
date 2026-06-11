@@ -74,6 +74,8 @@ input:focus{border-color:var(--star500)}
 
 .alert{padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;display:none}
 .alert.error{background:rgba(193,74,42,.1);border:1px solid rgba(193,74,42,.3);color:var(--ember)}
+.turnstile-wrap{margin:0 0 18px;min-height:0}
+.turnstile-wrap[data-active="true"]{min-height:65px}
 
 .footer{margin-top:24px;text-align:center;font-size:12px;color:var(--text3);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase}
 .footer a{color:var(--star300);text-decoration:none}.footer a:hover{color:var(--star500)}
@@ -180,6 +182,9 @@ input:focus{border-color:var(--star500)}
       <label for="register-confirm">Confirm password</label>
       <input type="password" id="register-confirm" autocomplete="new-password" placeholder="••••••••"/>
     </div>
+    <div id="turnstile-wrap-register" class="turnstile-wrap" data-active="false" hidden>
+      <div id="turnstile-widget-register"></div>
+    </div>
     <button class="btn btn-primary" id="btn-register">Create account</button>
     <p class="footer" style="margin-top:20px"><a href="#" id="link-show-signin">Already have an account? Sign in</a></p>
     <p class="footer" style="margin-top:8px"><a href="/terms">Terms</a></p>
@@ -188,7 +193,39 @@ input:focus{border-color:var(--star500)}
 
 <script>
 const API = 'https://starsol.app';
-const GOOGLE_CLIENT_ID = '804375183054-121q0717kr28resdfcaubfqpcgk925ct.apps.googleusercontent.com';
+let turnstileRegisterEnabled = false;
+let turnstileRegisterToken = '';
+let turnstileRegisterWidgetId = null;
+
+function renderRegisterTurnstile(siteKey) {
+  const wrap = document.getElementById('turnstile-wrap-register');
+  const target = document.getElementById('turnstile-widget-register');
+  if (!wrap || !target || !siteKey) return;
+  turnstileRegisterEnabled = true;
+  wrap.hidden = false;
+  wrap.dataset.active = 'true';
+  const doRender = () => {
+    if (!window.turnstile || turnstileRegisterWidgetId !== null) return;
+    turnstileRegisterWidgetId = window.turnstile.render(target, {
+      sitekey: siteKey,
+      action: 'register',
+      theme: 'dark',
+      callback: token => { turnstileRegisterToken = token || ''; },
+      'expired-callback': () => { turnstileRegisterToken = ''; },
+      'error-callback': () => { turnstileRegisterToken = ''; },
+    });
+  };
+  if (window.turnstile) doRender();
+  else {
+    window.__starSolAccountTurnstile = doRender;
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=__starSolAccountTurnstile';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+}
+let googleClientId = '';
 const _nextUrl = new URLSearchParams(location.search).get('next');
 const _oauthError = new URLSearchParams(location.search).get('oauth_error');
 
@@ -199,10 +236,10 @@ function redirectAfterAuth() {
 
 let _gsiInited = false;
 function initGoogleSignIn() {
-  if (_gsiInited || !window.google?.accounts?.id) return;
+  if (_gsiInited || !googleClientId || !window.google?.accounts?.id) return;
   _gsiInited = true;
   window.google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
+    client_id: googleClientId,
     callback: async ({ credential }) => {
       const alertEl = document.getElementById('alert-signin');
       alertEl.style.display = 'none';
@@ -210,14 +247,16 @@ function initGoogleSignIn() {
         const r = await fetch(`${API}/api/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credential }),
+          body: JSON.stringify({ credential, allowCreate: false }),
         });
         const d = await r.json();
         if (!r.ok) throw new Error(d.error || 'google_auth_failed');
         localStorage.setItem('ss-pair-token', d.token);
         redirectAfterAuth();
-      } catch {
-        alertEl.textContent = 'Google sign-in failed — try again.';
+      } catch (err) {
+        alertEl.textContent = err?.message === 'account_not_found'
+          ? 'No StarSol account exists for that Google email. Create an account first.'
+          : 'Google sign-in failed. Try again.';
         alertEl.style.display = 'block';
       }
     },
@@ -385,6 +424,11 @@ document.getElementById('btn-register').addEventListener('click', async () => {
     alertEl.style.display = 'block';
     return;
   }
+  if (turnstileRegisterEnabled && !turnstileRegisterToken) {
+    alertEl.textContent = 'Please complete the signup verification.';
+    alertEl.style.display = 'block';
+    return;
+  }
 
   const btn = document.getElementById('btn-register');
   const orig = btn.innerHTML;
@@ -394,7 +438,7 @@ document.getElementById('btn-register').addEventListener('click', async () => {
     const r = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, turnstileToken: turnstileRegisterToken || undefined }),
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'register_failed');
@@ -403,6 +447,10 @@ document.getElementById('btn-register').addEventListener('click', async () => {
   } catch (err) {
     alertEl.textContent = err?.message || 'Registration failed. Please try again.';
     alertEl.style.display = 'block';
+    if (turnstileRegisterEnabled && window.turnstile && turnstileRegisterWidgetId !== null) {
+      try { window.turnstile.reset(turnstileRegisterWidgetId); } catch (_) {}
+      turnstileRegisterToken = '';
+    }
     btn.disabled = false;
     btn.innerHTML = orig;
   }
@@ -411,6 +459,11 @@ document.getElementById('btn-register').addEventListener('click', async () => {
 const APPLE_SVG = `<svg width="17" height="17" viewBox="0 0 814 1000" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.4-57.9-155.5-127.4C46 790.9 0 663.6 0 541c0-184.8 120.9-282.3 239.4-282.3 63.6 0 116.8 42.8 156 42.8 37.4 0 96.3-43.6 163.7-43.6 26.5 0 108.2 2.6 168.6 71.9zm-224.5-171.7c29.3-35.3 50.1-84.8 50.1-134.2 0-6.5-.6-13-1.9-18.4C564.8 40.6 493.7 73 448 126.7c-26.5 30-52.4 77.4-52.4 124.7 0 7.1 1.3 14.3 1.9 16.5 3.2.6 8.4 1.3 13.6 1.3 44.1 0 109.1-30 161.5-97.3z"/></svg>`;
 
 fetch(`${API}/api/auth/config`).then(r => r.json()).then(cfg => {
+  googleClientId = cfg.googleClientId || '';
+  initGoogleSignIn();
+  if (cfg.turnstile && cfg.turnstile.enabled && cfg.turnstile.siteKey) {
+    renderRegisterTurnstile(cfg.turnstile.siteKey);
+  }
   if (!(cfg.apple || (cfg.oauth && cfg.oauth.apple))) return;
   const wrap = document.getElementById('apple-wrap-signin');
   wrap.innerHTML = `<a class="btn btn-apple" href="${API}/api/auth/oauth/apple/start?next=/account">${APPLE_SVG} Sign in with Apple</a>`;

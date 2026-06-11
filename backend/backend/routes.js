@@ -83,6 +83,53 @@ function presentPlaySubscription(sub) {
     };
 }
 
+function planRank(plan) {
+    const idx = PLAN_ORDER.indexOf(plan || 'free');
+    return idx < 0 ? 0 : idx;
+}
+
+function betterPlan(a, b) {
+    return planRank(b) > planRank(a) ? b : a;
+}
+
+function turnstileConfig() {
+    const enabled = String(process.env.TURNSTILE_ENABLED || '').toLowerCase() === 'true';
+    return {
+        enabled,
+        siteKey: process.env.TURNSTILE_SITE_KEY || '',
+        secret: process.env.TURNSTILE_SECRET_KEY || '',
+    };
+}
+
+async function verifyTurnstileRegister(req) {
+    const cfg = turnstileConfig();
+    if (!cfg.enabled) return null;
+    if (!cfg.secret) return { status: 503, error: 'turnstile_unavailable' };
+
+    const token = (req.body?.turnstileToken || req.body?.cfTurnstileResponse || '').toString();
+    if (!token) return { status: 400, error: 'turnstile_required' };
+
+    const form = new URLSearchParams();
+    form.set('secret', cfg.secret);
+    form.set('response', token);
+    const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim()
+        || req.socket?.remoteAddress
+        || null;
+    if (ip) form.set('remoteip', ip);
+
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.success !== true) {
+        console.warn('[turnstile] register verification failed:', data['error-codes'] || response.status);
+        return { status: 400, error: 'turnstile_failed' };
+    }
+    return null;
+}
+
 async function activePlaySubscriptionForUser(userId) {
     const rows = await store.query(
         `SELECT * FROM play_subscriptions
@@ -100,6 +147,9 @@ async function activePlaySubscriptionForUser(userId) {
 
 router.post('/auth/register', async (req, res) => {
     try {
+        const turnstileError = await verifyTurnstileRegister(req);
+        if (turnstileError) return res.status(turnstileError.status).json({ error: turnstileError.error });
+
         let { name, email, password } = req.body;
         email = (email || '').trim().toLowerCase();
         if (!email || !password || password.length < 8) {
@@ -155,33 +205,51 @@ router.get('/auth/me', authMiddleware, async (req, res) => {
     const sub = await store.subscriptions.findByUserId(req.user.id);
     const playSub = await activePlaySubscriptionForUser(req.user.id);
 
-    // Compute effectivePlan: sub plan takes precedence when subscription is active/entitled
+    // Compute effectivePlan across Stripe and Google Play. Neither source
+    // should mask the other; the user gets the highest currently entitled tier.
     const PAST_DUE_GRACE_MS = 28 * 24 * 60 * 60 * 1000;
     const ENTITLED_STATUSES = ['active', 'trialing', 'past_due', 'canceled'];
     let effectivePlan = req.user.plan || 'free';
     let entitledUntil = sub?.current_period_end ?? null;
+    let stripeEntitled = false;
     if (sub && ENTITLED_STATUSES.includes(sub.status)) {
         const now = Date.now();
         const insidePeriod = sub.current_period_end > now;
         const pastDueEntitled = sub.status === 'past_due'
             && sub.current_period_end + PAST_DUE_GRACE_MS > now;
         if (insidePeriod || pastDueEntitled) {
-            effectivePlan = sub.plan || effectivePlan;
+            effectivePlan = betterPlan(effectivePlan, sub.plan);
+            stripeEntitled = true;
+        }
+    }
+    if (playSub) {
+        effectivePlan = betterPlan(effectivePlan, playSub.plan);
+        if (!entitledUntil || (playSub.expiry_ms && playSub.expiry_ms > entitledUntil)) {
+            entitledUntil = playSub.expiry_ms;
         }
     }
 
+    const stripePresented = presentSubscription(sub);
+    const playPresented = presentPlaySubscription(playSub);
+    let primarySubscription = null;
+    if (stripeEntitled && playSub) {
+        primarySubscription = planRank(playSub.plan) >= planRank(sub.plan) ? playPresented : stripePresented;
+    } else {
+        primarySubscription = playPresented || (stripeEntitled ? stripePresented : null);
+    }
+
     res.json({
-        user: safeUser(req.user),
+        user: { ...safeUser(req.user), plan: effectivePlan },
         effectivePlan,
         entitledUntil,
-        subscription: presentSubscription(sub) || presentPlaySubscription(playSub),
-        stripeSubscription: presentSubscription(sub),
-        playSubscription: presentPlaySubscription(playSub),
+        subscription: primarySubscription,
+        stripeSubscription: stripePresented,
+        playSubscription: playPresented,
     });
 });
 
 router.post('/auth/google', async (req, res) => {
-    const { credential } = req.body || {};
+    const { credential, allowCreate = false } = req.body || {};
     if (!credential) return res.status(400).json({ error: 'missing_credential' });
     const clientId = process.env.GOOGLE_CLIENT_ID;
     if (!clientId) return res.status(503).json({ error: 'google_oauth_not_configured' });
@@ -197,6 +265,11 @@ router.post('/auth/google', async (req, res) => {
 
         let user = await store.users.findByEmail(addr);
         if (!user) {
+            if (allowCreate !== true) {
+                return res.status(404).json({ error: 'account_not_found' });
+            }
+            const turnstileError = await verifyTurnstileRegister(req);
+            if (turnstileError) return res.status(turnstileError.status).json({ error: turnstileError.error });
             user = await store.users.create({ name, email: addr, passwordHash: null });
             store.events.log({ userId: user.id, type: 'auth', event: 'google_register' });
         } else {
@@ -257,7 +330,16 @@ router.post('/auth/reset', async (req, res) => {
 
 // ── Auth config ───────────────────────────────────────────────────────────────
 router.get('/auth/config', (req, res) => {
-    res.json({ google: oauth.googleConfigured(), apple: oauth.appleConfigured() });
+    const turnstile = turnstileConfig();
+    res.json({
+        google: oauth.googleConfigured(),
+        googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+        apple: oauth.appleConfigured(),
+        turnstile: {
+            enabled: turnstile.enabled && !!turnstile.siteKey,
+            siteKey: turnstile.enabled ? turnstile.siteKey : '',
+        },
+    });
 });
 
 // ── Sign In with Apple — native tvOS credential flow ─────────────────────────
@@ -270,7 +352,19 @@ router.get('/auth/oauth/apple/start', async (req, res) => {
     }
     const rawNext = (req.query.next || '').toString();
     const next = (rawNext.startsWith('/') && !rawNext.startsWith('//')) ? rawNext : '/account';
-    const state = oauth.signState({ provider: 'apple', next });
+    let allowCreate = false;
+    if ((req.query.signup || '').toString() === '1') {
+        const turnstileError = await verifyTurnstileRegister({
+            ...req,
+            body: { turnstileToken: (req.query.turnstileToken || '').toString() },
+        });
+        if (turnstileError) {
+            const dest = next.startsWith('/pair') ? '/pair' : '/account';
+            return res.redirect(302, `${dest}?oauth_error=${encodeURIComponent('Please complete the signup verification.')}`);
+        }
+        allowCreate = true;
+    }
+    const state = oauth.signState({ provider: 'apple', next, allowCreate });
     res.redirect(302, oauth.appleAuthUrl({ state }));
 });
 
@@ -295,7 +389,11 @@ router.post('/auth/oauth/apple/callback', async (req, res) => {
                 profile.name = [fn, ln].filter(Boolean).join(' ') || null;
             } catch (_) {}
         }
-        const { user, created, linked } = await oauth.resolveUserForOauth({ provider: 'apple', profile });
+        const { user, created, linked } = await oauth.resolveUserForOauth({
+            provider: 'apple',
+            profile,
+            allowCreate: decoded.allowCreate === true,
+        });
         store.execute('INSERT INTO events (user_id, type, event, ts) VALUES (?,?,?,?)',
             [user.id, 'auth', created ? 'apple_register' : 'apple_login', Date.now()]).catch(() => {});
         const token = issueToken(user);

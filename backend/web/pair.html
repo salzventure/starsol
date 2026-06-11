@@ -79,6 +79,8 @@ input:focus{border-color:var(--star500)}
 .alert{padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:20px;display:none}
 .alert.error{background:rgba(193,74,42,.1);border:1px solid rgba(193,74,42,.3);color:var(--ember)}
 .alert.success{background:rgba(93,168,136,.1);border:1px solid rgba(93,168,136,.3);color:var(--aurora)}
+.turnstile-wrap{margin:0 0 20px;min-height:0}
+.turnstile-wrap[data-active="true"]{min-height:65px}
 
 /* Success state */
 .success-icon{width:64px;height:64px;border-radius:50%;background:rgba(93,168,136,.12);border:1px solid rgba(93,168,136,.3);
@@ -185,6 +187,9 @@ input:focus{border-color:var(--star500)}
       <label for="reg-password">Password</label>
       <input type="password" id="reg-password" autocomplete="new-password" placeholder="8+ characters"/>
     </div>
+    <div id="turnstile-wrap-register" class="turnstile-wrap" data-active="false" hidden>
+      <div id="turnstile-widget-register"></div>
+    </div>
     <button class="btn btn-primary" id="btn-register">Create account &amp; pair TV</button>
     <div class="divider">already have one?</div>
     <button class="btn btn-secondary" id="btn-to-signin">Sign in</button>
@@ -206,6 +211,38 @@ const API = 'https://starsol.app';
 let pendingCode = '';
 let authToken = '';
 let currentState = 'code';
+let turnstileRegisterEnabled = false;
+let turnstileRegisterToken = '';
+let turnstileRegisterWidgetId = null;
+
+function renderRegisterTurnstile(siteKey) {
+  const wrap = document.getElementById('turnstile-wrap-register');
+  const target = document.getElementById('turnstile-widget-register');
+  if (!wrap || !target || !siteKey) return;
+  turnstileRegisterEnabled = true;
+  wrap.hidden = false;
+  wrap.dataset.active = 'true';
+  const doRender = () => {
+    if (!window.turnstile || turnstileRegisterWidgetId !== null) return;
+    turnstileRegisterWidgetId = window.turnstile.render(target, {
+      sitekey: siteKey,
+      action: 'register',
+      theme: 'dark',
+      callback: token => { turnstileRegisterToken = token || ''; },
+      'expired-callback': () => { turnstileRegisterToken = ''; },
+      'error-callback': () => { turnstileRegisterToken = ''; },
+    });
+  };
+  if (window.turnstile) doRender();
+  else {
+    window.__starSolPairTurnstile = doRender;
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=__starSolPairTurnstile';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+}
 
 // Cache button labels before any async operations mutate innerHTML
 document.querySelectorAll('button.btn-primary').forEach(b => { b.dataset.label = b.innerHTML; });
@@ -284,12 +321,13 @@ document.getElementById('btn-register').addEventListener('click', async () => {
   const alert = document.getElementById('alert-register');
   if (!email || !password) return showAlert(alert, 'Email and password are required.');
   if (password.length < 8) return showAlert(alert, 'Password must be at least 8 characters.');
+  if (turnstileRegisterEnabled && !turnstileRegisterToken) return showAlert(alert, 'Please complete the signup verification.');
 
   setLoading('btn-register', true);
   try {
     const r = await fetch(`${API}/api/auth/register`, {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({name, email, password}),
+      body: JSON.stringify({name, email, password, turnstileToken: turnstileRegisterToken || undefined}),
     });
     const d = await r.json();
     if (!r.ok) return showAlert(alert, d.error === 'email_taken' ? 'An account with that email already exists.' : 'Registration failed. Try again.');
@@ -298,7 +336,13 @@ document.getElementById('btn-register').addEventListener('click', async () => {
     hideAlert(alert);
     await doPair();
   } catch { showAlert(alert, 'Connection error. Check your internet and try again.'); }
-  finally { setLoading('btn-register', false); }
+  finally {
+    if (turnstileRegisterEnabled && window.turnstile && turnstileRegisterWidgetId !== null) {
+      try { window.turnstile.reset(turnstileRegisterWidgetId); } catch (_) {}
+      turnstileRegisterToken = '';
+    }
+    setLoading('btn-register', false);
+  }
 });
 
 // ── Pair ─────────────────────────────────────────────────────────
@@ -357,6 +401,9 @@ if (urlCode) {
 const APPLE_SVG = '<svg width="16" height="19" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-42.3-150.3-99.9C172.1 719.3 128 614.9 128 516.9 128 388.2 201.8 324 273 285.7c55.7-30.1 116.7-37.3 175.6-37.3 64.8 0 123.7 23.9 166.8 23.9 41.1 0 108.5-25.6 176.6-25.6 23.4 0 112.6 2.6 174.4 67.9zM529.2 83.2c26.5-32.1 45.6-76.8 45.6-121.2 0-6.1-.5-12.3-1.6-17.3-43.2 1.6-95.3 28.8-126.4 63-24.2 27.4-47 72.5-47 117.6 0 6.7 1.1 13.4 1.6 15.5 2.7.5 7.1 1.1 11.6 1.1 38.9 0 87.8-26.1 116.2-58.7z"/></svg>';
 
 fetch(`${API}/api/auth/config`).then(r=>r.json()).then(cfg => {
+  if (cfg.turnstile && cfg.turnstile.enabled && cfg.turnstile.siteKey) {
+    renderRegisterTurnstile(cfg.turnstile.siteKey);
+  }
   if (!(cfg.apple || cfg.oauth?.apple)) return;
   ['signin','register'].forEach(id => {
     const wrap = document.getElementById('apple-wrap-'+id);
@@ -365,7 +412,16 @@ fetch(`${API}/api/auth/config`).then(r=>r.json()).then(cfg => {
     wrap.innerHTML = `<a class="btn btn-apple" id="btn-apple-${id}" href="${API}/api/auth/oauth/apple/start?next=/pair">${APPLE_SVG} Sign in with Apple</a>`;
     wrap.style.display = 'block';
     if (divider) divider.style.removeProperty('display');
-    document.getElementById('btn-apple-'+id).addEventListener('click', () => {
+    document.getElementById('btn-apple-'+id).addEventListener('click', (e) => {
+      if (id === 'register') {
+        const alert = document.getElementById('alert-register');
+        if (turnstileRegisterEnabled && !turnstileRegisterToken) {
+          e.preventDefault();
+          showAlert(alert, 'Please complete the signup verification.');
+          return;
+        }
+        e.currentTarget.href = `${API}/api/auth/oauth/apple/start?next=/pair&signup=1&turnstileToken=${encodeURIComponent(turnstileRegisterToken || '')}`;
+      }
       sessionStorage.setItem('ss-pending-code', pendingCode);
     });
   });

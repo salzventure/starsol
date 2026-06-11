@@ -19,12 +19,12 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com', 'https://js.stripe.com', 'https://fonts.googleapis.com'],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com', 'https://js.stripe.com', 'https://fonts.googleapis.com', 'https://challenges.cloudflare.com'],
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com'],
             imgSrc: ["'self'", 'data:', 'https:'],
-            connectSrc: ["'self'", 'https://api.stripe.com'],
-            frameSrc: ["'self'", 'https://js.stripe.com'],
+            connectSrc: ["'self'", 'https://api.stripe.com', 'https://accounts.google.com', 'https://challenges.cloudflare.com'],
+            frameSrc: ["'self'", 'https://js.stripe.com', 'https://accounts.google.com', 'https://challenges.cloudflare.com'],
         },
     },
 }));

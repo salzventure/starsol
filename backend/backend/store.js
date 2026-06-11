@@ -78,6 +78,28 @@ async function execute(sql, params) {
     return result;
 }
 
+const PLAN_ORDER = ['free', 'explorer', 'observer', 'institutional'];
+function betterPlan(a, b) {
+    const ai = PLAN_ORDER.indexOf(a || 'free');
+    const bi = PLAN_ORDER.indexOf(b || 'free');
+    return bi > ai ? b : a;
+}
+
+async function updateUserPlanPreservingPlay(userId, fallbackPlan) {
+    let plan = fallbackPlan || 'free';
+    const rows = await query(
+        `SELECT plan
+           FROM play_subscriptions
+          WHERE user_id = ?
+            AND status IN ("active","in_grace_period")
+            AND (expiry_ms IS NULL OR expiry_ms > ?)`,
+        [userId, Date.now()],
+    );
+    for (const row of rows) plan = betterPlan(plan, row.plan);
+    await users.updatePlan(userId, plan);
+    return plan;
+}
+
 // ── Users ────────────────────────────────────────────────────────────────
 const users = {
     findById: id => queryOne('SELECT * FROM users WHERE id = ?', [id]),
@@ -151,7 +173,7 @@ const subscriptions = {
             (status === 'past_due') ||
             (status === 'canceled' && insidePeriod) ||
             (cancelAtPeriodEnd && insidePeriod);
-        await users.updatePlan(userId, entitled ? plan : 'free');
+        await updateUserPlanPreservingPlay(userId, entitled ? plan : 'free');
     },
     cancel: async (stripeSubId) => {
         // Honor period end: mark canceled but preserve plan until current_period_end.
@@ -169,7 +191,7 @@ const subscriptions = {
               WHERE stripe_subscription_id = ?`,
             [effectivePlan, Date.now(), stripeSubId],
         );
-        await users.updatePlan(sub.user_id, effectivePlan);
+        await updateUserPlanPreservingPlay(sub.user_id, effectivePlan);
     },
     setPastDue: async (stripeSubId) => {
         // Stripe dunning: keep the user entitled while Stripe retries the charge.
@@ -204,7 +226,7 @@ const subscriptions = {
                 'UPDATE subscriptions SET plan = "free", updated_at = ? WHERE id = ?',
                 [now, row.id],
             );
-            await users.updatePlan(row.user_id, 'free');
+            await updateUserPlanPreservingPlay(row.user_id, 'free');
         }
         return lapsed.length;
     },

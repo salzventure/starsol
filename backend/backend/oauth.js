@@ -3,7 +3,7 @@
 // throwing at module load.
 //
 // Env vars (none required to boot — providers self-disable when unset):
-//   GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET
+//   GOOGLE_CLIENT_ID (Google Identity Services web client ID)
 //   APPLE_OAUTH_CLIENT_ID  (the Services ID, not the App ID)
 //   APPLE_OAUTH_TEAM_ID, APPLE_OAUTH_KEY_ID
 //   APPLE_OAUTH_PRIVATE_KEY  (the .p8 contents, PEM-formatted, with \n literals
@@ -33,7 +33,7 @@ if (!JWT_SECRET) throw new Error('JWT_SECRET env var is required');
 const SITE = process.env.APP_URL || 'https://starsol.app';
 
 function googleConfigured() {
-    return !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET);
+    return !!process.env.GOOGLE_CLIENT_ID;
 }
 function appleConfigured() {
     return !!(process.env.APPLE_OAUTH_CLIENT_ID
@@ -52,54 +52,15 @@ function callbackUrl(provider) {
     return `${SITE}/api/auth/oauth/${provider}/callback`;
 }
 
-function signState({ provider, next, nonce }) {
+function signState({ provider, next, nonce, allowCreate = false }) {
     return jwt.sign(
-        { provider, next: next || '/account', nonce: nonce || crypto.randomBytes(16).toString('hex') },
+        { provider, next: next || '/account', nonce: nonce || crypto.randomBytes(16).toString('hex'), allowCreate: allowCreate === true },
         JWT_SECRET,
         { expiresIn: '15m' },
     );
 }
 function verifyState(token) {
     try { return jwt.verify(token, JWT_SECRET); } catch (_) { return null; }
-}
-
-// ── Google ────────────────────────────────────────────────────────────
-function googleAuthUrl({ state }) {
-    const params = new URLSearchParams({
-        client_id:     process.env.GOOGLE_OAUTH_CLIENT_ID,
-        redirect_uri:  callbackUrl('google'),
-        response_type: 'code',
-        scope:         'openid email profile',
-        state,
-        access_type:   'online',
-        prompt:        'select_account',
-    });
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-}
-async function googleExchange(code) {
-    const body = new URLSearchParams({
-        code,
-        client_id:     process.env.GOOGLE_OAUTH_CLIENT_ID,
-        client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-        redirect_uri:  callbackUrl('google'),
-        grant_type:    'authorization_code',
-    });
-    const r = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-    });
-    if (!r.ok) throw new Error(`google token exchange failed: ${r.status}`);
-    const tok = await r.json();
-    if (!tok.id_token) throw new Error('google response missing id_token');
-    const claims = jwt.decode(tok.id_token);
-    if (!claims || !claims.sub || !claims.email) throw new Error('google id_token missing required claims');
-    return {
-        sub:           claims.sub,
-        email:         (claims.email || '').toLowerCase(),
-        emailVerified: !!claims.email_verified,
-        name:          claims.name || claims.given_name || null,
-    };
 }
 
 // ── Apple ────────────────────────────────────────────────────────────
@@ -188,7 +149,7 @@ async function touchIdentity(provider, sub) {
 
 // Resolve an oauth profile to a StarSol user. Side-effects: may create or
 // link rows. Returns the user object.
-async function resolveUserForOauth({ provider, profile }) {
+async function resolveUserForOauth({ provider, profile, allowCreate = false }) {
     // 1. Direct identity hit
     const existing = await findIdentity(provider, profile.sub);
     if (existing) {
@@ -206,6 +167,7 @@ async function resolveUserForOauth({ provider, profile }) {
     }
     // 3. Create a new account. Random unguessable password — the user can
     //    run /forgot if they ever want password login.
+    if (allowCreate !== true) throw new Error('oauth_account_creation_not_verified');
     if (!profile.email) throw new Error('provider returned no email — cannot create account');
     const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
     const now = Date.now();
@@ -222,8 +184,6 @@ module.exports = {
     providerConfig,
     googleConfigured,
     appleConfigured,
-    googleAuthUrl,
-    googleExchange,
     appleAuthUrl,
     appleExchange,
     appleClientSecret,
