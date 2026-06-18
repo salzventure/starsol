@@ -11,8 +11,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Read signing creds from local.properties (gitignored). Release keystore
-// will be generated when we're ready to publish to Play.
+// Read signing creds and optional Google client id from local.properties (gitignored).
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { stream -> load(stream) }
@@ -28,6 +27,14 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+
+        // Google Sign-In OAuth client id (Web application type, from Google Cloud
+        // Console). Plumbed via local.properties so it is not committed. Empty
+        // string is a safe default so the build still compiles when unset —
+        // GoogleSignInBridge.isAvailable() returns false and the TV falls back
+        // to the QR-pairing flow.
+        val googleClientId = localProps.getProperty("googleClientId") ?: ""
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${googleClientId}\"")
     }
 
     buildFeatures {
@@ -83,4 +90,5 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("com.android.billingclient:billing-ktx:7.1.1")
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
 }

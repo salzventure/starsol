@@ -1,0 +1,16 @@
+# Copy to local.properties (gitignored) and fill in real values before building.
+# DO NOT commit local.properties — it contains secrets.
+
+sdk.dir=/Users/YOURNAME/Library/Android/sdk
+
+# Release signing — required for Play Store builds
+storeFile=/Users/YOURNAME/.android/keystores/starsol-release.jks
+storePassword=CHANGEME
+keyAlias=starsol-release
+keyPassword=CHANGEME
+
+# Google OAuth Web Client ID (from Cloud Console — Web type, not Android)
+# Used for requestIdToken() in the native GoogleSignInBridge and for backend
+# ID-token verification at /api/auth/google. Leave empty to disable Google
+# Sign-In (TV falls back to QR-pairing flow).
+googleClientId=

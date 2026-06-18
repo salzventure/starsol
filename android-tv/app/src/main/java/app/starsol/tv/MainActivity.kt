@@ -14,6 +14,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
@@ -41,6 +43,11 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
     private val purchasesByToken = mutableMapOf<String, Purchase>()
     private val pendingReceiverScripts = mutableListOf<String>()
 
+    // Google Sign-In bridge — wired before the WebView so the @JavascriptInterface
+    // is registered before any page loads.
+    private lateinit var googleSignInBridge: GoogleSignInBridge
+    private lateinit var googleSignInLauncher: ActivityResultLauncher<Intent>
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +71,18 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
 
         // Debug builds only: expose the WebView JS context to Chrome DevTools.
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
+
+        // Google Sign-In bridge — must be initialised before the WebView so the
+        // @JavascriptInterface is registered before any page loads. The
+        // ActivityResultLauncher must also be registered before the Activity
+        // reaches STARTED, so we wire it here in onCreate.
+        googleSignInBridge = GoogleSignInBridge(this)
+        googleSignInLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            googleSignInBridge.onSignInActivityResult(result.data)
+        }
+        googleSignInBridge.launchSignIn = { intent -> googleSignInLauncher.launch(intent) }
 
         webView = WebView(this).apply {
             settings.apply {
@@ -118,7 +137,13 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
                 }
             }
             addJavascriptInterface(StarSolBillingBridge(), "StarSolBilling")
+            // Google Sign-In is always wired so native auth works regardless of
+            // billing state — avoids QR-only fallback on the account gate.
+            addJavascriptInterface(googleSignInBridge, "StarSolAuth")
         }
+
+        // Give GoogleSignInBridge a reference to the WebView for JS callbacks.
+        googleSignInBridge.webView = webView
 
         setContentView(webView)
         if (BuildConfig.DEBUG) webView.clearCache(true)

@@ -2568,6 +2568,14 @@ button { background: none; border: none; cursor: pointer; color: inherit; font: 
       <button class="btn btn-primary focusable" id="welcome-signin" data-action="signin" tabindex="0">Sign in with phone</button>
       <button class="btn btn-secondary focusable" id="welcome-guest" data-action="guest" tabindex="0">Browse as guest</button>
     </div>
+    <!-- Android TV native Google Sign-In — hidden on web/webOS/Tizen; shown by JS when StarSolAuth bridge is present -->
+    <div id="welcome-google-row" style="display:none;margin-top:18px;text-align:center;">
+      <div style="font-size:16px;color:var(--ss-star300,#c8b886);margin-bottom:12px;">— or on this TV —</div>
+      <button class="focusable" id="welcome-google-btn" tabindex="0" style="display:inline-flex;align-items:center;gap:14px;background:#fff;color:#1f1f1f;font-size:26px;font-weight:600;padding:16px 32px;border-radius:12px;border:2px solid #fff;cursor:pointer;">
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
   </div>
   <div class="footer">
     <div class="footer-item"><span>Imagery&nbsp;/</span>&nbsp;NASA &middot; ESA &middot; CSA &middot; STScI</div>
@@ -6369,6 +6377,91 @@ function boot() {
 }
 
 document.addEventListener('DOMContentLoaded', boot);
+
+/* ============================================================
+   ANDROID TV: NATIVE GOOGLE SIGN-IN (StarSolAuth bridge)
+   ============================================================ */
+
+/**
+ * Returns true when running inside the StarSol Android TV WebView wrapper.
+ * The native app appends "starsol-androidtv/x.x.x" to the UA string.
+ */
+function isAndroidTV() {
+  return /starsol-androidtv/i.test(navigator.userAgent || '');
+}
+
+/**
+ * Returns true when the StarSolAuth bridge is wired and the build has a
+ * non-empty Google client id. JS gates the "Sign in with Google" button on this.
+ */
+function googleSignInAvailable() {
+  return isAndroidTV() &&
+    typeof window.StarSolAuth !== 'undefined' &&
+    (() => { try { return !!window.StarSolAuth.isAvailable(); } catch(e) { return false; } })();
+}
+
+/**
+ * Called by the native GoogleSignInBridge after a sign-in attempt completes.
+ * The bridge passes a JSON string ({ok, credential, error}) which we forward
+ * to /api/auth/google to mint our own JWT.
+ */
+window.starsolGoogleSignInResult = function(jsonStr) {
+  try {
+    const r = (typeof jsonStr === 'string') ? JSON.parse(jsonStr) : jsonStr;
+    if (!r || !r.ok) {
+      const msg = (r && r.error) ? r.error : 'Sign-in failed';
+      showWhisper(msg, 'Try signing in on your phone instead.', 3500);
+      return;
+    }
+    fetch(API.base + '/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: r.credential }),
+    }).then(res => res.json()).then(data => {
+      if (data && data.token) {
+        APP.token = data.token;
+        localStorage.setItem('ss-token', data.token);
+        localStorage.removeItem('ss-guest');
+        APP.guest = false;
+        if (data.user) {
+          APP.userName = data.user.name || null;
+          setPlan(data.user.plan || 'free');
+        }
+        navigate('tonight');
+        showWhisper('Welcome to StarSol!', 'Signed in with Google.', 3000);
+      } else {
+        showWhisper((data && data.error) || 'Sign-in failed', 'Try again or use your phone.', 3500);
+      }
+    }).catch(() => showWhisper('Network error', 'Could not reach StarSol. Try again.', 3500));
+  } catch(e) {
+    showWhisper('Sign-in error', 'Please try again.', 3000);
+  }
+};
+
+// Show the Google Sign-In button on the welcome screen if the bridge is available.
+// Runs after DOMContentLoaded so the elements exist.
+(function initGoogleSignInButton() {
+  function maybeShowGoogleBtn() {
+    if (!googleSignInAvailable()) return;
+    const row = document.getElementById('welcome-google-row');
+    if (row) row.style.display = 'block';
+    const btn = document.getElementById('welcome-google-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+      if (!googleSignInAvailable()) {
+        showWhisper('Google Sign-In unavailable', 'Use QR code on your phone.', 3000);
+        return;
+      }
+      try { window.StarSolAuth.signInWithGoogle(); }
+      catch(e) { showWhisper('Could not open Google Sign-In', '', 3000); }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', maybeShowGoogleBtn);
+  } else {
+    maybeShowGoogleBtn();
+  }
+})();
 </script>
 </body>
 </html>
