@@ -19,20 +19,24 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com', 'https://js.stripe.com', 'https://fonts.googleapis.com', 'https://challenges.cloudflare.com'],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com', 'https://js.stripe.com', 'https://fonts.googleapis.com', 'https://challenges.cloudflare.com', 'https://cdn.jsdelivr.net'],
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com'],
             imgSrc: ["'self'", 'data:', 'https:'],
             connectSrc: ["'self'", 'https://api.stripe.com', 'https://accounts.google.com', 'https://challenges.cloudflare.com'],
-            frameSrc: ["'self'", 'https://js.stripe.com', 'https://accounts.google.com', 'https://challenges.cloudflare.com'],
+            frameSrc: ["'self'", 'https://js.stripe.com', 'https://accounts.google.com', 'https://challenges.cloudflare.com', 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
         },
     },
 }));
 const corsOriginsEnv = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) ?? [];
-const allowedOrigins = corsOriginsEnv.length > 0 ? corsOriginsEnv : ['https://starsol.app'];
+const allowedOrigins = new Set(corsOriginsEnv.length > 0 ? corsOriginsEnv : ['https://starsol.app']);
+if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.add(`http://localhost:${PORT}`);
+    allowedOrigins.add(`http://127.0.0.1:${PORT}`);
+}
 app.use(cors({
     origin(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.has(origin)) {
             return callback(null, true);
         }
         return callback(new Error('Not allowed by CORS'));
@@ -100,9 +104,12 @@ app.get('/pricing', (_req, res) => res.sendFile(path.join(__dirname, 'web/pricin
 app.get('/account', (_req, res) => res.sendFile(path.join(__dirname, 'web/account.html')));
 app.get('/terms', (_req, res) => res.sendFile(path.join(__dirname, 'web/terms.html')));
 app.get('/privacy', (_req, res) => res.sendFile(path.join(__dirname, 'web/privacy.html')));
+app.get('/delete-account', (_req, res) => res.sendFile(path.join(__dirname, 'web/delete-account.html')));
 app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, 'web/reset-password.html')));
 app.get('/tv', (_req, res) => res.sendFile(path.join(__dirname, 'web/tv.html')));
 app.get('/admin', (_req, res) => res.sendFile(path.join(__dirname, 'web/admin.html')));
+app.get('/admin-v2', (_req, res) => res.sendFile(path.join(__dirname, 'web/admin-v2.html')));
+app.get('/admin-shared/shell.css', (_req, res) => res.sendFile(path.join(__dirname, 'web/admin-shared.css')));
 
 // Global error handler
 app.use((err, req, res, next) => {

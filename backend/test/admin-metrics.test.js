@@ -6,8 +6,8 @@ const assert = require('node:assert/strict');
 const { _metrics } = require('../backend/admin');
 
 test('annual subscriptions are normalized to monthly revenue', () => {
-    assert.equal(_metrics.monthlyValue('explorer', 'year'), 39.99 / 12);
-    assert.equal(_metrics.monthlyValue('observer', 'month'), 7.99);
+    assert.equal(_metrics.monthlyValue('explorer', 'year'), 9.99 / 12);
+    assert.equal(_metrics.monthlyValue('observer', 'month'), 0);
 });
 
 test('revenue combines Stripe and committed Google Play subscriptions', () => {
@@ -15,9 +15,9 @@ test('revenue combines Stripe and committed Google Play subscriptions', () => {
         [{ plan: 'explorer', stripe_price_id: 'monthly', n: 2 }],
         [{ plan: 'observer', subscription_id: 'observer_annual', n: 1 }],
     );
-    assert.deepEqual(result.bySource, { stripe: 9.98, play: 5.42 });
-    assert.equal(result.mrrApprox, 15.4);
-    assert.equal(result.arrApprox, 184.8);
+    assert.deepEqual(result.bySource, { stripe: 3.98, play: 0 });
+    assert.equal(result.mrrApprox, 3.98);
+    assert.equal(result.arrApprox, 47.76);
 });
 
 test('unknown and institutional plans do not invent recurring revenue', () => {

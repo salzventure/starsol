@@ -1,0 +1,2505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>StarSol — Admin</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=optional" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.development.js" crossorigin="anonymous" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"></script>
+<!-- Used to render the otpauth:// URL as a QR for authenticator apps. -->
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;min-height:100vh;background:#0b0f14;color:#e5e7eb;font-family:'Space Grotesk',sans-serif;font-size:14px}
+#root{width:100%;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none}
+input,select,textarea{font-family:inherit;font-size:14px}
+a{color:#60a5fa;text-decoration:none}
+
+.mono{font-family:'DM Mono',monospace}
+
+/* Layout */
+.shell{min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;padding:14px 24px;border-bottom:1px solid #1f2937;background:#06090f;position:sticky;top:0;z-index:10}
+.logo{font-weight:700;font-size:17px;letter-spacing:-0.01em}
+.logo .dot{color:#fbbf24}
+.tag{font-size:11px;padding:3px 8px;border-radius:6px;background:#1e293b;color:#fbbf24;margin-left:10px;font-weight:600}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px;color:#9ca3af;font-size:13px}
+.btn-link{background:none;color:#9ca3af;padding:6px 10px;border-radius:6px;font-size:13px}
+.btn-link:hover{background:#1f2937;color:#e5e7eb}
+
+.tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid #1f2937;background:#06090f}
+.tab{padding:13px 18px;background:none;color:#9ca3af;font-size:14px;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:#e5e7eb}
+.tab.active{color:#fbbf24;border-bottom-color:#fbbf24}
+
+.page{padding:24px;max-width:1400px;width:100%;margin:0 auto;flex:1}
+.page h2{font-size:20px;font-weight:600;margin-bottom:4px}
+.page .sub{color:#9ca3af;font-size:13px;margin-bottom:20px}
+
+/* Cards / panels */
+.panel{background:#06090f;border:1px solid #1f2937;border-radius:10px;overflow:hidden}
+.panel-hdr{padding:14px 18px;border-bottom:1px solid #1f2937;display:flex;align-items:center;gap:12px}
+.panel-hdr h3{font-size:15px;font-weight:600}
+.panel-hdr .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid #1f2937}
+th{font-weight:600;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;background:#06090f}
+tr:hover td{background:#131b26}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Forms */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-size:12px;color:#9ca3af;font-weight:500}
+.field input,.field select,.field textarea{background:#06090f;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb;padding:10px 12px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#3b82f6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Buttons */
+.btn{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;transition:opacity .15s,background .15s}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn-primary{background:#fbbf24;color:#0b0f14}
+.btn-primary:hover:not(:disabled){background:#f59e0b}
+.btn-ghost{background:#1f2937;color:#e5e7eb}
+.btn-ghost:hover:not(:disabled){background:#374151}
+.btn-danger{background:#b91c1c;color:white}
+.btn-danger:hover:not(:disabled){background:#991b1b}
+.btn-sm{padding:5px 10px;font-size:12px;font-weight:500}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;letter-spacing:0.02em}
+.badge-free{background:#1f2937;color:#9ca3af}
+.badge-explorer{background:#1e3a8a;color:#93c5fd}
+.badge-observer{background:#5b21b6;color:#ddd6fe}
+.badge-active{background:#064e3b;color:#6ee7b7}
+.badge-suspended{background:#7f1d1d;color:#fca5a5}
+.badge-deleted{background:#1f2937;color:#6b7280}
+.badge-admin{background:#92400e;color:#fde68a}
+.badge-superadmin{background:#9a3412;color:#fed7aa}
+.badge-user{background:#1f2937;color:#9ca3af}
+.badge-expired{background:#1f2937;color:#6b7280}
+
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{width:100%;max-width:380px;background:#06090f;border:1px solid #1f2937;border-radius:14px;padding:32px}
+.login-card h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.login-card .sub{color:#9ca3af;font-size:13px;margin-bottom:24px}
+.err{background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px}
+.ok{background:#064e3b;border:1px solid #065f46;color:#6ee7b7;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal{background:#06090f;border:1px solid #1f2937;border-radius:12px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid #1f2937;display:flex;align-items:center}
+.modal-hdr h3{font-size:16px;font-weight:600}
+.modal-hdr .close{margin-left:auto;background:none;color:#9ca3af;padding:4px 8px;border-radius:6px;font-size:18px}
+.modal-hdr .close:hover{background:#1f2937;color:#e5e7eb}
+.modal-body{padding:20px}
+.modal-ftr{padding:14px 20px;border-top:1px solid #1f2937;display:flex;justify-content:flex-end;gap:10px}
+
+.empty{padding:40px;text-align:center;color:#6b7280;font-size:14px}
+.loading{padding:40px;text-align:center;color:#6b7280;font-size:13px}
+
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 16px;font-size:13px;margin-bottom:16px}
+.kv dt{color:#9ca3af}
+.kv dd{color:#e5e7eb;word-break:break-word}
+
+.search{background:#06090f;border:1px solid #1f2937;border-radius:8px;padding:8px 12px;color:#e5e7eb;width:280px}
+.search:focus{outline:none;border-color:#3b82f6}
+
+@media (max-width:700px){
+  .topbar{padding:12px 16px}
+  .tabs{padding:0 16px;overflow-x:auto}
+  .page{padding:16px}
+  .field-row{grid-template-columns:1fr}
+  .kv{grid-template-columns:110px 1fr}
+  table{font-size:12px}
+  th,td{padding:8px 10px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ── API helper ─────────────────────────────────────────────────────────
+const TOKEN_KEY = 'starsol_admin_token';
+function getToken()  { return localStorage.getItem(TOKEN_KEY); }
+function setToken(t) { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); }
+
+// ── StarSol compatibility layer ───────────────────────────────────
+// Keep the Stock UI contract intact while translating StarSol's API names
+// and camelCase payloads at this single boundary.
+const flightErrorDetails = new Map();
+function adaptFlightRequest(path, opts = {}) {
+  return { path, opts: { ...opts } };
+}
+function flightTrial(u) {
+  if (!u.hasTrial && !u.trialStartedAt) return null;
+  const startedAt=u.trialStartedAt==null?null:Number(u.trialStartedAt), daysTotal=Number(u.trialDaysTotal)||null;
+  if (!startedAt || !daysTotal) return { active:false,converted:!!u.trialConverted,expired:false,daysLeft:null,startedAt,granted:true };
+  const ends=startedAt+daysTotal*86400000;
+  return { active:!u.trialConverted&&Date.now()<ends,converted:!!u.trialConverted,expired:!u.trialConverted&&Date.now()>=ends,daysLeft:Math.max(0,Math.ceil((ends-Date.now())/86400000)),startedAt,daysTotal,granted:true };
+}
+function normalizeFlightUser(u = {}) {
+  return { ...u, signup_method:u.signup_method||u.signupMethod||'email', created_at:u.created_at||u.createdAt,
+    last_login_at:u.last_login_at||u.lastLoginAt, payment_source:u.payment_source||u.paymentSource,
+    status:u.status||(u.suspended||(u.locked_until&&Number(u.locked_until)>Date.now())?'suspended':'active'), trial:u.trial||flightTrial(u),
+    trial_started_at:u.trial_started_at||u.trialStartedAt, trial_converted_at:u.trial_converted_at||u.trialConvertedAt,
+    emailConsents:u.emailConsents||{productUpdates:u.marketingConsent!==false,marketing:!!u.marketingConsent},
+    total_usage_ms:Number(u.total_usage_ms||0),session_count:Number(u.session_count||0),tv_app_opens:Number(u.tv_app_opens||0),wl_count:Number(u.wl_count||0) };
+}
+function normalizeFlightResponse(originalPath, data = {}) {
+  if (originalPath.startsWith('/users?')) return { ...data, users:(data.users||[]).map(normalizeFlightUser) };
+  if (/^\/users\/\d+$/.test(originalPath)) return { ...data, user:normalizeFlightUser(data.user),
+    paymentSources:(data.paymentSources||[]).map(s=>({...s,billing_interval:s.billing_interval||s.interval,expires_ms:s.expires_ms||s.expiresAt,updated_at:s.updated_at||s.updatedAt})),
+    settings:data.settings||null,suspensions:data.suspensions||[],recentEvents:data.recentEvents||[] };
+  if (/^\/users\/\d+\/analytics$/.test(originalPath)) return { errorCount:0,tvAppOpens:0,bySource:[],featureUsage:[],clicksFirst3Sessions:0,...data };
+  if (originalPath === '/metrics') return { ...data, activeBySource:data.activeBySource||[],signupsByDay:data.signupsByDay||[],errorsByDay:data.errorsByDay||[],tvByPlatform:data.tvByPlatform||{},revenue:{mrrApprox:null,bySource:{},note:'',...(data.revenue||{})} };
+  if (originalPath.startsWith('/subscriptions?')) return { ...data, subs:(data.subscriptions||data.subs||[]).map(s=>({...s,billing_interval:s.billing_interval||s.interval_type,expires_ms:s.expires_ms||s.expires_at,updated_at:s.updated_at||s.updatedAt})) };
+  if (originalPath === '/errors') {
+    const groups=(data.errors||data.groups||[]).map(g=>{const signature=g.signature_hash||g.signature;const rows=(g.occurrences||[]).map(o=>({id:o.id,ts:o.ts,user_email:o.user_email||o.email,user_id:o.user_id||o.userId,source:o.source,message:o.message||o.data?.message||o.event,url:o.url||o.data?.url,stack:o.stack||o.data?.stack}));flightErrorDetails.set(signature,{rows});return {signature_hash:signature,last_seen:g.last_seen||g.lastSeen,sample_message:g.sample_message||g.message,sample_source:g.sample_source||g.source,users_affected:g.users_affected??g.users??0,occurrences:Number(g.occurrences_count??g.hits??rows.length)};});
+    return {groups,sinceMs:data.sinceMs||0};
+  }
+  if (/^\/errors\//.test(originalPath)) return flightErrorDetails.get(originalPath.slice(8))||{rows:[]};
+  if (originalPath === '/audit') return {entries:(data.entries||[]).map(e=>({...e,actor_email:e.actor_email||e.actorEmail,actor_user_id:e.actor_user_id||e.actorUserId,target_email:e.target_email||e.targetEmail,target_user_id:e.target_user_id||e.targetUserId,ip_address:e.ip_address||e.ip}))};
+  if (originalPath === '/invites') return {...data,invites:(data.codes||data.invites||[]).map(c=>{const uses=Number(c.uses||0);return {...c,plan_override:c.plan_override||c.planGrant,max_uses:c.active===false?uses:(c.max_uses??c.maxUses??Infinity),expires_at:c.expires_at||c.expiresAt,note:c.note||c.notes,created_at:c.created_at||c.createdAt,uses};})};
+  if (originalPath === '/referrals') return {referrers:(data.referrals||data.referrers||[]).map(r=>({...r,totalReferrals:r.totalReferrals??r.conversions,totalConversions:r.totalConversions??r.conversions,creditsGranted:r.creditsGranted??Math.floor((r.creditDays||0)/30),limit:r.limit??r.maxConversions??10,limitOverridden:r.limitOverridden??(r.maxConversions!=null)}))};
+  if (/^\/users\/\d+\/referrals$/.test(originalPath)) return {referees:(data.conversions||data.referees||[]).map(r=>({...r,userId:r.userId||r.refereeId,email:r.email||r.refereeEmail,signedUpAt:r.signedUpAt||r.createdAt,convertedAt:r.convertedAt||r.creditGrantedAt,convertedPlan:r.convertedPlan||r.plan,subStatus:r.subStatus||null,firstChargeAmount:r.firstChargeAmount??null}))};
+  return data;
+}
+
+async function api(path, opts = {}) {
+  if (/^\/errors\//.test(path) && flightErrorDetails.has(path.slice(8))) return normalizeFlightResponse(path, {});
+  const adapted = adaptFlightRequest(path, opts);
+  const t = getToken();
+  const r = await fetch('/api/admin' + adapted.path, {
+    ...adapted.opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-StarSol-Client': 'starsol-admin/2.0',
+      ...(t ? { Authorization: 'Bearer ' + t } : {}),
+      ...(adapted.opts.headers || {}),
+    },
+  });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+  return normalizeFlightResponse(path, json);
+}
+async function loginApi(email, password) {
+  const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify({email,password}) });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+  return json;
+}
+
+// ── Formatting ─────────────────────────────────────────────────────────
+const fmtDate = ts => !ts ? '—' : new Date(ts).toLocaleString();
+const fmtShort = ts => !ts ? '—' : new Date(ts).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+const fmtShortTime = ts => !ts ? '—' : new Date(ts).toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+function fmtSignupLocation(u) {
+  if (!u) return '—';
+  const bits = [u.signup_city, u.signup_region, u.signup_country].filter(Boolean);
+  return bits.length ? bits.join(', ') : '—';
+}
+function fmtSignupCountry(u) {
+  if (!u?.signup_country) return '—';
+  const c = String(u.signup_country).trim().toUpperCase();
+  return c.length > 8 ? c.slice(0, 8) : c;
+}
+
+function Badge({ kind, children }) {
+  return <span className={'badge badge-' + kind}>{children}</span>;
+}
+function PlanBadge({ plan })   { return <Badge kind={plan || 'free'}>{plan || 'free'}</Badge>; }
+function StatusBadge({ s })    { return <Badge kind={s || 'active'}>{s || 'active'}</Badge>; }
+function RoleBadge({ role })   { return <Badge kind={role || 'user'}>{role || 'user'}</Badge>; }
+// Signup method — 'email' (password), 'google' (OAuth), 'apple' (OAuth).
+// Renders a small label next to plan so we can spot social-vs-password mix.
+function SignupMethodBadge({ m }) {
+  const method = m || 'email';
+  const styleMap = {
+    email:  { bg: '#1e293b', fg: '#94a3b8', label: '✉ Email' },
+    google: { bg: '#fef3c7', fg: '#92400e', label: 'G Google' },
+    apple:  { bg: '#0f172a', fg: '#e2e8f0', label: ' Apple' },
+  };
+  const s = styleMap[method] || styleMap.email;
+  return <span style={{display:'inline-block',padding:'2px 8px',borderRadius:6,background:s.bg,color:s.fg,fontSize:10,fontWeight:700,letterSpacing:'0.04em',whiteSpace:'nowrap'}}>{s.label}</span>;
+}
+// Render an exact consent state instead of saying "Unsubscribed". A user can
+// be off because signup defaulted off, not because they clicked unsubscribe.
+function UnsubChip({ email }) {
+  if (!email || email.productUpdates !== false) return null;
+  return <span title="Product update emails are off"
+               style={{display:'inline-block',marginLeft:6,padding:'1px 6px',borderRadius:4,background:'#1e293b',color:'#fb923c',fontSize:10,fontWeight:700,letterSpacing:'0.04em'}}>EMAIL OFF</span>;
+}
+function TrialBadge({ trial }) {
+  if (!trial) return <span style={{color:'#6b7280',fontSize:11}}>—</span>;
+  if (trial.active)    return <Badge kind="trialing">{trial.daysLeft}d left</Badge>;
+  if (trial.converted) return <Badge kind="active">converted</Badge>;
+  if (trial.expired)   return <Badge kind="expired">expired</Badge>;
+  if (trial.granted)   return <Badge kind="trialing">granted</Badge>;
+  return <span style={{color:'#6b7280',fontSize:11}}>—</span>;
+}
+
+const SOURCE_LABEL = { stripe: 'Stripe', play: 'Google Play', apple: 'App Store' };
+function PaymentSourceCell({ sources }) {
+  if (!sources || sources.length === 0) return <span style={{color:'#6b7280'}}>none</span>;
+  // Most-recently-updated active row wins. If none active, show the most recent.
+  const active = sources.find(s => s.status === 'active' || s.status === 'trialing') || sources[0];
+  const label = SOURCE_LABEL[active.source] || active.source;
+  return (
+    <span>
+      <strong>{label}</strong>
+      {active.billing_interval && <span style={{color:'#9ca3af'}}> · {active.billing_interval}</span>}
+      {active.status && <span style={{color: active.status === 'active' ? '#6ee7b7' : '#fbbf24', marginLeft:6}}>· {active.status}</span>}
+      {sources.length > 1 && <span style={{color:'#6b7280',marginLeft:6,fontSize:11}}>(+{sources.length - 1} prior)</span>}
+    </span>
+  );
+}
+
+function fmtDur(ms) {
+  if (!ms || ms < 0) return '0s';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ' + (s % 60) + 's';
+  const h = Math.floor(m / 60);
+  return h + 'h ' + (m % 60) + 'm';
+}
+
+function Stat({ label, value, tone }) {
+  const colors = { good: '#6ee7b7', warn: '#fbbf24', mute: '#9ca3af' };
+  const valueColor = colors[tone] || '#e5e7eb';
+  return (
+    <div>
+      <div style={{fontSize:10,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>{label}</div>
+      <div style={{fontSize:18,fontWeight:600,color:valueColor,fontVariantNumeric:'tabular-nums'}}>{value}</div>
+    </div>
+  );
+}
+
+// ── Login screen (multi-step: password → TOTP code OR enrollment) ──────
+function Login({ onLogin }) {
+  const [step, setStep] = useState('password');     // 'password' | 'totp' | 'recovery' | 'enroll'
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [code, setCode] = useState('');
+  const [recovery, setRecovery] = useState('');
+  const [challengeToken, setChallengeToken] = useState('');
+  const [enrollToken, setEnrollToken] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function submitPassword(e) {
+    e.preventDefault();
+    setErr(''); setBusy(true);
+    try {
+      const r = await loginApi(email, pw);
+      if (r.needsTotp) {
+        setChallengeToken(r.challengeToken);
+        setStep('totp');
+      } else if (r.needsEnrollment) {
+        setEnrollToken(r.enrollToken);
+        setStep('enroll');
+      } else {
+        setToken(r.token);
+        onLogin(r.user);
+      }
+    } catch (e) { setErr(e.message); }
+    finally    { setBusy(false); }
+  }
+
+  async function submitTotp(e) {
+    e.preventDefault();
+    setErr(''); setBusy(true);
+    try {
+      const r = await api('/login/totp', { method:'POST',
+        body: JSON.stringify({ challengeToken, code }) });
+      setToken(r.token); onLogin(r.user);
+    } catch (e) { setErr(e.message); }
+    finally    { setBusy(false); }
+  }
+
+  async function submitRecovery(e) {
+    e.preventDefault();
+    setErr(''); setBusy(true);
+    try {
+      const r = await api('/login/recovery', { method:'POST',
+        body: JSON.stringify({ challengeToken, recoveryCode: recovery }) });
+      setToken(r.token); onLogin(r.user);
+      if (typeof r.recoveryCodesRemaining === 'number' && r.recoveryCodesRemaining < 3) {
+        alert(`Heads up: only ${r.recoveryCodesRemaining} recovery codes left. Re-enroll TOTP to mint a fresh set.`);
+      }
+    } catch (e) { setErr(e.message); }
+    finally    { setBusy(false); }
+  }
+
+  return (
+    <div className="login-wrap">
+      {step === 'password' && (
+        <form className="login-card" onSubmit={submitPassword}>
+          <h1>StarSol <span style={{color:'#fbbf24'}}>Admin</span></h1>
+          <div className="sub">Restricted area. Admin credentials required.</div>
+          {err && <div className="err">{err}</div>}
+          <div className="field">
+            <label>Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus required />
+          </div>
+          <div className="field">
+            <label>Password</label>
+            <input type="password" value={pw} onChange={e=>setPw(e.target.value)} required />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{width:'100%',marginTop:8}} disabled={busy}>
+            {busy ? 'Signing in…' : 'Continue'}
+          </button>
+        </form>
+      )}
+
+      {step === 'totp' && (
+        <form className="login-card" onSubmit={submitTotp}>
+          <h1>Two-factor</h1>
+          <div className="sub">Enter the 6-digit code from your authenticator app.</div>
+          {err && <div className="err">{err}</div>}
+          <div className="field">
+            <label>Code</label>
+            <input className="mono" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*"
+                   maxLength={6} value={code}
+                   onChange={e=>setCode(e.target.value.replace(/\D/g,''))}
+                   autoFocus required style={{fontSize:18,letterSpacing:'0.2em',textAlign:'center'}} />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{width:'100%',marginTop:4}} disabled={busy || code.length !== 6}>
+            {busy ? 'Verifying…' : 'Verify'}
+          </button>
+          <button type="button" className="btn-link" style={{width:'100%',marginTop:10,textAlign:'center'}}
+                  onClick={()=>{setErr(''); setStep('recovery');}}>
+            Lost your phone? Use a recovery code
+          </button>
+        </form>
+      )}
+
+      {step === 'recovery' && (
+        <form className="login-card" onSubmit={submitRecovery}>
+          <h1>Recovery code</h1>
+          <div className="sub">Each recovery code works exactly once.</div>
+          {err && <div className="err">{err}</div>}
+          <div className="field">
+            <label>Recovery code</label>
+            <input className="mono" value={recovery} onChange={e=>setRecovery(e.target.value)}
+                   placeholder="xxxx-xxxx-xxxx" autoFocus required />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{width:'100%',marginTop:4}} disabled={busy}>
+            {busy ? 'Verifying…' : 'Sign in'}
+          </button>
+          <button type="button" className="btn-link" style={{width:'100%',marginTop:10,textAlign:'center'}}
+                  onClick={()=>{setErr(''); setStep('totp');}}>
+            Back to authenticator code
+          </button>
+        </form>
+      )}
+
+      {step === 'enroll' && (
+        <EnrollTotp enrollToken={enrollToken} onDone={(token, user) => {
+          setToken(token); onLogin(user);
+        }} />
+      )}
+    </div>
+  );
+}
+
+// Enrollment flow — shown on first login when ADMIN_REQUIRE_TOTP=1 and the
+// account has no totp_secret yet, OR when an authenticated admin re-enrolls.
+function EnrollTotp({ enrollToken, sessionToken, onDone }) {
+  const [setup, setSetup] = useState(null);   // { otpauth, secret, recoveryCodes, setupToken }
+  const [code, setCode]   = useState('');
+  const [err, setErr]     = useState('');
+  const [busy, setBusy]   = useState(false);
+  const [savedRecovery, setSavedRecovery] = useState(false);
+  const qrRef = React.useRef(null);
+
+  // Fetch the secret + recovery codes once.
+  useEffect(() => {
+    (async () => {
+      try {
+        const tokenForSetup = enrollToken || sessionToken;
+        const r = await fetch('/api/admin/totp/setup', {
+          method:'POST',
+          headers: {
+            'Content-Type':'application/json',
+            'Authorization': 'Bearer ' + tokenForSetup,
+            'X-StarSol-Client': 'starsol-admin/2.0',
+          },
+          body: '{}',
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'setup failed');
+        setSetup(json);
+      } catch (e) { setErr(e.message); }
+    })();
+  }, [enrollToken, sessionToken]);
+
+  // Render the QR once we have the otpauth URL.
+  useEffect(() => {
+    if (setup?.otpauth && qrRef.current && window.QRious) {
+      qrRef.current.innerHTML = '';
+      const canvas=document.createElement('canvas');qrRef.current.appendChild(canvas);
+      new window.QRious({element:canvas,value:setup.otpauth,size:200,padding:4,level:'M'});
+    }
+  }, [setup]);
+
+  async function verify(e) {
+    e.preventDefault();
+    if (!savedRecovery) {
+      if (!confirm('Did you save your recovery codes somewhere safe? You will not see them again.')) return;
+      setSavedRecovery(true);
+    }
+    setBusy(true); setErr('');
+    try {
+      const r = await api('/totp/enable', { method:'POST',
+        body: JSON.stringify({ setupToken: setup.setupToken, code }) });
+      onDone(r.token, r.user);
+    } catch (e) { setErr(e.message); setBusy(false); }
+  }
+
+  return (
+    <div className="login-card" style={{maxWidth: 480}}>
+      <h1>Set up two-factor</h1>
+      <div className="sub">Required before you can sign in.</div>
+      {err && <div className="err">{err}</div>}
+      {!setup ? <div className="loading">Loading…</div> : (
+        <>
+          <div style={{fontWeight:600, fontSize:13, marginTop:6, marginBottom:8}}>1. Scan with your authenticator app</div>
+          <div ref={qrRef} style={{display:'flex',justifyContent:'center',background:'#fff',padding:14,borderRadius:10,marginBottom:6}} />
+          <div className="mono" style={{fontSize:11,color:'#9ca3af',textAlign:'center',marginBottom:18,wordBreak:'break-all'}}>
+            Or enter manually: <strong style={{color:'#e5e7eb'}}>{setup.secret}</strong>
+          </div>
+
+          <div style={{fontWeight:600, fontSize:13, marginBottom:8}}>2. Save these recovery codes</div>
+          <div style={{background:'#06090f',border:'1px solid #1f2937',borderRadius:8,padding:12,fontFamily:'DM Mono,monospace',fontSize:13,marginBottom:6,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 16px'}}>
+            {setup.recoveryCodes.map((c, i) => <div key={i}>{c}</div>)}
+          </div>
+          <div style={{fontSize:11,color:'#fbbf24',marginBottom:18}}>
+            Each works once. Store somewhere offline — password manager or printed. They're the only way back in if you lose your phone.
+          </div>
+
+          <form onSubmit={verify}>
+            <div style={{fontWeight:600, fontSize:13, marginBottom:8}}>3. Enter a code from the app to confirm</div>
+            <div className="field">
+              <input className="mono" inputMode="numeric" pattern="[0-9]*" maxLength={6}
+                     value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))}
+                     style={{fontSize:18,letterSpacing:'0.2em',textAlign:'center'}} required />
+            </div>
+            <button type="submit" className="btn btn-primary" style={{width:'100%'}} disabled={busy || code.length !== 6}>
+              {busy ? 'Enabling…' : 'Enable two-factor'}
+            </button>
+          </form>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Users tab ──────────────────────────────────────────────────────────
+const USERS_PAGE_SIZE = 100;
+function UsersTab({ me }) {
+  const [rows, setRows] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState(null);
+
+  const load = useCallback(async () => {
+    setRows(null);
+    try {
+      const params = new URLSearchParams({
+        q,
+        offset: String(page * USERS_PAGE_SIZE),
+        limit: String(USERS_PAGE_SIZE),
+      });
+      const r = await api('/users?' + params.toString());
+      setRows(r.users);
+      setTotal(r.total);
+    } catch (e) { setRows([]); alert(e.message); }
+  }, [q, page]);
+
+  useEffect(() => { setPage(0); }, [q]);
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <>
+      <h2>Users</h2>
+      <div className="sub">{total} total. Click a row to view details and take action.</div>
+      <div className="panel">
+        <div className="panel-hdr">
+          <input className="search" placeholder="Search email or name…" value={q}
+                 onChange={e=>setQ(e.target.value)} />
+          <div className="right">
+            <button className="btn btn-ghost btn-sm" onClick={load}>Refresh</button>
+          </div>
+        </div>
+        {rows === null ? <div className="loading">Loading…</div>
+         : rows.length === 0 ? <div className="empty">No users found.</div>
+         : <table>
+            <thead><tr>
+              <th>ID</th><th>Email</th><th>Plan</th><th>Trial</th><th>Signup</th><th>Location</th><th>Pay</th><th>Status</th><th>Joined</th><th>Last active</th><th>TV opens</th><th>WL</th><th>Usage</th>
+            </tr></thead>
+            <tbody>
+            {rows.map(u => (
+              <tr key={u.id} tabIndex="0" onClick={()=>setSelected(u.id)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelected(u.id);}}} style={{cursor:'pointer'}}>
+                <td className="mono">{u.id}</td>
+                <td>{u.email}<UnsubChip email={u.emailConsents} /></td>
+                <td><PlanBadge plan={u.plan} /></td>
+                <td><TrialBadge trial={u.trial} /></td>
+                <td><SignupMethodBadge m={u.signup_method} /></td>
+                <td className="mono" style={{fontSize:11,color:fmtSignupCountry(u)==='—'?'#4b5563':'#9ca3af'}} title={fmtSignupLocation(u)}>{fmtSignupCountry(u)}</td>
+                <td className="mono" style={{fontSize:11,color:'#9ca3af'}}>{u.payment_source || '—'}</td>
+                <td><StatusBadge s={u.status} /></td>
+                <td style={{color:'#9ca3af'}}>{fmtShortTime(u.created_at)}</td>
+                <td style={{color: u.last_login_at ? '#9ca3af' : '#6b7280'}}>{u.last_login_at ? fmtShortTime(u.last_login_at) : 'never'}</td>
+                <td className="mono" style={{color: u.tv_app_opens > 0 ? '#e5e7eb' : '#4b5563', fontSize:12}}>{u.tv_app_opens || '—'}</td>
+                <td className="mono" style={{color: u.wl_count > 0 ? '#e5e7eb' : '#4b5563', fontSize:12}}>{u.wl_count || '—'}</td>
+                <td className="mono" style={{color: u.total_usage_ms > 0 ? '#e5e7eb' : '#4b5563', fontSize:12}} title={u.session_count + ' sessions'}>{u.total_usage_ms > 0 ? fmtDur(u.total_usage_ms) : '—'}</td>
+              </tr>
+            ))}
+            </tbody>
+           </table>}
+        {rows && rows.length > 0 && (
+          <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderTop:'1px solid #1f2937',fontSize:13,color:'#9ca3af'}}>
+            <button className="btn btn-ghost btn-sm" disabled={page === 0} onClick={()=>setPage(p=>p-1)}>← Prev</button>
+            <span>Page {page + 1} · {Math.min(page * USERS_PAGE_SIZE + 1, total)}–{Math.min((page + 1) * USERS_PAGE_SIZE, total)} of {total}</span>
+            <button className="btn btn-ghost btn-sm" disabled={(page + 1) * USERS_PAGE_SIZE >= total} onClick={()=>setPage(p=>p+1)}>Next →</button>
+          </div>
+        )}
+      </div>
+      {selected && <UserModal id={selected} me={me} onClose={()=>{setSelected(null); load();}} />}
+    </>
+  );
+}
+
+function UserModal({ id, me, onClose }) {
+  const [data, setData] = useState(null);
+  const [err, setErr]   = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const [analytics, setAnalytics] = useState(null);
+
+  const load = useCallback(async () => {
+    setData(null); setErr(''); setAnalytics(null);
+    try {
+      // Detail first (fast), analytics in parallel.
+      const [d, a, credits] = await Promise.all([
+        api('/users/' + id),
+        api('/users/' + id + '/analytics').catch(() => null),
+        api('/users/' + id + '/credits').catch(() => ({credits:[]})),
+      ]);
+      setData({...d,credits:credits.credits||[]});
+      setAnalytics(a);
+    } catch (e) { setErr(e.message); }
+  }, [id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function act(path, body) {
+    if (!confirm('Confirm?')) return;
+    setBusy(true); setErr('');
+    try { await api('/users/' + id + path, { method:'POST', body: body ? JSON.stringify(body) : undefined }); await load(); }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  const changePlan = async () => {
+    const plan = prompt('New plan: free, explorer, observer, or institutional', data?.user?.plan);
+    if (!plan) return;
+    act('/plan', { plan });
+  };
+  const suspend = async () => {
+    const reason = prompt('Reason for suspension?');
+    if (!reason) return;
+    act('/suspend', { reason });
+  };
+  const unsuspend = () => act('/unsuspend');
+  const changeRole = async () => {
+    const role = prompt('New role: user, admin, or superadmin', data?.user?.role);
+    if (!role) return;
+    act('/role', { role });
+  };
+  const [promoOpen, setPromoOpen] = useState(false);
+
+  const grantTrial = async () => {
+    if (!confirm('Grant the configured Pro trial to this user?\n\nThis resets trial_started_at to now and clears trial_converted_at + trial_expired_emitted_at.')) return;
+    act('/trial/grant');
+  };
+  const extendTrial = async () => {
+    const days = prompt('Extend the trial by how many days? (1–30)', '7');
+    if (!days) return;
+    act('/trial/extend', { days: parseInt(days, 10) });
+  };
+  const endTrial = async () => {
+    if (!confirm('End this user\'s trial right now?\n\nNext /api/me will revert them to Free. Use /trial/grant to give them a fresh one later.')) return;
+    act('/trial/end');
+  };
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetMsg, setResetMsg] = useState('');
+  const triggerReset = () => {
+    setResetMsg('');
+    setResetOpen(true);
+  };
+  const runPasswordReset = async (delivery) => {
+    setBusy(true); setErr('');
+    try {
+      const r = await api('/users/' + id + '/password-reset', {
+        method:'POST', body: JSON.stringify({ delivery }),
+      });
+      const mins = Math.round(r.expiresInMs / 60000);
+      if (delivery === 'copy') {
+        try {
+          await navigator.clipboard.writeText(r.resetUrl);
+          setResetMsg(`Reset link copied. It expires in ${mins} min.`);
+        } catch (_) {
+          window.prompt(`Copy reset link. It expires in ${mins} min:`, r.resetUrl);
+          setResetMsg(`Reset link generated. It expires in ${mins} min.`);
+        }
+      } else {
+        setResetMsg(`Reset email sent to ${r.sentTo || 'the user'}.`);
+      }
+      await load();
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const u = data?.user;
+  const canSuspend = u && u.id !== me.id && u.role !== 'superadmin' && u.status === 'active';
+  const canUnsuspend = u && u.status === 'suspended';
+  const canChangeRole = me.role === 'superadmin' && u && u.id !== me.id;
+
+  return (
+    <div className="modal-bg" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-hdr">
+          <h3>User #{id}</h3>
+          <button className="close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {err && <div className="err">{err}</div>}
+          {!data ? <div className="loading">Loading…</div> :
+          <>
+            <dl className="kv">
+              <dt>Email</dt>       <dd>{u.email}</dd>
+              <dt>Name</dt>        <dd>{u.name || '—'}</dd>
+              <dt>Plan</dt>        <dd><PlanBadge plan={u.plan} /></dd>
+              <dt>Trial</dt>       <dd>
+                <TrialBadge trial={u.trial} />
+                {u.trial_started_at && <span style={{marginLeft:8,color:'#9ca3af',fontSize:11}}>started {fmtShort(u.trial_started_at)}{u.trial_converted_at?` · converted ${fmtShort(u.trial_converted_at)}`:''}</span>}
+              </dd>
+              <dt>Role</dt>        <dd><RoleBadge role={u.role} /></dd>
+              <dt>Status</dt>      <dd><StatusBadge s={u.status} /></dd>
+              <dt>Joined</dt>      <dd>{fmtDate(u.created_at)}</dd>
+              <dt>Signup location</dt> <dd>{fmtSignupLocation(u)} {u.signup_ip && <span className="mono" style={{color:'#6b7280',fontSize:11,marginLeft:8}}>IP {u.signup_ip}</span>}</dd>
+              <dt>Last active</dt> <dd>{u.last_login_at ? fmtDate(u.last_login_at) : <span style={{color:'#6b7280'}}>never</span>}</dd>
+              <dt>Payment</dt>     <dd><PaymentSourceCell sources={data.paymentSources} /></dd>
+              <dt>Email consent</dt> <dd>
+                {u.emailConsents?.productUpdates === false
+                  ? <Badge kind="expired">UNSUBBED · product updates</Badge>
+                  : <Badge kind="active">subscribed · product updates</Badge>}
+                {u.emailConsents?.marketing === true && <Badge kind="trialing" style={{marginLeft:6}}>opted-in marketing</Badge>}
+                {u.emailConsents?.lastUnsub && (
+                  <span style={{marginLeft:8,color:'#9ca3af',fontSize:11}}>
+                    last unsub {fmtShort(u.emailConsents.lastUnsub.ts)}
+                    {u.emailConsents.lastUnsub.source ? ` via ${u.emailConsents.lastUnsub.source.replace('_',' ')}` : ''}
+                  </span>
+                )}
+              </dd>
+            </dl>
+
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
+              <button className="btn btn-ghost btn-sm" disabled={busy} onClick={changePlan}>Change plan</button>
+              <button className="btn btn-ghost btn-sm" disabled={busy} onClick={triggerReset}>Trigger password reset</button>
+              {me.role === 'superadmin' && u.role !== 'user' && u.id !== me.id && <button className="btn btn-ghost btn-sm" disabled={busy} onClick={()=>act('/totp-reset')}>Reset TOTP</button>}
+              {canChangeRole && <button className="btn btn-ghost btn-sm" disabled={busy} onClick={changeRole}>Change role</button>}
+              {canSuspend   && <button className="btn btn-danger btn-sm" disabled={busy} onClick={suspend}>Suspend</button>}
+              {canUnsuspend && <button className="btn btn-primary btn-sm" disabled={busy} onClick={unsuspend}>Unsuspend</button>}
+              {/* Trial overrides — superadmin-only on the backend, so hide
+                  the buttons for non-superadmins to match. */}
+              {false && me.role === 'superadmin' && (
+                <>
+                  <button className="btn btn-ghost btn-sm" disabled={busy} onClick={grantTrial}>Grant trial</button>
+                  {u.trial?.active && <button className="btn btn-ghost btn-sm" disabled={busy} onClick={extendTrial}>Extend trial</button>}
+                  {u.trial?.active && <button className="btn btn-danger btn-sm" disabled={busy} onClick={endTrial}>End trial</button>}
+                </>
+              )}
+            </div>
+            <div className="field-row" style={{marginBottom:18}}><div><div style={{fontSize:12,color:'#9ca3af',fontWeight:600,marginBottom:6}}>Saved airports</div><div>{(data.airports||[]).map(a=><Badge key={a.iata} kind="free">{a.iata}{a.city?' · '+a.city:''}</Badge>)}{!(data.airports||[]).length&&<span style={{color:'#6b7280'}}>None</span>}</div></div><div><div style={{fontSize:12,color:'#9ca3af',fontWeight:600,marginBottom:6}}>Tracked flights</div><div>{(data.flights||[]).map(f=><Badge key={f} kind="free">{f}</Badge>)}{!(data.flights||[]).length&&<span style={{color:'#6b7280'}}>None</span>}</div></div></div>
+            <div style={{fontSize:12,color:'#9ca3af',fontWeight:600,marginBottom:6}}>Service-credit ledger</div><div style={{overflowX:'auto',marginBottom:18}}><table><thead><tr><th>Plan</th><th>Days</th><th>Expires</th><th>Reason</th><th></th></tr></thead><tbody>{(data.credits||[]).map(c=><tr key={c.id}><td>{c.plan||'—'}</td><td>{c.days}</td><td>{fmtDate(c.expiresAt)}</td><td>{c.reason||'—'}</td><td>{c.revoked?'Revoked':me.role==='superadmin'?<button className="btn btn-danger btn-sm" onClick={()=>{if(confirm('Revoke this service credit?')){setBusy(true);api('/credits/'+c.id+'/revoke',{method:'POST'}).then(load).catch(e=>setErr(e.message)).finally(()=>setBusy(false));}}}>Revoke</button>:'Active'}</td></tr>)}{!(data.credits||[]).length&&<tr><td colSpan="5" className="empty">No service credits.</td></tr>}</tbody></table></div>
+            {resetOpen && (
+              <div className="panel" style={{margin:'-6px 0 18px 0',borderColor:'#374151'}}>
+                <div className="panel-hdr"><h3>Reset this user's password?</h3></div>
+                <div style={{padding:'14px 18px',fontSize:13,color:'#9ca3af',lineHeight:1.55}}>
+                  <div style={{marginBottom:10}}>
+                    This will create a one-hour password reset link for <strong style={{color:'#e5e7eb'}}>{u.email}</strong>.
+                    Choose whether to email it to the user or copy it for a support workflow.
+                  </div>
+                  {resetMsg && <div className="ok" style={{marginBottom:10}}>{resetMsg}</div>}
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                    <button className="btn btn-primary btn-sm" disabled={busy} onClick={()=>runPasswordReset('email')}>Send email</button>
+                    <button className="btn btn-ghost btn-sm" disabled={busy} onClick={()=>runPasswordReset('copy')}>Copy link</button>
+                    <button className="btn btn-ghost btn-sm" disabled={busy} onClick={()=>{setResetOpen(false);setResetMsg('');}}>Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {promoOpen && (
+              <PromoModal
+                userId={id}
+                paymentSource={data.paymentSources?.find(s => s.status === 'active' || s.status === 'trialing')?.source || null}
+                onClose={() => setPromoOpen(false)}
+                onDone={() => { setPromoOpen(false); load(); }}
+              />
+            )}
+
+            {/* ── Watchlist + Sectors ───────────────────────────────────── */}
+            {(data.settings?.watchlist?.length > 0 || data.settings?.sectors?.length > 0) && (
+              <div style={{marginBottom:16}}>
+                {data.settings.watchlist?.length > 0 && <>
+                  <div style={{fontSize:12,color:'#9ca3af',marginBottom:6,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>Watchlist ({data.settings.watchlist.length})</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+                    {data.settings.watchlist.map(sym => (
+                      <span key={sym} className="mono" style={{fontSize:12,fontWeight:700,background:'#0f1728',border:'1px solid #1f2937',borderRadius:6,padding:'3px 8px',color:'#e5e7eb'}}>{sym}</span>
+                    ))}
+                  </div>
+                </>}
+                {data.settings.sectors?.length > 0 && <>
+                  <div style={{fontSize:12,color:'#9ca3af',marginBottom:6,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>Sectors ({data.settings.sectors.length})</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:4}}>
+                    {data.settings.sectors.map(s => (
+                      <span key={s} style={{fontSize:12,background:'#0f1728',border:'1px solid #1f2937',borderRadius:6,padding:'3px 8px',color:'#9ca3af'}}>{s}</span>
+                    ))}
+                  </div>
+                </>}
+              </div>
+            )}
+
+            {/* ── Analytics block ───────────────────────────────────────── */}
+            <div style={{fontSize:12,color:'#9ca3af',marginBottom:6,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>Activity</div>
+            <div style={{background:'#06090f',borderRadius:8,padding:12,marginBottom:16}}>
+              {!analytics ? <div style={{color:'#6b7280',fontSize:12}}>Loading analytics…</div> : (
+                <>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(110px,1fr))',gap:'10px 16px',marginBottom:10}}>
+                    <Stat label="Opens"          value={analytics.opens} />
+                    <Stat label="TV app opens"   value={analytics.tvAppOpens || 0} />
+                    <Stat label="Total time"     value={fmtDur(analytics.totalMs)} />
+                    <Stat label="Avg / session"  value={fmtDur(analytics.avgMs)} />
+                    <Stat label="Errors"         value={analytics.errorCount} tone={analytics.errorCount > 0 ? 'warn' : 'mute'} />
+                    <Stat label="Clicks (1st 3)" value={analytics.clicksFirst3Sessions} />
+                  </div>
+                  {analytics.bySource.length > 0 && (
+                    <div style={{fontSize:11,color:'#9ca3af',marginBottom:6}}>By device:</div>
+                  )}
+                  <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:analytics.featureUsage.length ? 12 : 0}}>
+                    {analytics.bySource.map(s => (
+                      <div key={s.source} className="mono" style={{fontSize:11,background:'#06090f',border:'1px solid #1f2937',borderRadius:6,padding:'4px 8px'}}>
+                        {s.source}: {s.sessions}× · {fmtDur(s.totalMs)}
+                      </div>
+                    ))}
+                  </div>
+                  {analytics.featureUsage.length > 0 && <>
+                    <div style={{fontSize:11,color:'#9ca3af',marginBottom:6}}>Top features used:</div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                      {analytics.featureUsage.slice(0, 12).map(f => (
+                        <div key={f.event} className="mono" style={{fontSize:10,background:'#06090f',border:'1px solid #1f2937',borderRadius:6,padding:'3px 7px',color:'#9ca3af'}}>
+                          <span style={{color:'#e5e7eb'}}>{f.event}</span>{' '}
+                          <span style={{color:'#fbbf24'}}>×{f.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>}
+                  {analytics.inviteCode && (
+                    <div style={{marginTop:12,fontSize:11,color:'#9ca3af'}}>
+                      Signed up with promo: <span className="mono" style={{color:'#fbbf24'}}>{analytics.inviteCode.code}</span>
+                      {analytics.inviteCode.note && <span style={{color:'#6b7280'}}> — {analytics.inviteCode.note}</span>}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {data.suspensions.length > 0 && <>
+              <div style={{fontSize:12,color:'#9ca3af',marginBottom:6,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>Suspension history</div>
+              <div style={{background:'#06090f',borderRadius:8,padding:10,marginBottom:16,fontSize:12}}>
+                {data.suspensions.map(s => (
+                  <div key={s.id} style={{paddingBottom:6,marginBottom:6,borderBottom:'1px solid #1f2937'}}>
+                    <div><strong>{fmtDate(s.suspended_at)}</strong>{s.lifted_at ? ` — lifted ${fmtDate(s.lifted_at)}` : ' — active'}</div>
+                    <div style={{color:'#9ca3af'}}>{s.reason}</div>
+                  </div>
+                ))}
+              </div>
+            </>}
+
+            {data.recentEvents.length > 0 && <>
+              <div style={{fontSize:12,color:'#9ca3af',marginBottom:6,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>Recent activity</div>
+              <div style={{background:'#06090f',borderRadius:8,padding:10,fontSize:12,maxHeight:180,overflowY:'auto'}}>
+                {data.recentEvents.map(e => (
+                  <div key={e.id} className="mono" style={{fontSize:11,color:'#9ca3af',padding:'3px 0'}}>
+                    {fmtDate(e.ts)} — <span style={{color:'#e5e7eb'}}>{e.event}</span>
+                  </div>
+                ))}
+              </div>
+            </>}
+          </>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Invite Codes tab ───────────────────────────────────────────────────
+function InvitesTab() {
+  const [rows, setRows] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [flash, setFlash] = useState('');
+
+  const load = async () => {
+    setRows(null);
+    try { const r = await api('/invites'); setRows(r.invites); }
+    catch (e) { alert(e.message); setRows([]); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const revoke = async id => {
+    if (!confirm('Revoke this code? Existing redemptions are kept.')) return;
+    try { await api('/invites/' + id, { method:'DELETE' }); await load(); }
+    catch (e) { alert(e.message); }
+  };
+
+  return (
+    <>
+      <h2>Invite / promo codes</h2>
+      <div className="sub">Codes new users can enter at signup. Optionally grants a paid plan on redemption.</div>
+      {flash && <div className="ok">{flash}</div>}
+      <div className="panel">
+        <div className="panel-hdr">
+          <h3>All codes</h3>
+          <div className="right">
+            <button className="btn btn-ghost btn-sm" onClick={load}>Refresh</button>
+            <button className="btn btn-primary btn-sm" onClick={()=>setShowForm(true)}>New code</button>
+          </div>
+        </div>
+        {rows === null ? <div className="loading">Loading…</div>
+         : rows.length === 0 ? <div className="empty">No codes yet. Create one to get started.</div>
+         : <table>
+            <thead><tr>
+              <th>Code</th><th>Plan grant</th><th>Uses</th><th>Expires</th>
+              <th>Note</th><th>Created</th><th></th>
+            </tr></thead>
+            <tbody>{rows.map(r => {
+              const exhausted = r.uses >= r.max_uses;
+              const expired   = r.expires_at && r.expires_at < Date.now();
+              const dead      = exhausted || expired;
+              return (
+                <tr key={r.id} style={{opacity: dead ? 0.55 : 1}}>
+                  <td className="mono" style={{fontWeight:600}}>{r.code}</td>
+                  <td>{r.plan_override ? <PlanBadge plan={r.plan_override} /> : <span style={{color:'#6b7280'}}>none</span>}</td>
+                  <td className="num">{r.uses}<span style={{color:'#6b7280'}}> / {r.max_uses}</span></td>
+                  <td>{r.expires_at ? (expired ? <Badge kind="expired">expired</Badge> : fmtShort(r.expires_at)) : '—'}</td>
+                  <td style={{color:'#9ca3af'}}>{r.note || '—'}</td>
+                  <td style={{color:'#9ca3af'}}>{fmtShort(r.created_at)}</td>
+                  <td>{!dead && <button className="btn btn-ghost btn-sm" onClick={()=>revoke(r.id)}>Revoke</button>}</td>
+                </tr>
+              );
+            })}</tbody>
+           </table>}
+      </div>
+      {showForm && <NewInviteModal onClose={() => setShowForm(false)} onCreated={c => {
+        setShowForm(false);
+        setFlash('Code created: ' + c);
+        setTimeout(()=>setFlash(''), 4000);
+        load();
+      }} />}
+    </>
+  );
+}
+
+function NewInviteModal({ onClose, onCreated }) {
+  const [code, setCode] = useState('');
+  const [maxUses, setMaxUses] = useState(1);
+  const [planOverride, setPlanOverride] = useState('');
+  const [expiresDays, setExpiresDays] = useState('');
+  const [note, setNote] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      const body = { max_uses: Number(maxUses) };
+      if (code.trim())          body.code = code.trim();
+      if (planOverride)         body.plan_override = planOverride;
+      if (note.trim())          body.note = note.trim();
+      if (expiresDays && +expiresDays > 0) body.expires_at = Date.now() + (+expiresDays) * 86400_000;
+      const r = await api('/invites', { method:'POST', body: JSON.stringify(body) });
+      onCreated(r.code);
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="modal-bg" onClick={e => e.target === e.currentTarget && onClose()}>
+      <form className="modal" onSubmit={submit}>
+        <div className="modal-hdr">
+          <h3>New invite code</h3>
+          <button type="button" className="close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {err && <div className="err">{err}</div>}
+          <div className="field">
+            <label>Code (optional — leave blank to auto-generate)</label>
+            <input className="mono" value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
+                   placeholder="LAUNCH50" maxLength={64} />
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Max uses</label>
+              <input type="number" min="1" value={maxUses} onChange={e=>setMaxUses(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label>Expires in (days, optional)</label>
+              <input type="number" min="1" value={expiresDays} onChange={e=>setExpiresDays(e.target.value)} placeholder="never" />
+            </div>
+          </div>
+          <div className="field">
+            <label>Grant plan on redemption (optional)</label>
+            <select value={planOverride} onChange={e=>setPlanOverride(e.target.value)}>
+              <option value="">None — user gets free tier</option>
+              <option value="free">free</option>
+              <option value="explorer">explorer</option>
+              <option value="observer">observer</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Note (internal — who is this for?)</label>
+            <input value={note} onChange={e=>setNote(e.target.value)} maxLength={255}
+                   placeholder="e.g. Beta tester — jane@example.com" />
+          </div>
+        </div>
+        <div className="modal-ftr">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy ? 'Creating…' : 'Create code'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── Overview tab (business metrics) ──────────────────────────────────
+function OverviewTab({ me }) {
+  const [data, setData] = useState(null);
+  const [err, setErr]   = useState('');
+  const [backfillBusy, setBackfillBusy] = useState(false);
+
+  const load = async () => {
+    setData(null); setErr('');
+    try { setData(await api('/metrics')); }
+    catch (e) { setErr(e.message); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const backfillTrials = async () => {
+    if (!confirm(
+      'Grant the configured Pro trial to every active Free user without one?\n\n' +
+      'This is the launch-announcement action. It is idempotent — re-running ' +
+      'after this won\'t double-grant; users who already had a trial are skipped.\n\n' +
+      'Audit-logged.'
+    )) return;
+    setBackfillBusy(true); setErr('');
+    try {
+      const r = await api('/trial/backfill', { method: 'POST' });
+      alert(`Granted trial to ${r.count} user${r.count === 1 ? '' : 's'}. Refreshing metrics…`);
+      await load();
+    } catch (e) { setErr(e.message); }
+    finally { setBackfillBusy(false); }
+  };
+
+  if (err)   return <><h2>Overview</h2><div className="err">{err}</div></>;
+  if (!data) return <><h2>Overview</h2><div className="loading">Loading…</div></>;
+
+  return (
+    <>
+      <h2>Overview</h2>
+      <div className="sub">Snapshot of users, engagement, and revenue. Refresh for current numbers.</div>
+
+      {/* Top row: headline metrics */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:14,marginBottom:18}}>
+        <BigStat
+          label="MRR (all providers)"
+          value={data.revenue.mrrApprox == null ? 'Unknown' : '$' + data.revenue.mrrApprox.toLocaleString()}
+          sub={`Stripe ${moneyOrUnknown(data.revenue.bySource?.stripe)} · Apple ${moneyOrUnknown(data.revenue.bySource?.apple)} · Google ${moneyOrUnknown(data.revenue.bySource?.play)}`}
+        />
+        <BigStat label="Total users"  value={data.users.total.toLocaleString()} sub={data.users.active + ' active'} />
+        <BigStat label="DAU / WAU / MAU" value={`${data.engagement.dau} / ${data.engagement.wau} / ${data.engagement.mau}`} sub="distinct users by session" />
+        <BigStat label="Total usage time" value={fmtDur(data.engagement.totalMs)} sub={data.engagement.totalSessions.toLocaleString() + ' sessions'} />
+        <BigStat label="Churn last 30d" value={data.churn30d} sub="canceled Stripe subs" tone={data.churn30d > 0 ? 'warn' : 'mute'} />
+        {data.trial && (
+          <BigStat
+            label={`Pro Trial (${data.trial.daysTotal}d)`}
+            value={`${data.trial.active} active`}
+            sub={`${data.trial.converted} converted${data.trial.conversionPct != null ? ` · ${data.trial.conversionPct}%` : ''} · ${data.trial.expired} expired`}
+            tone={data.trial.active > 0 ? 'good' : 'mute'}
+          />
+        )}
+      </div>
+
+      {me?.role === 'superadmin' && data.trial && (
+        <div className="panel" style={{marginBottom:18}}>
+          <div className="panel-hdr"><h3>Trial backfill</h3></div>
+          <div style={{padding:'14px 18px',fontSize:13,color:'#9ca3af',lineHeight:1.55}}>
+            Grant the configured Pro trial to every active Free user who's never had one.
+            Idempotent — safe to re-run; only newly-eligible users get the grant.
+            Audit-logged with the count.
+            <div style={{marginTop:12}}>
+              <button className="btn btn-primary btn-sm" disabled={backfillBusy} onClick={backfillTrials}>
+                {backfillBusy ? 'Backfilling…' : 'Backfill trials to all Free users'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Plan breakdown */}
+      <div className="panel" style={{marginBottom:18}}>
+        <div className="panel-hdr"><h3>Users by plan</h3></div>
+        <div style={{padding:'14px 18px',display:'flex',gap:18,flexWrap:'wrap'}}>
+          <PlanCount label="Free"     n={data.users.byPlan.free}    color="#9ca3af" />
+          <PlanCount label="Member"   n={data.users.byPlan.member} color="#93c5fd" />
+          <PlanCount label="Institutional" n={data.users.byPlan.institutional} color="#ddd6fe" />
+          <PlanCount label="Suspended" n={data.users.suspended}     color="#fca5a5" />
+        </div>
+      </div>
+
+      {/* Active subs by source */}
+      <div className="panel" style={{marginBottom:18}}>
+        <div className="panel-hdr"><h3>Active subscriptions by source</h3></div>
+        {data.activeBySource.length === 0
+          ? <div className="empty">No active paid subscriptions yet.</div>
+          : <table>
+              <thead><tr><th>Source</th><th>Plan</th><th>Interval</th><th className="num">Count</th></tr></thead>
+              <tbody>{data.activeBySource.map((r,i) => (
+                <tr key={i}>
+                  <td className="mono"><strong>{SOURCE_LABEL[r.source] || r.source}</strong></td>
+                  <td><PlanBadge plan={r.plan} /></td>
+                  <td>{r.interval || '—'}</td>
+                  <td className="num">{r.n}</td>
+                </tr>
+              ))}</tbody>
+            </table>}
+      </div>
+
+      {/* TV platform breakdown */}
+      {data.tvByPlatform && Object.keys(data.tvByPlatform).length > 0 && (
+        <div className="panel" style={{marginBottom:18}}>
+          <div className="panel-hdr"><h3>Active users by TV platform</h3><span style={{marginLeft:'auto',fontSize:11,color:'#6b7280'}}>last 30 days</span></div>
+          <div style={{padding:'14px 18px',display:'flex',gap:18,flexWrap:'wrap'}}>
+            {[['androidtv','Google TV / Android'],['tvos','Apple TV'],['firetv','Fire TV'],['lg','LG webOS'],['tizen','Samsung Tizen'],['roku','Roku']].map(([key,label]) =>
+              data.tvByPlatform[key] > 0
+                ? <PlanCount key={key} label={label} n={data.tvByPlatform[key]} color="#93c5fd" />
+                : null
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Signup trend */}
+      <div className="panel" style={{marginBottom:18}}>
+        <div className="panel-hdr"><h3>Signups, last 30 days</h3></div>
+        <BarChart data={data.signupsByDay} color="#fbbf24" />
+      </div>
+
+      {/* Errors trend */}
+      <div className="panel" style={{marginBottom:18}}>
+        <div className="panel-hdr"><h3>Errors, last 14 days</h3></div>
+        <BarChart data={data.errorsByDay} color="#fca5a5" emptyText="No errors recorded yet." />
+      </div>
+
+      <div style={{fontSize:11,color:'#6b7280',marginTop:8}}>{data.revenue.note}</div>
+    </>
+  );
+}
+
+function BigStat({ label, value, sub, tone }) {
+  const colors = { good: '#6ee7b7', warn: '#fbbf24', mute: '#9ca3af' };
+  const valueColor = colors[tone] || '#fbbf24';
+  return (
+    <div className="panel" style={{padding:'14px 18px'}}>
+      <div style={{fontSize:11,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:4}}>{label}</div>
+      <div style={{fontSize:24,fontWeight:700,color:valueColor,fontVariantNumeric:'tabular-nums'}}>{value}</div>
+      {sub && <div style={{fontSize:12,color:'#6b7280',marginTop:2}}>{sub}</div>}
+    </div>
+  );
+}
+
+function moneyOrUnknown(value) { return value == null ? 'Unknown' : '$' + Number(value).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function PlanCount({ label, n, color }) {
+  return (
+    <div>
+      <div style={{fontSize:11,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>{label}</div>
+      <div style={{fontSize:22,fontWeight:600,color,fontVariantNumeric:'tabular-nums'}}>{n.toLocaleString()}</div>
+    </div>
+  );
+}
+
+function BarChart({ data, color, emptyText }) {
+  if (!data || data.length === 0) {
+    return <div className="empty" style={{padding:30}}>{emptyText || 'No data yet — come back tomorrow.'}</div>;
+  }
+  const max = Math.max(1, ...data.map(d => d.n));
+  return (
+    <div style={{padding:'12px 18px 14px',display:'flex',alignItems:'flex-end',gap:3,height:90}}>
+      {data.map((d, i) => (
+        <div key={i} title={`${new Date(d.day).toLocaleDateString()} — ${d.n}`}
+             style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+          <div style={{
+            width: '100%',
+            background: color,
+            opacity: 0.65,
+            borderRadius: '3px 3px 0 0',
+            height: `${Math.max(2, (d.n / max) * 75)}px`,
+          }} />
+          <div style={{fontSize:9,color:'#6b7280',fontFamily:'DM Mono,monospace'}}>{d.n}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Promo / comp modal (per-user grant) ──────────────────────────────
+function PromoModal({ userId, paymentSource, onClose, onDone }) {
+  const [tab, setTab] = useState('credit');     // 'credit' | 'stripe'
+  const [plan, setPlan]   = useState('explorer');
+  const [days, setDays]   = useState(30);
+  const [reason, setReason] = useState('');
+  const [coupon, setCoupon] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function grantCredit(e) {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      await api('/users/' + userId + '/credit', { method:'POST',
+        body: JSON.stringify({ plan, days: Number(days), reason }) });
+      onDone();
+    } catch (e) { setErr(e.message); setBusy(false); }
+  }
+
+  async function applyCoupon(e) {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      await api('/users/' + userId + '/stripe-coupon', { method:'POST',
+        body: JSON.stringify({ couponId: coupon.trim() }) });
+      onDone();
+    } catch (e) { setErr(e.message); setBusy(false); }
+  }
+
+  // Stripe coupon path is only useful if the user actually pays via Stripe.
+  // Surface this clearly so an admin doesn't try to apply a coupon to a Play user.
+  const stripePathBlocked = paymentSource && paymentSource !== 'stripe';
+
+  return (
+    <div className="modal-bg" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-hdr">
+          <h3>Grant promo</h3>
+          <button type="button" className="close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{display:'flex',gap:2,borderBottom:'1px solid #1f2937',marginBottom:18,marginTop:-8}}>
+            <button type="button"
+                    className={'tab' + (tab==='credit' ? ' active' : '')}
+                    onClick={()=>{setErr(''); setTab('credit');}}>
+              Service credit
+            </button>
+            <button type="button"
+                    className={'tab' + (tab==='stripe' ? ' active' : '')}
+                    onClick={()=>{setErr(''); setTab('stripe');}}>
+              Stripe coupon
+            </button>
+          </div>
+
+          {err && <div className="err">{err}</div>}
+
+          {tab === 'credit' && (
+            <form onSubmit={grantCredit}>
+              <div style={{fontSize:12,color:'#9ca3af',marginBottom:14,lineHeight:1.5}}>
+                Grants the user N days of plan X server-side. Works for any
+                payment source (or none) — bypasses the store entirely. Use
+                for comps, support cases, or "give my friend Pro for a month".
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Plan</label>
+                  <select value={plan} onChange={e=>setPlan(e.target.value)}>
+                    <option value="explorer">explorer</option>
+                    <option value="observer">observer</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Days</label>
+                  <input type="number" min="1" max="365" value={days}
+                         onChange={e=>setDays(e.target.value)} required />
+                </div>
+              </div>
+              <div className="field">
+                <label>Reason (audit log + visible to other admins)</label>
+                <input value={reason} onChange={e=>setReason(e.target.value)}
+                       placeholder="e.g. comp for support case #42" maxLength={255} />
+              </div>
+              <div className="modal-ftr" style={{marginLeft:-20,marginRight:-20,marginBottom:-20,marginTop:18}}>
+                <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={busy}>
+                  {busy ? 'Granting…' : `Grant ${plan} for ${days} days`}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {tab === 'stripe' && (
+            <form onSubmit={applyCoupon}>
+              <div style={{fontSize:12,color:'#9ca3af',marginBottom:14,lineHeight:1.5}}>
+                Applies an existing Stripe coupon (created in the Stripe
+                dashboard) to the user's active subscription. Use for
+                recurring discounts: "20% off forever", "$5 off for 3 months".
+              </div>
+              {stripePathBlocked && (
+                <div style={{background:'#451a03',border:'1px solid #92400e',color:'#fbbf24',padding:10,borderRadius:8,fontSize:12,marginBottom:14}}>
+                  This user pays via <strong>{paymentSource}</strong>, not Stripe.
+                  Stripe coupons can't be applied to {paymentSource} subscriptions.
+                  {paymentSource === 'play'  && ' Mint a Play promo code in the Play Console and hand it to them.'}
+                  {paymentSource === 'apple' && ' Mint an offer code in App Store Connect and hand it to them.'}
+                  {' '}Or use the Service credit tab for a server-side comp.
+                </div>
+              )}
+              <div className="field">
+                <label>Coupon ID (from Stripe dashboard → Products → Coupons)</label>
+                <input className="mono" value={coupon} onChange={e=>setCoupon(e.target.value)}
+                       placeholder="e.g. LAUNCH20" required />
+              </div>
+              <div className="modal-ftr" style={{marginLeft:-20,marginRight:-20,marginBottom:-20,marginTop:18}}>
+                <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={busy || !coupon.trim()}>
+                  {busy ? 'Applying…' : 'Apply coupon'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Subscriptions tab (unified Stripe + Play + Apple) ────────────────
+function SubscriptionsTab() {
+  const [data, setData]     = useState(null);
+  const [source, setSource] = useState('');
+  const [status, setStatus] = useState('active');
+  const [plan, setPlan]     = useState('');
+
+  const load = useCallback(async () => {
+    setData(null);
+    const q = new URLSearchParams();
+    if (source) q.set('source', source);
+    if (status) q.set('status', status);
+    if (plan)   q.set('plan', plan);
+    try { setData(await api('/subscriptions?' + q.toString())); }
+    catch (e) { alert(e.message); setData({ subs: [] }); }
+  }, [source, status, plan]);
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <>
+      <h2>Subscriptions</h2>
+      <div className="sub">All paid subscriptions across Stripe, Google Play, and the App Store.</div>
+      <div className="panel">
+        <div className="panel-hdr" style={{flexWrap:'wrap',gap:10}}>
+          <select className="search" style={{width:'auto'}} value={source} onChange={e=>setSource(e.target.value)}>
+            <option value="">All sources</option>
+            <option value="stripe">Stripe</option>
+            <option value="play">Google Play</option>
+            <option value="apple">App Store</option>
+          </select>
+          <select className="search" style={{width:'auto'}} value={status} onChange={e=>setStatus(e.target.value)}>
+            <option value="">All statuses</option>
+            <option value="active">active</option>
+            <option value="trialing">trialing</option>
+            <option value="past_due">past_due</option>
+            <option value="canceled">canceled</option>
+            <option value="in_grace_period">in_grace_period</option>
+            <option value="on_hold">on_hold</option>
+            <option value="expired">expired</option>
+          </select>
+          <select className="search" style={{width:'auto'}} value={plan} onChange={e=>setPlan(e.target.value)}>
+            <option value="">All plans</option>
+            <option value="explorer">explorer</option>
+            <option value="observer">observer</option>
+          </select>
+          <div className="right"><button className="btn btn-ghost btn-sm" onClick={load}>Refresh</button></div>
+        </div>
+        {!data ? <div className="loading">Loading…</div>
+         : data.subs.length === 0 ? <div className="empty">No subscriptions match these filters.</div>
+         : <table>
+            <thead><tr>
+              <th>User</th><th>Source</th><th>Plan</th><th>Interval</th><th>Status</th><th>Expires</th><th>Updated</th>
+            </tr></thead>
+            <tbody>{data.subs.map((r, i) => (
+              <tr key={i}>
+                <td>{r.email || ('#' + r.user_id)}</td>
+                <td className="mono"><strong>{SOURCE_LABEL[r.source] || r.source}</strong></td>
+                <td><PlanBadge plan={r.plan} /></td>
+                <td>{r.billing_interval || '—'}</td>
+                <td><Badge kind={r.status === 'active' || r.status === 'trialing' ? 'active' : 'expired'}>{r.status || '—'}</Badge></td>
+                <td style={{color:'#9ca3af'}}>{r.expires_ms ? fmtDate(r.expires_ms) : '—'}</td>
+                <td style={{color:'#6b7280',fontSize:11}}>{fmtShort(r.updated_at)}</td>
+              </tr>
+            ))}</tbody>
+           </table>}
+      </div>
+    </>
+  );
+}
+
+// ── Errors tab (bug inbox) ────────────────────────────────────────────
+function ErrorsTab() {
+  const [data, setData] = useState(null);
+  const [selected, setSelected] = useState(null);
+
+  const load = async () => {
+    setData(null);
+    try { setData(await api('/errors')); }
+    catch (e) { alert(e.message); setData({ groups: [], sinceMs: 0 }); }
+  };
+  useEffect(() => { load(); }, []);
+
+  return (
+    <>
+      <h2>Errors</h2>
+      <div className="sub">Client + server errors grouped by stack signature. Newest first.</div>
+      <div className="panel">
+        <div className="panel-hdr">
+          <h3>Groups (last 14 days)</h3>
+          <div className="right"><button className="btn btn-ghost btn-sm" onClick={load}>Refresh</button></div>
+        </div>
+        {!data ? <div className="loading">Loading…</div>
+         : data.groups.length === 0
+            ? <div className="empty">No errors recorded. Either things are great, or analytics.js isn't loaded yet.</div>
+            : <table>
+                <thead><tr>
+                  <th>Last seen</th><th>Message</th><th>Source</th>
+                  <th className="num">Users</th><th className="num">Hits</th><th></th>
+                </tr></thead>
+                <tbody>{data.groups.map(g => (
+                  <tr key={g.signature_hash} onClick={()=>setSelected(g.signature_hash)} style={{cursor:'pointer'}}>
+                    <td style={{color:'#9ca3af',whiteSpace:'nowrap'}}>{fmtDate(g.last_seen)}</td>
+                    <td style={{maxWidth:380,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                        title={g.sample_message}>{g.sample_message}</td>
+                    <td className="mono" style={{fontSize:11,color:'#9ca3af'}}>{g.sample_source || '—'}</td>
+                    <td className="num">{g.users_affected}</td>
+                    <td className="num" style={{color: g.occurrences > 50 ? '#fca5a5' : '#e5e7eb'}}>{g.occurrences}</td>
+                    <td><button className="btn btn-ghost btn-sm">Open</button></td>
+                  </tr>
+                ))}</tbody>
+              </table>}
+      </div>
+      {selected && <ErrorDetailModal signature={selected} onClose={()=>setSelected(null)} />}
+    </>
+  );
+}
+
+function ErrorDetailModal({ signature, onClose }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    api('/errors/' + signature).then(setData).catch(e => alert(e.message));
+  }, [signature]);
+  return (
+    <div className="modal-bg" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{maxWidth: 720}}>
+        <div className="modal-hdr">
+          <h3>Error <span className="mono" style={{fontSize:11,color:'#9ca3af'}}>{signature.slice(0,12)}…</span></h3>
+          <button className="close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {!data ? <div className="loading">Loading…</div> : data.rows.length === 0 ? <div className="empty">No occurrences left.</div> : (
+            <>
+              <div style={{fontSize:12,color:'#9ca3af',marginBottom:10}}>
+                Showing {data.rows.length} most recent occurrences.
+              </div>
+              {data.rows.map(r => (
+                <div key={r.id} style={{background:'#06090f',border:'1px solid #1f2937',borderRadius:8,padding:12,marginBottom:10,fontSize:12}}>
+                  <div style={{display:'flex',gap:12,marginBottom:6,color:'#9ca3af'}}>
+                    <span>{fmtDate(r.ts)}</span>
+                    <span>·</span>
+                    <span>{r.user_email || (r.user_id ? '#' + r.user_id : 'anon')}</span>
+                    <span>·</span>
+                    <span className="mono">{r.source || '?'}</span>
+                  </div>
+                  <div style={{color:'#e5e7eb',fontWeight:500,marginBottom:6}}>{r.message}</div>
+                  {r.url && <div className="mono" style={{fontSize:10,color:'#6b7280',marginBottom:6,wordBreak:'break-all'}}>{r.url}</div>}
+                  {r.stack && (
+                    <pre className="mono" style={{fontSize:10,color:'#9ca3af',whiteSpace:'pre-wrap',maxHeight:200,overflow:'auto',background:'#000',padding:8,borderRadius:6,margin:0}}>
+                      {r.stack}
+                    </pre>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Audit tab ──────────────────────────────────────────────────────────
+function AuditTab() {
+  const [rows, setRows] = useState(null);
+  const load = async () => {
+    setRows(null);
+    try { const r = await api('/audit'); setRows(r.entries); }
+    catch (e) { alert(e.message); setRows([]); }
+  };
+  useEffect(() => { load(); }, []);
+
+  return (
+    <>
+      <h2>Audit log</h2>
+      <div className="sub">Every admin action is recorded, append-only.</div>
+      <div className="panel">
+        <div className="panel-hdr">
+          <h3>Recent entries</h3>
+          <div className="right"><button className="btn btn-ghost btn-sm" onClick={load}>Refresh</button></div>
+        </div>
+        {rows === null ? <div className="loading">Loading…</div>
+         : rows.length === 0 ? <div className="empty">No audit entries yet.</div>
+         : <table>
+            <thead><tr>
+              <th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th>
+            </tr></thead>
+            <tbody>{rows.map(r => (
+              <tr key={r.id}>
+                <td style={{color:'#9ca3af',whiteSpace:'nowrap'}}>{fmtDate(r.ts)}</td>
+                <td>{r.actor_email || ('#' + r.actor_user_id)}</td>
+                <td className="mono" style={{color:'#fbbf24'}}>{r.action}</td>
+                <td>{r.target_email || (r.target_user_id ? '#' + r.target_user_id : '—')}</td>
+                <td className="mono" style={{fontSize:11,color:'#9ca3af',maxWidth:280,wordBreak:'break-word'}}>
+                  {r.details ? JSON.stringify(r.details) : '—'}
+                </td>
+                <td className="mono" style={{color:'#6b7280',fontSize:11}}>{r.ip_address || '—'}</td>
+              </tr>
+            ))}</tbody>
+           </table>}
+      </div>
+    </>
+  );
+}
+
+// ── Email lifecycle tab ───────────────────────────────────────────────
+//
+// Three sub-views:
+//   1. Campaigns — config + 30d rollup of sends/opens/clicks/bounces.
+//      Click a campaign to open the Preview modal.
+//   2. Recent sends — flat log, filterable by campaign.
+//   3. Last cron run — last lifecycle.runAndRecord() result for visibility
+//      into "did anything fire in the last 15 min?"
+function EmailTab() {
+  const [campaigns, setCampaigns] = useState(null);
+  const [overrides, setOverrides] = useState({});
+  const [lastRun, setLastRun]     = useState(null);
+  const [sends, setSends]         = useState(null);
+  const [filter, setFilter]       = useState('');
+  const [previewId, setPreviewId] = useState(null);
+  const [previewPlan, setPreviewPlan] = useState('free');
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [expandedId, setExpandedId] = useState(null); // campaign id whose drill-down row is open
+  const [timeSeries, setTimeSeries] = useState({});   // { [id]: { series, thisWindow, priorWindow } }
+  const [editSubject, setEditSubject]     = useState('');
+  const [editPreheader, setEditPreheader] = useState('');
+  const [origSubject, setOrigSubject]     = useState('');
+  const [origPreheader, setOrigPreheader] = useState('');
+  const [busy, setBusy]           = useState(false);
+  const [view, setView]           = useState('list'); // 'list' | 'flow'
+  const [waitlistStats, setWaitlistStats]   = useState(null);
+  const [waitlistRows, setWaitlistRows]     = useState(null);
+
+  const loadCampaigns = async () => {
+    setCampaigns(null);
+    try { const r = await api('/email/campaigns'); setCampaigns(r.campaigns); }
+    catch (e) { alert(e.message); setCampaigns([]); }
+  };
+  const loadOverrides = async () => {
+    try { const r = await api('/email/overrides'); setOverrides(r.overrides || {}); }
+    catch (e) { console.warn(e); }
+  };
+  const loadLastRun = async () => {
+    try { const r = await api('/email/lastrun'); setLastRun(r.lastRun || null); }
+    catch (e) { console.warn(e); }
+  };
+  const loadSends = async () => {
+    setSends(null);
+    try {
+      const q = filter ? '?campaign=' + encodeURIComponent(filter) : '';
+      const r = await api('/email/sends' + q);
+      setSends(r.sends);
+    } catch (e) { alert(e.message); setSends([]); }
+  };
+  const loadWaitlist = async () => {
+    try {
+      const [s, l] = await Promise.all([
+        api('/waitlist/stats'),
+        api('/waitlist?limit=50'),
+      ]);
+      setWaitlistStats(s);
+      setWaitlistRows(l.rows || []);
+    } catch (e) { console.warn('waitlist load:', e.message); }
+  };
+  useEffect(() => { loadCampaigns(); loadOverrides(); loadLastRun(); loadSends(); loadWaitlist(); }, []);
+  useEffect(() => { loadSends(); }, [filter]);
+
+  const blastW2 = async () => {
+    const n = waitlistStats?.unnotified || 0;
+    if (!n) { alert('No unnotified waitlist rows.'); return; }
+    if (!confirm('Send the W2 launch announcement to ' + n + ' unnotified waitlist ' +
+                 (n === 1 ? 'entry' : 'entries') + '?\n\nThis is a one-way action — once sent, those rows are marked notified.')) return;
+    setBusy(true);
+    try {
+      const r = await api('/waitlist/notify', { method: 'POST' });
+      alert('Done.\n\nSent: ' + r.sent + '\nFailed: ' + r.failed + '\nTotal unnotified at start: ' + r.total_unnotified);
+      await loadWaitlist();
+    } catch (e) { alert(e.message); }
+    setBusy(false);
+  };
+  const exportWaitlist = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/waitlist/export', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + (getToken() || '') },
+      });
+      if (!res.ok) throw new Error('export failed: ' + res.status);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'waitlist-' + new Date().toISOString().slice(0,10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) { alert(e.message); }
+    setBusy(false);
+  };
+
+  // Re-fetch the preview HTML whenever the user opens a preview, switches
+  // plan, or types into the subject/preheader fields. Authenticated fetch
+  // (the iframe `src` form would 401 — no Authorization header in a plain
+  // src navigation).
+  useEffect(() => {
+    if (!previewId) { setPreviewHtml(''); return; }
+    const draftQ = [];
+    if (editSubject   && editSubject   !== origSubject)   draftQ.push('subject='   + encodeURIComponent(editSubject));
+    if (editPreheader && editPreheader !== origPreheader) draftQ.push('preheader=' + encodeURIComponent(editPreheader));
+    const url = '/email/preview/' + previewId + '?plan=' + previewPlan + (draftQ.length ? '&' + draftQ.join('&') : '');
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/admin' + url, { headers: { Authorization: 'Bearer ' + (getToken() || '') } });
+        const html = await r.text();
+        if (!cancelled) setPreviewHtml(html);
+      } catch (e) { if (!cancelled) setPreviewHtml('<pre style="color:#fff;padding:24px;">Preview error: ' + e.message + '</pre>'); }
+    })();
+    return () => { cancelled = true; };
+  }, [previewId, previewPlan, editSubject, editPreheader]);
+
+  // When a preview opens, seed the edit form with the saved override or the
+  // template's default. The subject/preheader values come from a JSON variant
+  // of the preview endpoint (?json=1) so we know the *current effective* text.
+  useEffect(() => {
+    if (!previewId) return;
+    (async () => {
+      try {
+        const ov = overrides[previewId] || {};
+        // Get the TEMPLATE-DEFAULT subject/preheader (no overrides applied)
+        // by hitting the JSON endpoint with explicit empty overrides — pass
+        // an unlikely-to-collide marker to defeat saved-override merge.
+        const r = await fetch('/api/admin/email/preview/' + previewId + '?plan=' + previewPlan + '&json=1', {
+          headers: { Authorization: 'Bearer ' + (getToken() || '') },
+        });
+        const data = await r.json();
+        // Saved override (or default if no override set) becomes the editor's
+        // starting point. We track the "originals" so we know if the user
+        // diverged from the default.
+        setOrigSubject(data.subject || '');
+        setOrigPreheader(data.preheader || '');
+        setEditSubject(ov.subject || data.subject || '');
+        setEditPreheader(ov.preheader || data.preheader || '');
+      } catch (_) {}
+    })();
+  }, [previewId]);
+
+  const sendTest = async (id) => {
+    if (!confirm('Send TEST ' + id + ' email to your inbox?')) return;
+    setBusy(true);
+    try {
+      const r = await api('/email/test', { method: 'POST', body: JSON.stringify({ campaign: id, plan: previewPlan }) });
+      alert('Sent. Resend id: ' + (r.resend_id || '(none)'));
+    } catch (e) { alert(e.message); }
+    setBusy(false);
+  };
+  const runNow = async () => {
+    if (!confirm('Run the lifecycle sweep RIGHT NOW? This may send live emails.')) return;
+    setBusy(true);
+    try { const r = await api('/email/runnow', { method: 'POST' }); setLastRun(r); loadCampaigns(); loadSends(); }
+    catch (e) { alert(e.message); }
+    setBusy(false);
+  };
+  const saveOverride = async () => {
+    if (!previewId) return;
+    setBusy(true);
+    try {
+      const body = {};
+      // Send empty string → backend treats as NULL (revert to default).
+      // Send same-as-default → also save (admin may want to lock the value).
+      body.subject   = editSubject;
+      body.preheader = editPreheader;
+      await api('/email/overrides/' + previewId, { method: 'POST', body: JSON.stringify(body) });
+      await loadOverrides();
+      await loadCampaigns();
+    } catch (e) { alert(e.message); }
+    setBusy(false);
+  };
+  const clearOverride = async () => {
+    if (!previewId) return;
+    if (!confirm('Revert ' + previewId + ' to template defaults?')) return;
+    setBusy(true);
+    try {
+      await api('/email/overrides/' + previewId, { method: 'DELETE' });
+      await loadOverrides();
+      await loadCampaigns();
+      setEditSubject(origSubject);
+      setEditPreheader(origPreheader);
+    } catch (e) { alert(e.message); }
+    setBusy(false);
+  };
+
+  const kindColor = (k) => k === 'transactional' ? '#16a34a' : k === 'marketing' ? '#ef4444' : '#f59e0b';
+  const groupOf = (id) => id.startsWith('A') ? 'Onboarding'
+                       : id.startsWith('B') ? 'Upsell'
+                       : id.startsWith('W') ? 'Waitlist'
+                       : 'Retention';
+  const groups = { Onboarding: [], Upsell: [], Retention: [], Waitlist: [] };
+  (campaigns || []).forEach(c => groups[groupOf(c.id)].push(c));
+
+  // Reporting summary across the last 30 days.
+  const rep = (() => {
+    if (!campaigns || !campaigns.length) return null;
+    const total = campaigns.reduce((a, c) => ({
+      sent: a.sent + c.sent, suppressed: a.suppressed + c.suppressed,
+      delivered: a.delivered + c.delivered, opened: a.opened + c.opened,
+      clicked: a.clicked + c.clicked, bounced: a.bounced + c.bounced,
+    }), {sent:0, suppressed:0, delivered:0, opened:0, clicked:0, bounced:0});
+    const openRate  = total.delivered ? (100 * total.opened  / total.delivered) : null;
+    const clickRate = total.opened    ? (100 * total.clicked / total.opened)    : null;
+    const bounceRate= total.sent      ? (100 * total.bounced / total.sent)      : null;
+    const top = [...campaigns].sort((a,b) => b.sent - a.sent).find(c => c.sent > 0) || null;
+    const topClicks = [...campaigns].sort((a,b) => b.clicked - a.clicked).find(c => c.clicked > 0) || null;
+    return { total, openRate, clickRate, bounceRate, top, topClicks };
+  })();
+
+  return (
+    <>
+      <h2>Email lifecycle</h2>
+      <div className="sub">
+        Drip + upsell + retention campaigns. Cron runs every 15 min in-process; transactional billing emails fire from the Stripe webhook directly.
+      </div>
+
+      {/* Reporting summary cards (last 30 days) */}
+      {rep && (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(160px,1fr))',gap:10,margin:'16px 0'}}>
+          <ReportCard label="Sent (30d)" value={rep.total.sent} sub={rep.total.suppressed + ' suppressed'} />
+          <ReportCard label="Open rate" value={rep.openRate==null?'—':rep.openRate.toFixed(1)+'%'} sub={rep.total.opened + ' / ' + rep.total.delivered} color="#3b82f6"/>
+          <ReportCard label="Click rate" value={rep.clickRate==null?'—':rep.clickRate.toFixed(1)+'%'} sub={rep.total.clicked + ' clicked'} color="#16a34a"/>
+          <ReportCard label="Bounce rate" value={rep.bounceRate==null?'—':rep.bounceRate.toFixed(1)+'%'} sub={rep.total.bounced + ' bounced'} color={rep.total.bounced ? '#ef4444' : undefined}/>
+          <ReportCard label="Top by sends" value={rep.top ? rep.top.id : '—'} sub={rep.top ? rep.top.sent + ' emails' : ''}/>
+          <ReportCard label="Top by clicks" value={rep.topClicks ? rep.topClicks.id : '—'} sub={rep.topClicks ? rep.topClicks.clicked + ' clicks' : ''}/>
+        </div>
+      )}
+
+      <div className="panel">
+        <div className="panel-hdr">
+          <h3>Last cron run</h3>
+          <div className="right">
+            <button className={'btn btn-ghost btn-sm' + (view==='list'?' active':'')} onClick={()=>setView('list')} style={view==='list'?{background:'#1f2937'}:{}}>List</button>
+            <button className={'btn btn-ghost btn-sm' + (view==='flow'?' active':'')} onClick={()=>setView('flow')} style={{...(view==='flow'?{background:'#1f2937'}:{}),marginLeft:4}}>Flow</button>
+            <button className="btn btn-ghost btn-sm" onClick={loadLastRun} style={{marginLeft:8}}>Refresh</button>
+            <button className="btn btn-sm" onClick={runNow} disabled={busy} style={{marginLeft:8}}>Run now</button>
+          </div>
+        </div>
+        {lastRun ? (
+          <div style={{padding:'12px 14px',fontSize:13,color:'#cbd5e1'}}>
+            Started {fmtDate(lastRun.startedAt)} · took {lastRun.tookMs}ms
+            <details style={{marginTop:8}}>
+              <summary style={{cursor:'pointer',color:'#9ca3af'}}>Per-campaign breakdown</summary>
+              <pre style={{fontSize:11,marginTop:6,color:'#94a3b8',whiteSpace:'pre-wrap'}}>{JSON.stringify(lastRun.breakdown, null, 2)}</pre>
+            </details>
+          </div>
+        ) : <div className="empty">No cron run logged yet (server boots with a 60s warm-up before the first tick).</div>}
+      </div>
+
+      {/* Pre-launch waitlist — shows the SIGNUP_CODE-gated intercept queue.
+          Stats cards + recent 50 + "Send launch announcement" button. */}
+      <div className="panel">
+        <div className="panel-hdr">
+          <h3>Pre-launch waitlist <span style={{color:'#9ca3af',fontWeight:400,fontSize:12}}>· captured when SIGNUP_CODE gate intercepts a signup</span></h3>
+          <div className="right">
+            <button className="btn btn-ghost btn-sm" onClick={loadWaitlist} disabled={busy}>Refresh</button>
+            <button className="btn btn-ghost btn-sm" onClick={exportWaitlist} disabled={busy} style={{marginLeft:6}}>Export CSV</button>
+            <button className="btn btn-sm" onClick={blastW2}
+              disabled={busy || !waitlistStats || !waitlistStats.unnotified}
+              style={{marginLeft:8,background:waitlistStats && waitlistStats.unnotified ? '#3b82f6' : undefined}}>
+              {waitlistStats ? 'Send W2 to ' + (waitlistStats.unnotified || 0) + ' unnotified' : 'Send W2'}
+            </button>
+          </div>
+        </div>
+        {waitlistStats && (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(160px,1fr))',gap:10,padding:'12px 14px'}}>
+            <ReportCard label="Total" value={waitlistStats.total} sub="all-time waitlist"/>
+            <ReportCard label="Unnotified" value={waitlistStats.unnotified} sub="awaiting W2 blast" color={waitlistStats.unnotified ? '#fbbf24' : undefined}/>
+            <ReportCard label="Notified" value={waitlistStats.notified} sub="W2 already sent" color="#3b82f6"/>
+            <ReportCard label="Converted" value={waitlistStats.converted} sub="signed up post-launch" color="#16a34a"/>
+          </div>
+        )}
+        {waitlistRows === null ? <div className="loading">Loading…</div>
+         : waitlistRows.length === 0 ? <div className="empty">No waitlist entries yet. Once SIGNUP_CODE is set and a user submits the signup form without the code, they'll show up here.</div>
+         : <table>
+            <thead><tr>
+              <th>Email</th><th>Name</th><th>Source</th><th>Signed up</th>
+              <th style={{textAlign:'right'}}>Attempts</th>
+              <th>Notified</th><th>Converted</th>
+            </tr></thead>
+            <tbody>
+              {waitlistRows.map(r => (
+                <tr key={r.id}>
+                  <td className="mono" style={{fontSize:12}}>{r.email}</td>
+                  <td style={{color:'#cbd5e1',fontSize:12}}>{r.name || <span style={{color:'#64748b'}}>—</span>}</td>
+                  <td style={{color:'#9ca3af',fontSize:12}}>{r.source || <span style={{color:'#64748b'}}>—</span>}</td>
+                  <td style={{color:'#9ca3af',whiteSpace:'nowrap',fontSize:12}}>{fmtDate(r.signup_at)}</td>
+                  <td className="mono" style={{textAlign:'right',color:r.signup_attempt_count>1?'#fbbf24':'#9ca3af'}}>{r.signup_attempt_count}</td>
+                  <td>{r.notified_at
+                    ? <span style={{color:'#3b82f6',fontSize:11}}>{fmtDate(r.notified_at)}</span>
+                    : <span style={{color:'#64748b',fontSize:11}}>—</span>}</td>
+                  <td>{r.converted_user_id
+                    ? <span style={{color:'#16a34a',fontSize:11}}>user #{r.converted_user_id}</span>
+                    : <span style={{color:'#64748b',fontSize:11}}>—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+           </table>}
+      </div>
+
+      {view === 'flow' && <FlowChart campaigns={campaigns||[]} onPick={setPreviewId} kindColor={kindColor}/>}
+
+      {view === 'list' && Object.entries(groups).map(([groupName, list]) => (
+        <div className="panel" key={groupName}>
+          <div className="panel-hdr">
+            <h3>{groupName} <span style={{color:'#9ca3af',fontWeight:400,fontSize:12}}>· {list.length} campaigns</span></h3>
+          </div>
+          {campaigns === null ? <div className="loading">Loading…</div>
+           : list.length === 0 ? <div className="empty">None.</div>
+           : <table>
+              <thead><tr>
+                <th style={{whiteSpace:'nowrap'}}>ID</th>
+                <th>Trigger</th>
+                <th>Kind</th>
+                <th>Cooldown</th>
+                <th style={{textAlign:'right'}}>Sent</th>
+                <th style={{textAlign:'right'}}>Delivered</th>
+                <th style={{textAlign:'right'}}>Opened</th>
+                <th style={{textAlign:'right'}}>Clicked</th>
+                <th style={{textAlign:'right'}}>Bounced</th>
+                <th></th>
+              </tr></thead>
+              <tbody>
+                {list.map(c => {
+                  const isOpen = expandedId === c.id;
+                  const toggle = async () => {
+                    if (isOpen) { setExpandedId(null); return; }
+                    setExpandedId(c.id);
+                    if (!timeSeries[c.id]) {
+                      try {
+                        const r = await api('/email/campaigns/' + c.id + '/timeseries');
+                        setTimeSeries(prev => ({ ...prev, [c.id]: r }));
+                      } catch (e) { /* leave undefined; UI shows loading state */ }
+                    }
+                  };
+                  const ts = timeSeries[c.id];
+                  return [
+                  <tr key={c.id} onClick={toggle} style={{cursor:'pointer'}}>
+                    <td className="mono" style={{fontWeight:600,whiteSpace:'nowrap'}}>
+                      <span style={{display:'inline-block',width:14,color:'#64748b'}}>{isOpen ? '▾' : '▸'}</span>
+                      {c.id}{c.hasOverride && <span title="Custom copy override active" style={{marginLeft:6,color:'#fbbf24',fontSize:10}}>✎</span>}
+                    </td>
+                    <td style={{fontSize:13,color:'#e5e7eb',minWidth:360,lineHeight:1.5,padding:'10px 12px'}}>{c.triggerDescription || '—'}</td>
+                    <td><span style={{color:kindColor(c.kind),fontSize:11,fontWeight:600,letterSpacing:'0.04em',textTransform:'uppercase'}}>{c.kind}</span></td>
+                    <td style={{color:'#9ca3af',fontSize:12,whiteSpace:'nowrap'}}>
+                      {c.cooldownDays ? c.cooldownDays + 'd' : '—'}
+                      {c.maxLifetime ? <span style={{color:'#64748b'}}> · max {c.maxLifetime}</span> : null}
+                    </td>
+                    <td className="mono" style={{textAlign:'right'}}>{c.sent}</td>
+                    <td className="mono" style={{textAlign:'right'}}>{c.delivered}</td>
+                    <td className="mono" style={{textAlign:'right',color:'#3b82f6'}}>{c.opened}</td>
+                    <td className="mono" style={{textAlign:'right',color:'#16a34a'}}>{c.clicked}</td>
+                    <td className="mono" style={{textAlign:'right',color:c.bounced?'#ef4444':'#64748b'}}>{c.bounced}</td>
+                    <td style={{whiteSpace:'nowrap'}} onClick={e=>e.stopPropagation()}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>setPreviewId(c.id)}>Preview / Edit</button>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>sendTest(c.id)} disabled={busy} style={{marginLeft:6}}>Test</button>
+                    </td>
+                  </tr>,
+                  isOpen && (
+                    <tr key={c.id + '-detail'}>
+                      <td colSpan={10} style={{background:'#06090f',padding:'14px 18px',borderTop:'1px solid #1f2937'}}>
+                        {!ts ? <div style={{color:'#9ca3af',fontSize:12}}>Loading time-series…</div>
+                         : <CampaignDetail data={ts}/>}
+                      </td>
+                    </tr>
+                  )
+                ];}).flat().filter(Boolean)}
+              </tbody>
+             </table>}
+        </div>
+      ))}
+
+      {view === 'list' && <div className="panel">
+        <div className="panel-hdr">
+          <h3>Recent sends</h3>
+          <div className="right">
+            <select value={filter} onChange={e=>setFilter(e.target.value)} style={{marginRight:8,padding:'4px 8px',background:'#1f2937',color:'#e5e7eb',border:'1px solid #374151',borderRadius:6,fontSize:12}}>
+              <option value="">All campaigns</option>
+              {(campaigns||[]).map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
+            </select>
+            <button className="btn btn-ghost btn-sm" onClick={loadSends}>Refresh</button>
+          </div>
+        </div>
+        {sends === null ? <div className="loading">Loading…</div>
+         : sends.length === 0 ? <div className="empty">No sends yet.</div>
+         : <table>
+            <thead><tr>
+              <th>When</th><th>To</th><th>Campaign</th><th>Kind</th><th>Plan</th><th>Status</th><th className="mono">Resend ID</th>
+            </tr></thead>
+            <tbody>
+              {sends.map(s => (
+                <tr key={s.id}>
+                  <td style={{color:'#9ca3af',whiteSpace:'nowrap'}}>{fmtDate(s.sent_at)}</td>
+                  <td>{s.email || ('#' + s.user_id)}</td>
+                  <td className="mono">{s.campaign}</td>
+                  <td><span style={{color:kindColor(s.kind),fontSize:11}}>{s.kind}</span></td>
+                  <td style={{color:'#9ca3af',fontSize:12}}>{s.plan_at_send || '—'}</td>
+                  <td>{s.suppressed_reason
+                    ? <span style={{color:'#f59e0b',fontSize:11}}>SKIP · {s.suppressed_reason}</span>
+                    : <span style={{color:'#16a34a',fontSize:11}}>SENT</span>}</td>
+                  <td className="mono" style={{color:'#64748b',fontSize:11}}>{s.resend_id ? s.resend_id.substring(0, 16) + '…' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+           </table>}
+      </div>}
+
+      {previewId && (
+        <div onClick={(e)=>{if(e.target===e.currentTarget)setPreviewId(null)}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#0f1728',border:'1px solid #1f2937',borderRadius:12,maxWidth:1400,width:'100%',maxHeight:'94vh',display:'flex',flexDirection:'column'}}>
+            <div style={{padding:'14px 18px',borderBottom:'1px solid #1f2937',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+              <strong style={{color:'#fff'}}>Preview / Edit · {previewId}</strong>
+              <span style={{color:'#e5e7eb',fontSize:13,background:'#1e293b',padding:'4px 10px',borderRadius:6,maxWidth:680}}>{(campaigns||[]).find(c=>c.id===previewId)?.triggerDescription || ''}</span>
+              <select value={previewPlan} onChange={e=>setPreviewPlan(e.target.value)} style={{padding:'4px 8px',background:'#1f2937',color:'#e5e7eb',border:'1px solid #374151',borderRadius:6,fontSize:12}}>
+                <option value="free">free</option>
+                <option value="explorer">explorer</option>
+                <option value="observer">observer</option>
+              </select>
+              <div style={{marginLeft:'auto',display:'flex',gap:6}}>
+                {overrides[previewId] && <button className="btn btn-ghost btn-sm" onClick={clearOverride} disabled={busy} style={{color:'#fbbf24'}}>Revert to default</button>}
+                <button className="btn btn-sm" onClick={saveOverride} disabled={busy || (editSubject===origSubject && editPreheader===origPreheader && !overrides[previewId])}>Save</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>sendTest(previewId)} disabled={busy}>Send test</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>setPreviewId(null)}>Close</button>
+              </div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'300px 1fr',flex:1,minHeight:0}}>
+              {/* Editor pane */}
+              <div style={{padding:18,borderRight:'1px solid #1f2937',overflowY:'auto',display:'flex',flexDirection:'column',gap:14}}>
+                <label style={{display:'flex',flexDirection:'column',gap:6}}>
+                  <span style={{fontSize:12,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.04em'}}>Subject</span>
+                  <input value={editSubject} onChange={e=>setEditSubject(e.target.value)} maxLength={200}
+                    style={{padding:'8px 10px',background:'#06090f',color:'#e5e7eb',border:'1px solid #374151',borderRadius:6,fontSize:13}}/>
+                  <span style={{fontSize:11,color:'#64748b'}}>{editSubject.length}/200 · default: <em style={{color:'#94a3b8'}}>{origSubject}</em></span>
+                </label>
+                <label style={{display:'flex',flexDirection:'column',gap:6}}>
+                  <span style={{fontSize:12,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.04em'}}>Preheader</span>
+                  <textarea value={editPreheader} onChange={e=>setEditPreheader(e.target.value)} maxLength={200} rows={3}
+                    style={{padding:'8px 10px',background:'#06090f',color:'#e5e7eb',border:'1px solid #374151',borderRadius:6,fontSize:13,fontFamily:'inherit',resize:'vertical'}}/>
+                  <span style={{fontSize:11,color:'#64748b'}}>{editPreheader.length}/200 · Gmail/Apple Mail inbox preview snippet</span>
+                </label>
+                <div style={{fontSize:11,color:'#64748b',padding:10,background:'#06090f',borderRadius:6,lineHeight:1.5}}>
+                  Body, layout, and CTA URL are template-controlled — only subject + preheader can be tweaked from the admin without a code change. Edit and the preview re-renders live.
+                </div>
+              </div>
+              {/* Live preview pane */}
+              <iframe srcDoc={previewHtml} style={{border:'none',background:'#ffffff',minHeight:0,width:'100%',height:'100%'}} sandbox="allow-same-origin"/>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Reporting summary card. Visual = number on top, label/sub below.
+function ReportCard({ label, value, sub, color }) {
+  return (
+    <div style={{background:'#0f1728',border:'1px solid #1f2937',borderRadius:10,padding:'14px 16px'}}>
+      <div style={{fontSize:11,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:4}}>{label}</div>
+      <div style={{fontSize:22,fontWeight:700,color:color||'#e5e7eb',lineHeight:1.1}}>{value}</div>
+      <div style={{fontSize:11,color:'#64748b',marginTop:4}}>{sub}</div>
+    </div>
+  );
+}
+
+// Per-campaign drill-down: time-series chart + delta vs prior window.
+// `data` shape: { series:[{day,sent,delivered,opened,clicked,bounced}],
+//                 thisWindow:{...rates}, priorWindow:{...rates}, days:30 }
+function CampaignDetail({ data }) {
+  const series = data.series || [];
+  const days = data.days || 30;
+  // Sparkline: 4 stacked lines (sent / opened / clicked / bounced) over 2*days days.
+  const W = 720, H = 90, padX = 6, padY = 6;
+  const maxY = Math.max(1, ...series.map(r => Math.max(r.sent, r.delivered, r.opened, r.clicked, r.bounced)));
+  const xAt = (i) => padX + (i / Math.max(1, series.length - 1)) * (W - 2*padX);
+  const yAt = (v) => H - padY - (v / maxY) * (H - 2*padY);
+  const path = (key, color) => {
+    const d = series.map((r, i) => `${i===0?'M':'L'}${xAt(i).toFixed(1)},${yAt(r[key]).toFixed(1)}`).join('');
+    return <path d={d} fill="none" stroke={color} strokeWidth="1.6"/>;
+  };
+  // Vertical separator at the prior/this-window boundary.
+  const sepX = xAt(days);
+  const fmtDelta = (cur, prior, label) => {
+    if (cur == null && prior == null) return null;
+    if (prior == null || prior === 0) {
+      return { label, val: cur != null ? cur.toFixed(1) + '%' : '—', delta: '+new', deltaColor: '#16a34a' };
+    }
+    if (cur == null) return { label, val: '—', delta: '', deltaColor: '#64748b' };
+    const d = cur - prior;
+    return { label, val: cur.toFixed(1) + '%', delta: (d>=0?'+':'') + d.toFixed(1) + 'pp', deltaColor: d >= 0 ? '#16a34a' : '#ef4444' };
+  };
+  const cards = [
+    fmtDelta(data.thisWindow.open_rate,   data.priorWindow.open_rate,   'Open rate'),
+    fmtDelta(data.thisWindow.click_rate,  data.priorWindow.click_rate,  'Click rate'),
+    fmtDelta(data.thisWindow.bounce_rate, data.priorWindow.bounce_rate, 'Bounce rate'),
+  ].filter(Boolean);
+  // Volume delta (counts, not rates)
+  const volDelta = data.thisWindow.sent - data.priorWindow.sent;
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:18}}>
+      <div>
+        <div style={{fontSize:11,color:'#9ca3af',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.04em'}}>Last {2*days} days · daily</div>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{maxWidth:W}}>
+          <line x1={sepX} y1={padY} x2={sepX} y2={H-padY} stroke="#374151" strokeWidth="1" strokeDasharray="3,3"/>
+          {path('sent',      '#cbd5e1')}
+          {path('delivered', '#3b82f6')}
+          {path('opened',    '#8b5cf6')}
+          {path('clicked',   '#16a34a')}
+          {path('bounced',   '#ef4444')}
+        </svg>
+        <div style={{display:'flex',gap:14,fontSize:11,color:'#9ca3af',flexWrap:'wrap',marginTop:6}}>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4}}><span style={{width:14,height:2,background:'#cbd5e1'}}/>Sent</span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4}}><span style={{width:14,height:2,background:'#3b82f6'}}/>Delivered</span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4}}><span style={{width:14,height:2,background:'#8b5cf6'}}/>Opened</span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4}}><span style={{width:14,height:2,background:'#16a34a'}}/>Clicked</span>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4}}><span style={{width:14,height:2,background:'#ef4444'}}/>Bounced</span>
+          <span style={{marginLeft:'auto',color:'#64748b'}}>Dashed line splits prior {days}d (left) from current {days}d (right)</span>
+        </div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        <div style={{fontSize:11,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.04em'}}>Last {days}d vs prior {days}d</div>
+        <div style={{background:'#0f1728',border:'1px solid #1f2937',borderRadius:8,padding:'10px 12px'}}>
+          <div style={{fontSize:11,color:'#9ca3af'}}>Volume</div>
+          <div style={{display:'flex',alignItems:'baseline',gap:8}}>
+            <div style={{fontSize:18,fontWeight:700,color:'#e5e7eb'}}>{data.thisWindow.sent}</div>
+            <div style={{fontSize:12,color: volDelta >= 0 ? '#16a34a' : '#ef4444'}}>{volDelta>=0?'+':''}{volDelta} vs prior</div>
+          </div>
+          <div style={{fontSize:11,color:'#64748b'}}>{data.thisWindow.suppressed} suppressed</div>
+        </div>
+        {cards.map(c => (
+          <div key={c.label} style={{background:'#0f1728',border:'1px solid #1f2937',borderRadius:8,padding:'10px 12px'}}>
+            <div style={{fontSize:11,color:'#9ca3af'}}>{c.label}</div>
+            <div style={{display:'flex',alignItems:'baseline',gap:8}}>
+              <div style={{fontSize:18,fontWeight:700,color:'#e5e7eb'}}>{c.val}</div>
+              <div style={{fontSize:12,color:c.deltaColor}}>{c.delta}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Flow chart — SVG diagram of the user journey through campaigns.
+// Layout is hand-tuned to read top-to-bottom: signup → onboarding column,
+// behavioral upsells branch off to the right, retention branches off the
+// left after subscription_cancelled. Click a node → opens preview.
+function FlowChart({ campaigns, onPick, kindColor }) {
+  const data = Object.fromEntries((campaigns || []).map(c => [c.id, c]));
+  // Coordinates: x grouped (0=onboarding, +1=upsell, -1=retention, -2=dunning).
+  // y is timeline position. Each unit = 70px.
+  const PX = 90, PY = 64;
+  const cx = (col) => 360 + col * PX;
+  const cy = (row) => 60 + row * PY;
+  const NODES = [
+    { id: 'SIGNUP', label: 'Signup', col: 0, row: 0, fixed: true },
+    { id: 'A1',  col: 0, row: 1 },
+    { id: 'A1b', col: 0, row: 2 },
+    { id: 'A2',  col: 0, row: 3 },
+    { id: 'A2b', col: 0, row: 4 },
+    { id: 'A3',  col: 0, row: 5 },
+    { id: 'A4',  col: 0, row: 6 },
+    { id: 'A5',  col: 0, row: 7 },
+    { id: 'A6',  col: 0, row: 8 },
+    { id: 'B1',  col: 2, row: 5 },
+    { id: 'B2',  col: 2, row: 6 },
+    { id: 'B3',  col: 2, row: 7 },
+    { id: 'B4',  col: 2, row: 8 },
+    { id: 'B5',  col: 2, row: 9 },
+    { id: 'B6',  col: 2, row: 4 },
+    { id: 'CANCELLED', label: 'Cancellation', col: -2, row: 1, fixed: true },
+    { id: 'C1',  col: -2, row: 0 },
+    { id: 'C2',  col: -2, row: 2 },
+    { id: 'C3',  col: -2, row: 3 },
+    { id: 'C4',  col: -2, row: 4 },
+    { id: 'PAYFAIL', label: 'Payment failed', col: -3, row: 5, fixed: true },
+    { id: 'C5',  col: -3, row: 6 },
+    { id: 'C6',  col: -3, row: 7 },
+    { id: 'C7',  col: -3, row: 8 },
+    { id: 'C8',  col: -3, row: 9 },
+    { id: 'C9',  col: 2, row: 11, label: 'C9 · 60d inactive' },
+  ];
+  // Edges as { from, to, label?, dashed? }.
+  const E = [
+    { from: 'SIGNUP', to: 'A1' }, { from: 'A1', to: 'A1b' }, { from: 'A1b', to: 'A2' },
+    { from: 'A2', to: 'A2b' }, { from: 'A2b', to: 'A3' }, { from: 'A3', to: 'A4' },
+    { from: 'A4', to: 'A5' }, { from: 'A5', to: 'A6' },
+    // Upsell branches
+    { from: 'A3', to: 'B1', dashed: true, label: 'limit hit' },
+    { from: 'A5', to: 'B2', dashed: true, label: '5d engaged' },
+    { from: 'A5', to: 'B3', dashed: true, label: 'repeat ticker' },
+    { from: 'A6', to: 'B4', dashed: true, label: 'explorer manual edits' },
+    { from: 'A6', to: 'B5', dashed: true, label: 'multi-device' },
+    { from: 'A2b', to: 'B6', dashed: true, label: 'pricing view' },
+    // Retention
+    { from: 'CANCELLED', to: 'C1', dashed: true, label: 'T-3d annual' },
+    { from: 'CANCELLED', to: 'C2', label: 'T+0' },
+    { from: 'C2', to: 'C3', label: '+7d' }, { from: 'C3', to: 'C4', label: '+30d' },
+    // Dunning
+    { from: 'PAYFAIL', to: 'C5' }, { from: 'C5', to: 'C6', label: '+3d' }, { from: 'C6', to: 'C7', label: '+7d' }, { from: 'C7', to: 'C8' },
+  ];
+  const NODE_W = 100, NODE_H = 36;
+  const nodeMap = Object.fromEntries(NODES.map(n => [n.id, n]));
+  const W = 980, H = 12 * PY + 80;
+
+  const renderNode = (n) => {
+    const x = cx(n.col), y = cy(n.row);
+    const c = data[n.id];
+    const fill = n.fixed ? '#1f2937' : (c ? '#06090f' : '#06090f');
+    const stroke = n.fixed ? '#475569' : (c && c.kind ? kindColor(c.kind) : '#374151');
+    const text = c && c.kind ? c.id : (n.label || n.id);
+    const sub = c ? (c.sent + ' sent · ' + c.opened + ' opened') : null;
+    return (
+      <g key={n.id} style={{cursor:c?'pointer':'default'}} onClick={()=>{ if(c) onPick(n.id); }}>
+        <rect x={x-NODE_W/2} y={y-NODE_H/2} width={NODE_W} height={NODE_H} rx={8} ry={8} fill={fill} stroke={stroke} strokeWidth={1.5}/>
+        <text x={x} y={y - (sub ? 1 : 4)} textAnchor="middle" fill="#e5e7eb" fontSize="12" fontWeight="600" dominantBaseline="middle">{text}</text>
+        {sub && <text x={x} y={y+12} textAnchor="middle" fill="#64748b" fontSize="9">{sub}</text>}
+      </g>
+    );
+  };
+
+  const renderEdge = (e, i) => {
+    const a = nodeMap[e.from], b = nodeMap[e.to];
+    if (!a || !b) return null;
+    const x1 = cx(a.col), y1 = cy(a.row), x2 = cx(b.col), y2 = cy(b.row);
+    const sameCol = a.col === b.col;
+    const sy = sameCol ? y1 + NODE_H/2 : y1;
+    const ey = sameCol ? y2 - NODE_H/2 : y2;
+    const path = sameCol
+      ? `M${x1},${sy} L${x2},${ey}`
+      : `M${x1 + (a.col<b.col?NODE_W/2:-NODE_W/2)},${y1} C${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2} ${x2 + (b.col<a.col?NODE_W/2:-NODE_W/2)},${y2}`;
+    const mx = (x1+x2)/2, my = (y1+y2)/2;
+    return (
+      <g key={i}>
+        <path d={path} stroke="#374151" strokeWidth="1.5" fill="none" strokeDasharray={e.dashed ? '4,4' : null} markerEnd="url(#arrow)"/>
+        {e.label && <text x={mx} y={my-4} textAnchor="middle" fill="#64748b" fontSize="10">{e.label}</text>}
+      </g>
+    );
+  };
+
+  return (
+    <div className="panel">
+      <div className="panel-hdr">
+        <h3>User journey flow</h3>
+        <div className="right" style={{fontSize:12,color:'#9ca3af'}}>Click a node to preview</div>
+      </div>
+      <div style={{padding:12,overflowX:'auto'}}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{minWidth:760,maxWidth:1100}}>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+            </marker>
+          </defs>
+          {E.map(renderEdge)}
+          {NODES.map(renderNode)}
+        </svg>
+      </div>
+      <div style={{padding:'8px 14px 14px',display:'flex',gap:14,fontSize:11,color:'#9ca3af',flexWrap:'wrap'}}>
+        <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:10,height:10,borderRadius:2,background:'#16a34a'}}/>Transactional</span>
+        <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:10,height:10,borderRadius:2,background:'#f59e0b'}}/>Product updates</span>
+        <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:10,height:10,borderRadius:2,background:'#ef4444'}}/>Marketing</span>
+        <span style={{marginLeft:'auto',color:'#64748b'}}>Solid arrows = sequence · Dashed = behavioral trigger</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Referrals tab ─────────────────────────────────────────────────────
+function ReferralsTab() {
+  const [data, setData]   = useState(null);
+  const [err, setErr]     = useState('');
+  const [expanded, setExpanded] = useState(null); // userId of expanded row
+  const [detail, setDetail]     = useState({});   // userId → detail data
+  const [editLimit, setEditLimit]   = useState(null); // userId being edited
+  const [limitInput, setLimitInput] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api('/referrals')
+      .then(r => setData(r.referrers))
+      .catch(e => setErr(e.message));
+  }, []);
+
+  const loadDetail = async (userId) => {
+    if (detail[userId]) return;
+    try {
+      const r = await api(`/users/${userId}/referrals`);
+      setDetail(prev => ({ ...prev, [userId]: r }));
+    } catch (e) {
+      setDetail(prev => ({ ...prev, [userId]: { error: e.message } }));
+    }
+  };
+
+  const toggleRow = async (userId) => {
+    if (expanded === userId) { setExpanded(null); return; }
+    setExpanded(userId);
+    await loadDetail(userId);
+  };
+
+  const saveLimit = async (userId) => {
+    setSaving(true);
+    const val = limitInput.trim();
+    const payload = val === '' ? { limit: null } : { limit: parseInt(val, 10) };
+    try {
+      await api(`/users/${userId}/referral-limit`, { method: 'PATCH', body: JSON.stringify(payload) });
+      // Refresh list
+      const r = await api('/referrals');
+      setData(r.referrers);
+      // Refresh detail if loaded
+      if (detail[userId]) {
+        const d = await api(`/users/${userId}/referrals`);
+        setDetail(prev => ({ ...prev, [userId]: d }));
+      }
+      setEditLimit(null);
+    } catch (e) {
+      alert('Save failed: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fmtDate = ts => ts ? new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  const fmt$ = v => v != null ? `$${Number(v).toFixed(2)}` : '—';
+
+  if (err) return <><h2>Referrals</h2><div className="err">{err}</div></>;
+
+  return (
+    <>
+      <h2>Referrals</h2>
+      <p className="sub">Users who have referral codes. Click a row to see their referees and referee spend.</p>
+
+      {!data
+        ? <div className="loading">Loading…</div>
+        : data.length === 0
+          ? <div style={{color:'#9ca3af',fontSize:14}}>No referral codes issued yet.</div>
+          : <div className="panel">
+              <table>
+                <thead><tr>
+                  <th>User</th>
+                  <th>Code</th>
+                  <th className="num">Referrals</th>
+                  <th className="num">Converted</th>
+                  <th className="num">Credits</th>
+                  <th className="num">Limit</th>
+                  <th></th>
+                </tr></thead>
+                <tbody>
+                  {data.map(r => [
+                    <tr key={r.userId} style={{cursor:'pointer'}} onClick={() => toggleRow(r.userId)}>
+                      <td>{r.email}</td>
+                      <td className="mono" style={{fontSize:12,color:'#fbbf24'}}>{r.code}</td>
+                      <td className="num">{r.totalReferrals}</td>
+                      <td className="num">{r.totalConversions}</td>
+                      <td className="num">{r.creditsGranted}</td>
+                      <td className="num">
+                        {editLimit === r.userId
+                          ? <span onClick={e => e.stopPropagation()} style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+                              <input
+                                type="number" min="0" max="9999"
+                                value={limitInput}
+                                onChange={e => setLimitInput(e.target.value)}
+                                placeholder="default"
+                                style={{width:70,padding:'4px 8px',background:'#06090f',border:'1px solid #3b82f6',borderRadius:6,color:'#e5e7eb',fontSize:12}}
+                              />
+                              <button className="btn btn-primary btn-sm" disabled={saving}
+                                onClick={e => { e.stopPropagation(); saveLimit(r.userId); }}>
+                                {saving ? '…' : 'Save'}
+                              </button>
+                              <button className="btn btn-ghost btn-sm"
+                                onClick={e => { e.stopPropagation(); setEditLimit(null); }}>
+                                ✕
+                              </button>
+                            </span>
+                          : <span>
+                              {r.limitOverridden
+                                ? <span style={{color:'#fbbf24',fontWeight:600}}>{r.limit} *</span>
+                                : r.limit}
+                            </span>
+                        }
+                      </td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setEditLimit(r.userId);
+                            setLimitInput(r.limitOverridden ? String(r.limit) : '');
+                          }}>
+                          Edit limit
+                        </button>
+                      </td>
+                    </tr>,
+                    expanded === r.userId && (
+                      <tr key={r.userId + '-detail'}>
+                        <td colSpan={7} style={{padding:'0 0 0 24px',background:'#06090f'}}>
+                          {!detail[r.userId]
+                            ? <div style={{padding:'12px 0',color:'#9ca3af',fontSize:13}}>Loading…</div>
+                            : detail[r.userId].error
+                              ? <div style={{padding:'12px 0',color:'#ef4444',fontSize:13}}>{detail[r.userId].error}</div>
+                              : detail[r.userId].referees.length === 0
+                                ? <div style={{padding:'12px 0',color:'#6b7280',fontSize:13}}>No referred users yet.</div>
+                                : <table style={{margin:'8px 0'}}>
+                                    <thead><tr>
+                                      <th>Referee email</th>
+                                      <th>Joined</th>
+                                      <th>Converted</th>
+                                      <th>Plan</th>
+                                      <th>Sub status</th>
+                                      <th className="num">First charge</th>
+                                      <th>Credit</th>
+                                    </tr></thead>
+                                    <tbody>
+                                      {detail[r.userId].referees.map(ref => (
+                                        <tr key={ref.userId}>
+                                          <td>{ref.email}</td>
+                                          <td style={{color:'#9ca3af',fontSize:12}}>{fmtDate(ref.signedUpAt)}</td>
+                                          <td style={{color:'#9ca3af',fontSize:12}}>{fmtDate(ref.convertedAt)}</td>
+                                          <td>{ref.convertedPlan
+                                            ? <span className={`badge badge-${ref.convertedPlan}`}>{ref.convertedPlan}</span>
+                                            : <span style={{color:'#6b7280',fontSize:12}}>—</span>}
+                                          </td>
+                                          <td>
+                                            {ref.subStatus
+                                              ? <span className={`badge badge-${ref.subStatus === 'active' ? 'active' : 'expired'}`}>{ref.subStatus}</span>
+                                              : <span style={{color:'#6b7280',fontSize:12}}>—</span>}
+                                          </td>
+                                          <td className="num" style={{fontFamily:'DM Mono,monospace'}}>{fmt$(ref.firstChargeAmount)}</td>
+                                          <td>
+                                            {ref.convertedAt == null
+                                              ? <span style={{color:'#9ca3af',fontSize:12}}>Pending</span>
+                                              : ref.creditGranted
+                                                ? <span style={{color:'#16a34a',fontWeight:600,fontSize:12}}>+1 month</span>
+                                                : <span style={{color:'#f59e0b',fontSize:12}}>Limit hit</span>}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                          }
+                        </td>
+                      </tr>
+                    ),
+                  ])}
+                </tbody>
+              </table>
+            </div>
+      }
+    </>
+  );
+}
+
+// ── Revenue tab (StarSol extension) ───────────────────────────────
+function RevenueTab() {
+  const [data,setData]=useState(null),[err,setErr]=useState('');
+  const load=async()=>{setData(null);setErr('');try{setData(await api('/revenue/history'));}catch(e){setErr(e.message);}};
+  useEffect(()=>{load();},[]);
+  if(err)return <><h2>Revenue</h2><div className="err">Could not load revenue history: {err}</div><button className="btn btn-ghost btn-sm" onClick={load}>Try again</button></>;
+  if(!data)return <><h2>Revenue</h2><div className="loading">Loading revenue history…</div></>;
+  const rows=(data.quarters||data.quarterly||[]).map(r=>({quarter:r.quarter||r.label||r.key,revenue:r.revenue??r.gross??r.amount,invoices:r.invoices??r.invoiceCount??0}));
+  const gross=data.lifetimeGrossRevenue??data.lifetimeGross??data.lifetimeGrossCollected??data.grossCollected??null;
+  const providers=data.providers||data.providerAvailability||{};
+  const max=Math.max(1,...rows.map(r=>Number(r.revenue||0)));
+  return <>
+    <h2>Revenue</h2><div className="sub">Gross collected revenue by calendar quarter.</div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:14,marginBottom:18}}>
+      <BigStat label="Lifetime gross collected" value={moneyOrUnknown(gross)} sub="Before fees, refunds, and taxes unless the provider reports otherwise" />
+      <div className="panel" style={{padding:'14px 18px'}}><div style={{fontSize:11,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6}}>Completeness</div><div style={{fontSize:18,fontWeight:700,color:data.complete?'#6ee7b7':'#fbbf24'}}>{data.complete?'Complete':'Partial'}</div><div style={{fontSize:12,color:'#9ca3af',marginTop:4}}>{data.note||data.completenessNote||(data.complete?'All configured providers included.':'One or more providers unavailable.')}</div></div>
+    </div>
+    {Object.keys(providers).length>0&&<div className="panel" style={{padding:'12px 18px',marginBottom:18,display:'flex',gap:14,flexWrap:'wrap'}} aria-label="Revenue provider availability">{Object.entries(providers).map(([name,value])=>{const detail=typeof value==='object'?value:{available:value===true||value==='available'},available=!!detail.available,label={stripe:'Stripe',play:'Google Play',apple:'Apple'}[name]||name;return <span key={name} aria-label={`${label}: ${available?'available':'unavailable'}, gross ${moneyOrUnknown(detail.grossRevenue)}`}><strong>{label}</strong> <Badge kind={available?'active':'expired'}>{available?'available':'unavailable'}</Badge> <span style={{color:'#9ca3af',fontSize:12}}>gross {moneyOrUnknown(detail.grossRevenue)}{detail.invoiceCount!=null?` · ${detail.invoiceCount} invoices`:''}</span></span>})}</div>}
+    {rows.length===0?<div className="panel empty">No collected revenue history is available yet.</div>:<>
+      <figure className="panel" style={{padding:'18px',marginBottom:18,overflowX:'auto'}} aria-label="Quarterly gross collected revenue bar chart">
+        <div style={{display:'flex',alignItems:'flex-end',gap:10,height:190,minWidth:Math.max(320,rows.length*74)}}>{rows.map((r,i)=>{const value=Number(r.revenue??r.gross??0);return <div key={r.quarter||i} style={{flex:'1 0 56px',height:'100%',display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',gap:5}} role="img" aria-label={`${r.quarter}: ${moneyOrUnknown(value)}, ${Number(r.invoices||0)} invoices`}><span className="mono" style={{fontSize:10,color:'#9ca3af'}}>{moneyOrUnknown(value)}</span><div style={{height:`${Math.max(2,value/max*140)}px`,width:'100%',maxWidth:54,background:'#fbbf24',borderRadius:'5px 5px 0 0'}}/><span className="mono" style={{fontSize:11,color:'#9ca3af',whiteSpace:'nowrap'}}>{r.quarter}</span></div>})}</div>
+      </figure>
+      <div className="panel" style={{overflowX:'auto'}}><table><thead><tr><th>Quarter</th><th className="num">Revenue</th><th className="num">Invoices</th></tr></thead><tbody>{rows.map((r,i)=><tr key={r.quarter||i}><td className="mono">{r.quarter}</td><td className="num">{moneyOrUnknown(r.revenue??r.gross)}</td><td className="num">{Number(r.invoices||0).toLocaleString()}</td></tr>)}</tbody></table></div>
+    </>}
+  </>;
+}
+
+// ── Operations tab (StarSol extension) ────────────────────────────
+async function flightRootApi(path,opts={}){const r=await fetch('/api'+path,{...opts,headers:{'Content-Type':'application/json',Authorization:'Bearer '+getToken(),...(opts.headers||{})}});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||`HTTP ${r.status}`);return j;}
+function OperationsTab({me,onLogout}){
+ const [d,setD]=useState(null),[err,setErr]=useState(''),[flash,setFlash]=useState('');
+ const load=useCallback(async()=>{setD(null);setErr('');try{const [metrics,tv,revenue,announcements,flags,promos,flight,airports]=await Promise.all([api('/metrics'),Promise.resolve({connected:0}),api('/revenue'),api('/announcements'),api('/feature-flags'),api('/promo-codes'),api('/flight-api/usage'),api('/airports/popular')]);setD({metrics,tv,revenue,announcements:announcements.announcements||[],flags:flags.flags||[],promos:promos.codes||[],flight,airports:airports.airports||[]});}catch(e){setErr(e.message);setD({});}},[]);useEffect(()=>{load();},[load]);
+ const done=m=>{setFlash(m);load();};if(d===null)return <><h2>Operations</h2><div className="loading">Loading StarSol operations…</div></>;
+ const eng=d.metrics?.engagement||{},rev=d.revenue||{},flight=d.flight||{};
+ return <><h2>Operations</h2><div className="sub">StarSol service controls, telemetry, billing, and administration.</div>{err&&<div className="err">{err}</div>}{flash&&<div className="ok">{flash}</div>}
+ <div className="panel" style={{marginBottom:18}}><div className="panel-hdr"><h3>Live TVs &amp; usage telemetry</h3><div className="right"><button className="btn btn-ghost btn-sm" onClick={load}>Refresh</button><button className="btn btn-primary btn-sm" onClick={async()=>{if(!confirm('Push a reload to every connected TV?'))return;try{const result=await flightRootApi('/reload',{method:'POST',body:JSON.stringify({message:'Update pushed from admin'})});setFlash(`Reload sent to ${Number(result.clients||0)} connected TV${Number(result.clients||0)===1?'':'s'}.`);}catch(e){setErr(e.message);}}}>Push reload</button></div></div><div style={{padding:18,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12}}><BigStat label="Connected TVs" value={d.tv?.connected??0}/><BigStat label="New users today" value={d.metrics?.users?.today||0}/><BigStat label="New users this week" value={d.metrics?.users?.thisWeek||0}/><BigStat label="New users this month" value={d.metrics?.users?.thisMonth||0}/><BigStat label="Active subscriptions" value={d.metrics?.subscriptions?.active||0}/><BigStat label="Usage 24h" value={fmtDur(eng.usageMs24h||0)}/><BigStat label="Usage 7d" value={fmtDur(eng.usageMs7d||0)}/><BigStat label="Sessions 30d" value={eng.totalSessions30d||0}/><BigStat label="Avg session" value={fmtDur(eng.avgSessionMs30d||0)}/></div><div style={{overflowX:'auto'}}><table><thead><tr><th>Platform</th><th className="num">Sessions</th><th className="num">Usage</th><th className="num">Active</th></tr></thead><tbody>{(eng.bySource||[]).map(r=><tr key={r.source}><td>{r.source}</td><td className="num">{r.sessions||0}</td><td className="num">{fmtDur(r.totalMs||0)}</td><td className="num">{r.active||0}</td></tr>)}{!(eng.bySource||[]).length&&<tr><td colSpan="4" className="empty">No platform telemetry yet.</td></tr>}</tbody></table></div><div style={{padding:14,display:'flex',gap:8,flexWrap:'wrap'}}>{(eng.topEvents7d||[]).map(e=><Badge key={e.event} kind="free">{e.event} ×{e.count}</Badge>)}{!(eng.topEvents7d||[]).length&&<span style={{color:'#6b7280'}}>No recent events.</span>}</div></div>
+ <div className="panel" style={{marginBottom:18}}><div className="panel-hdr"><h3>Revenue, dunning &amp; billing events</h3><div className="right"><button className="btn btn-ghost btn-sm" onClick={()=>location.hash='#revenue'}>Revenue history</button></div></div><div style={{padding:18,display:'flex',gap:12,flexWrap:'wrap'}}><BigStat label="MRR" value={moneyOrUnknown(rev.mrr)}/><BigStat label="ARR" value={moneyOrUnknown(rev.arr)}/><span style={{color:'#9ca3af',alignSelf:'center'}}>{rev.note||''}</span></div><div style={{overflowX:'auto'}}><table><thead><tr><th>Product</th><th className="num">Subscriptions</th><th className="num">MRR contribution</th></tr></thead><tbody>{Object.entries(rev.breakdown||{}).map(([k,v])=><tr key={k}><td className="mono">{k.replaceAll('_',' ')}</td><td className="num">{v.count}</td><td className="num">{moneyOrUnknown(v.mrr)}</td></tr>)}</tbody></table><table><thead><tr><th>Past-due user</th><th>Plan</th><th>Updated</th></tr></thead><tbody>{(rev.dunning||[]).map((r,i)=><tr key={i}><td>{r.email}</td><td>{r.plan}</td><td>{fmtDate(r.updated_at)}</td></tr>)}{!(rev.dunning||[]).length&&<tr><td colSpan="3" className="empty">No past-due subscriptions.</td></tr>}</tbody></table><table><thead><tr><th>Billing event</th><th>User</th><th>Time</th></tr></thead><tbody>{(rev.events||[]).map((r,i)=><tr key={i}><td className="mono">{r.type}</td><td>{r.email||'—'}</td><td>{fmtDate(r.ts)}</td></tr>)}{!(rev.events||[]).length&&<tr><td colSpan="3" className="empty">No recent billing events.</td></tr>}</tbody></table></div></div>
+ <AnnouncementOps rows={d.announcements||[]} done={done} fail={setErr}/><FlagOps rows={d.flags||[]} superadmin={me.role==='superadmin'} done={done} fail={setErr}/><PromoOps rows={d.promos||[]} superadmin={me.role==='superadmin'} done={done} fail={setErr}/>
+ <div className="panel" style={{marginBottom:18}}><div className="panel-hdr"><h3>StarSol content &amp; catalog status</h3></div>{flight.stubMode&&<div className="err" style={{display:'block',margin:14}}>Content service reports degraded mode.</div>}<div style={{padding:18,display:'flex',gap:12,flexWrap:'wrap'}}><BigStat label="Published content" value={flight.today||0}/><BigStat label="Ambient images" value={flight.thisMonth||0}/><BigStat label="Catalog status" value={flight.stubMode?'ON':'OFF'}/></div><div style={{overflowX:'auto'}}><table><thead><tr><th>Endpoint</th><th className="num">Calls</th><th className="num">Avg ms</th><th className="num">Cache hits</th></tr></thead><tbody>{(flight.byEndpoint||[]).map(r=><tr key={r.endpoint}><td className="mono">{r.endpoint}</td><td className="num">{r.calls}</td><td className="num">{r.avgMs||'—'}</td><td className="num">{r.cacheHits||0}</td></tr>)}</tbody></table><table><thead><tr><th>Recent content</th><th>City</th><th className="num">Published</th></tr></thead><tbody>{(d.airports||[]).map((a,i)=><tr key={a.iata||a.iata_code||i}><td className="mono">{a.iata||a.iata_code||a.code}</td><td>{a.city||'—'}</td><td className="num">{a.count??a.saves??a.n??'—'}</td></tr>)}{!(d.airports||[]).length&&<tr><td colSpan="3" className="empty">No content records yet.</td></tr>}</tbody></table></div></div><PasswordOps done={done} fail={setErr} onLogout={onLogout}/></>;
+}
+function AnnouncementOps({rows,done,fail}){const [v,setV]=useState({title:'',body:'',targetTier:'all'});return <div className="panel" style={{marginBottom:18}}><div className="panel-hdr"><h3>Announcements</h3></div><form style={{padding:18}} onSubmit={async e=>{e.preventDefault();try{await api('/announcements',{method:'POST',body:JSON.stringify(v)});setV({title:'',body:'',targetTier:'all'});done('Announcement created.');}catch(x){fail(x.message);}}}><div className="field-row"><div className="field"><label>Title</label><input value={v.title} onChange={e=>setV({...v,title:e.target.value})} required/></div><div className="field"><label>Target tier</label><select value={v.targetTier} onChange={e=>setV({...v,targetTier:e.target.value})}><option value="all">All</option><option value="explorer">Member</option><option value="observer">Member only</option></select></div></div><div className="field"><label>Body</label><textarea value={v.body} onChange={e=>setV({...v,body:e.target.value})} required/></div><button className="btn btn-primary btn-sm">Create draft</button></form><table><thead><tr><th>Title</th><th>Tier</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(a=><tr key={a.id}><td>{a.title}</td><td>{a.target_tier}</td><td>{a.status}</td><td><button className="btn btn-ghost btn-sm" onClick={async()=>{const title=prompt('Announcement title',a.title);if(title===null)return;try{await api('/announcements/'+a.id,{method:'PATCH',body:JSON.stringify({title})});done('Announcement updated.');}catch(x){fail(x.message);}}}>Edit</button>{a.status==='draft'&&<button className="btn btn-danger btn-sm" style={{marginLeft:6}} onClick={async()=>{if(!confirm('Delete this draft?'))return;try{await api('/announcements/'+a.id,{method:'DELETE'});done('Announcement deleted.');}catch(x){fail(x.message);}}}>Delete</button>}</td></tr>)}{!rows.length&&<tr><td colSpan="4" className="empty">No announcements.</td></tr>}</tbody></table></div>}
+function FlagOps({rows,superadmin,done,fail}){const [k,setK]=useState(''),[v,setV]=useState('');const save=async(key,value)=>{try{await api('/feature-flags/'+encodeURIComponent(key),{method:'PATCH',body:JSON.stringify({value})});done('Feature flag saved.');}catch(x){fail(x.message);}};return <div className="panel" style={{marginBottom:18}}><div className="panel-hdr"><h3>Feature flags</h3></div><table><thead><tr><th>Key</th><th>Value</th><th></th></tr></thead><tbody>{rows.map(f=><FlagRow key={f.key} flag={f} canEdit={superadmin} save={save}/>)}</tbody></table>{superadmin&&<form style={{padding:18,display:'flex',gap:8,flexWrap:'wrap'}} onSubmit={e=>{e.preventDefault();save(k,v);setK('');setV('');}}><input aria-label="New flag key" value={k} onChange={e=>setK(e.target.value)} placeholder="flag_key" required/><input aria-label="New flag value" value={v} onChange={e=>setV(e.target.value)} placeholder="value"/><button className="btn btn-primary btn-sm">Create flag</button></form>}</div>}
+function FlagRow({flag,canEdit,save}){const [v,setV]=useState(flag.value);return <tr><td className="mono">{flag.key}</td><td><input aria-label={`${flag.key} value`} value={v} disabled={!canEdit} onChange={e=>setV(e.target.value)}/></td><td>{canEdit?<button className="btn btn-ghost btn-sm" onClick={()=>save(flag.key,v)}>Save</button>:'Read only'}</td></tr>}
+function PromoOps({rows,superadmin,done,fail}){const [v,setV]=useState({code:'',discountType:'percent',discountValue:'',maxRedemptions:''});return <div className="panel" style={{marginBottom:18}}><div className="panel-hdr"><h3>Discount promo codes</h3></div>{superadmin&&<form style={{padding:18,display:'flex',gap:8,flexWrap:'wrap'}} onSubmit={async e=>{e.preventDefault();try{await api('/promo-codes',{method:'POST',body:JSON.stringify({...v,discountValue:Number(v.discountValue),maxRedemptions:v.maxRedemptions?Number(v.maxRedemptions):null})});setV({code:'',discountType:'percent',discountValue:'',maxRedemptions:''});done('Discount created.');}catch(x){fail(x.message);}}}><input aria-label="Discount code" value={v.code} onChange={e=>setV({...v,code:e.target.value.toUpperCase()})} placeholder="CODE" required/><select aria-label="Discount type" value={v.discountType} onChange={e=>setV({...v,discountType:e.target.value})}><option value="percent">% off</option><option value="fixed">$ off</option></select><input aria-label="Discount value" type="number" value={v.discountValue} onChange={e=>setV({...v,discountValue:e.target.value})} required/><input aria-label="Maximum redemptions" type="number" value={v.maxRedemptions} onChange={e=>setV({...v,maxRedemptions:e.target.value})}/><button className="btn btn-primary btn-sm">Create discount</button></form>}<table><thead><tr><th>Code</th><th>Discount</th><th>Uses</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(p=><tr key={p.id}><td className="mono">{p.code}</td><td>{p.discountType==='percent'?p.discountValue+'%':moneyOrUnknown(p.discountValue)}</td><td>{p.redemptions||0}{p.maxRedemptions?'/'+p.maxRedemptions:''}</td><td>{p.active?'Active':'Disabled'}</td><td>{p.active&&superadmin&&<button className="btn btn-danger btn-sm" onClick={async()=>{if(!confirm('Disable this discount?'))return;try{await api('/promo-codes/'+p.id+'/disable',{method:'PATCH'});done('Discount disabled.');}catch(x){fail(x.message);}}}>Disable</button>}</td></tr>)}</tbody></table></div>}
+function PasswordOps({done,fail,onLogout}){const [v,setV]=useState({currentPassword:'',newPassword:'',confirm:''});return <div className="panel"><div className="panel-hdr"><h3>Admin password</h3></div><form style={{padding:18,maxWidth:520}} onSubmit={async e=>{e.preventDefault();if(v.newPassword!==v.confirm)return fail('Passwords do not match.');if(v.newPassword.length<8)return fail('New password must be at least 8 characters.');if(!confirm('Change your password?'))return;try{const result=await api('/me/password',{method:'POST',body:JSON.stringify({currentPassword:v.currentPassword,newPassword:v.newPassword})});if(result.reloginRequired){setToken(null);onLogout();return;}done('Password updated.');}catch(x){fail(x.message);}}}><div className="field"><label>Current password</label><input type="password" value={v.currentPassword} onChange={e=>setV({...v,currentPassword:e.target.value})} required/></div><div className="field"><label>New password</label><input type="password" minLength="8" value={v.newPassword} onChange={e=>setV({...v,newPassword:e.target.value})} required/></div><div className="field"><label>Confirm new password</label><input type="password" minLength="8" value={v.confirm} onChange={e=>setV({...v,confirm:e.target.value})} required/></div><button className="btn btn-primary">Update password</button></form></div>}
+
+// ── Shell ──────────────────────────────────────────────────────────────
+// Tab IDs that have first-class URL state. Anything not in this set falls
+// back to 'overview' on initial load. Matches the buttons rendered below.
+const VALID_TABS = new Set(['overview','users','subs','revenue','operations','errors','invites','referrals','email','audit']);
+
+function readTabFromHash() {
+  const raw = (window.location.hash || '').replace(/^#/, '');
+  return VALID_TABS.has(raw) ? raw : 'overview';
+}
+
+function App() {
+  const [me, setMe]     = useState(null);
+  const [boot, setBoot] = useState(true);
+  const [tab, setTabState] = useState(readTabFromHash);
+  // Wrap setTab so changing a tab also updates the URL — gives the user
+  // shareable links and preserves position across refreshes.
+  const setTab = (next) => {
+    setTabState(next);
+    if (window.location.hash !== '#' + next) {
+      // pushState so browser back/forward step through tab history.
+      history.pushState({ tab: next }, '', '#' + next);
+    }
+  };
+
+  // React to back/forward + hash edits in the address bar.
+  useEffect(() => {
+    const onHash = () => setTabState(readTabFromHash());
+    window.addEventListener('hashchange', onHash);
+    window.addEventListener('popstate', onHash);
+    return () => {
+      window.removeEventListener('hashchange', onHash);
+      window.removeEventListener('popstate', onHash);
+    };
+  }, []);
+
+  // Validate token on mount
+  useEffect(() => {
+    const t = getToken();
+    if (!t) { setBoot(false); return; }
+    api('/me').then(r => { setMe(r.user); }).catch(() => { setToken(null); }).finally(() => setBoot(false));
+  }, []);
+
+  if (boot) return <div className="loading" style={{marginTop:100}}>Loading…</div>;
+  if (!me)  return <Login onLogin={setMe} />;
+
+  const logout = () => { setToken(null); setMe(null); };
+
+  return (
+    <div className="shell">
+      <div className="topbar">
+        <div className="logo">Star<span className="dot">·</span>Sol</div>
+        <span className="tag">ADMIN</span>
+        <div className="topbar-right">
+          <span>{me.email} <RoleBadge role={me.role} /></span>
+          <button className="btn-link" onClick={logout}>Sign out</button>
+        </div>
+      </div>
+      <div className="tabs">
+        <button className={'tab' + (tab==='overview'? ' active':'')} onClick={()=>setTab('overview')}>Overview</button>
+        <button className={'tab' + (tab==='users'   ? ' active':'')} onClick={()=>setTab('users')}>Users</button>
+        <button className={'tab' + (tab==='subs'    ? ' active':'')} onClick={()=>setTab('subs')}>Subscriptions</button>
+        <button className={'tab' + (tab==='revenue' ? ' active':'')} onClick={()=>setTab('revenue')}>Revenue</button>
+        <button className={'tab' + (tab==='operations' ? ' active':'')} onClick={()=>setTab('operations')}>Operations</button>
+        <button className={'tab' + (tab==='errors'  ? ' active':'')} onClick={()=>setTab('errors')}>Errors</button>
+        <button className={'tab' + (tab==='invites'   ? ' active':'')} onClick={()=>setTab('invites')}>Invite codes</button>
+        <button className={'tab' + (tab==='referrals' ? ' active':'')} onClick={()=>setTab('referrals')}>Referrals</button>
+        <button className={'tab' + (tab==='email'     ? ' active':'')} onClick={()=>setTab('email')}>Email</button>
+        <button className={'tab' + (tab==='audit'     ? ' active':'')} onClick={()=>setTab('audit')}>Audit log</button>
+      </div>
+      <div className="page">
+        {tab==='overview' && <OverviewTab me={me} />}
+        {tab==='users'   && <UsersTab me={me} />}
+        {tab==='subs'    && <SubscriptionsTab />}
+        {tab==='revenue' && <RevenueTab />}
+        {tab==='operations' && <OperationsTab me={me} onLogout={logout} />}
+        {tab==='errors'  && <ErrorsTab />}
+        {tab==='invites'   && <InvitesTab />}
+        {tab==='referrals' && <ReferralsTab />}
+        {tab==='email'     && <EmailTab />}
+        {tab==='audit'     && <AuditTab />}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
