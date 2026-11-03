@@ -109,6 +109,7 @@ app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, 'web
 app.get('/tv', (_req, res) => res.sendFile(path.join(__dirname, 'web/tv.html')));
 app.get('/admin', (_req, res) => res.sendFile(path.join(__dirname, 'web/admin.html')));
 app.get('/admin-v2', (_req, res) => res.sendFile(path.join(__dirname, 'web/admin-v2.html')));
+app.get('/admin/v2', (_req, res) => res.sendFile(path.join(__dirname, 'web/admin-v2.html')));
 app.get('/admin-shared/shell.css', (_req, res) => res.sendFile(path.join(__dirname, 'web/admin-shared.css')));
 
 // Global error handler
