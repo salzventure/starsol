@@ -31,3 +31,9 @@ test('revenue UI and backend preserve unknown provider values', () => {
 test('StarSol-specific catalog APIs remain reachable', () => {
     for (const route of ["'/content'", "'/ambient'", "'/sky-events'"]) assert.ok(backend.includes(route));
 });
+
+test('email campaign reporting normalizes absent counters to numbers', () => {
+    for (const counter of ['sent','delivered','opened','clicked','bounced']) {
+        assert.match(backend, new RegExp(`${counter}:Number\\(n\\.${counter}\\|\\|0\\)`));
+    }
+});

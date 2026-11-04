@@ -254,11 +254,19 @@ router.get('/audit', (_req, res) => res.json({ entries: [], availability: 'not_c
 router.get('/invites', (_req, res) => res.json({ invites: [], availability: 'not_configured' }));
 router.get('/referrals', (_req, res) => res.json({ referrers: [], availability: 'not_configured' }));
 
-router.get('/email/campaigns', (_req, res) => res.json({ campaigns: [
-    { id:'welcome', name:'Welcome', kind:'transactional' }, { id:'email_verify', name:'Verify email', kind:'transactional' },
-    { id:'password_reset', name:'Password reset', kind:'transactional' }, { id:'D1_look_up', name:'Day 1 — Look up', kind:'lifecycle' },
-    { id:'D7_convert', name:'Day 7 — Convert', kind:'lifecycle' }, { id:'admin_daily', name:'Admin daily', kind:'internal' },
-] }));
+router.get('/email/campaigns', async (_req, res) => {
+    const definitions = [
+        { id:'welcome', name:'Welcome', kind:'transactional' }, { id:'email_verify', name:'Verify email', kind:'transactional' },
+        { id:'password_reset', name:'Password reset', kind:'transactional' }, { id:'D1_look_up', name:'Day 1 — Look up', kind:'marketing' },
+        { id:'D7_convert', name:'Day 7 — Convert', kind:'marketing' }, { id:'admin_daily', name:'Admin daily', kind:'internal' },
+    ];
+    const counts = await store.query(`SELECT campaign,
+        COUNT(*) sent, SUM(status='delivered') delivered, SUM(status='opened') opened,
+        SUM(status='clicked') clicked, SUM(status='bounced') bounced
+        FROM email_sends WHERE sent_at >= ? GROUP BY campaign`, [Date.now()-30*DAY_MS]).catch(() => []);
+    const byCampaign = new Map(counts.map(r => [r.campaign, r]));
+    res.json({ campaigns:definitions.map(c => { const n=byCampaign.get(c.id)||{}; return {...c,triggerDescription:c.name,cooldownDays:null,maxLifetime:null,hasOverride:false,sent:Number(n.sent||0),suppressed:0,delivered:Number(n.delivered||0),opened:Number(n.opened||0),clicked:Number(n.clicked||0),bounced:Number(n.bounced||0)}; }) });
+});
 router.get('/email/overrides', (_req, res) => res.json({ overrides: {}, availability: 'not_configured' }));
 router.get('/email/lastrun', (_req, res) => res.json({ lastRun: null }));
 router.get('/email/sends', async (req, res) => {
