@@ -25,7 +25,7 @@ test('revenue UI and backend preserve unknown provider values', () => {
     assert.match(html, /Lifetime gross collected/);
     assert.match(html, /Quarterly gross collected revenue bar chart/);
     assert.match(backend, /lifetimeGrossRevenue:null/);
-    assert.match(backend, /Google Play lifetime transaction history is unavailable/);
+    assert.match(backend, /Google Play historical orders are unavailable/);
 });
 
 test('StarSol-specific catalog APIs remain reachable', () => {

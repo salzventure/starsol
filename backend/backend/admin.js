@@ -49,6 +49,53 @@ function calculateRevenue(stripeRows = [], playRows = []) {
     return { mrrApprox, arrApprox: Number((mrrApprox * 12).toFixed(2)), bySource };
 }
 
+async function collectLiveRevenue(stripeClient, playRows = []) {
+    const providers = {
+        stripe:{ verified:!!stripeClient, active:0, current:0, next:0 },
+        play:{ verified:true, active:0, current:0, next:0 },
+    };
+    if (stripeClient) {
+        try {
+            for await (const subscription of stripeClient.subscriptions.list({ status:'all', limit:100 })) {
+                if (subscription.status !== 'active') continue;
+                providers.stripe.active++;
+                for (const item of subscription.items?.data || []) {
+                    const price = item.price;
+                    if (!price?.recurring || price.currency !== 'usd' || !Number.isFinite(price.unit_amount)) {
+                        throw new Error('STRIPE_RECURRING_PRICE_UNAVAILABLE');
+                    }
+                    const value = price.unit_amount * Number(item.quantity || 1) / 100 /
+                        (price.recurring.interval === 'year' ? 12 : 1);
+                    providers.stripe.current += value;
+                    if (!subscription.cancel_at_period_end) providers.stripe.next += value;
+                }
+            }
+        } catch (error) {
+            providers.stripe = { verified:false, active:0, current:0, next:0, error:error.code || error.message };
+        }
+    }
+    for (const row of playRows) {
+        const count = Number(row.n || 0);
+        const interval = /annual|year/i.test(String(row.subscription_id || '')) ? 'year' : 'month';
+        const value = monthlyValue(row.plan, interval) * count;
+        providers.play.active += count;
+        providers.play.current += value;
+        if (Number(row.auto_renewing) !== 0) providers.play.next += value;
+    }
+    for (const provider of Object.values(providers)) {
+        provider.current = Number(provider.current.toFixed(2));
+        provider.next = Number(provider.next.toFixed(2));
+    }
+    const current = Object.values(providers).reduce((sum, provider) => sum + provider.current, 0);
+    const next = Object.values(providers).reduce((sum, provider) => sum + provider.next, 0);
+    return {
+        mrrApprox:Number(current.toFixed(2)), nextMrr:Number(next.toFixed(2)),
+        arrApprox:Number((current * 12).toFixed(2)),
+        bySource:{ stripe:providers.stripe.verified ? providers.stripe.current : null, play:providers.play.current },
+        providers, complete:Object.values(providers).every(provider => provider.verified),
+    };
+}
+
 // All admin routes require auth + admin role
 router.use(authMiddleware, adminMiddleware);
 
@@ -108,9 +155,9 @@ router.get('/metrics', async (_req, res) => {
                 WHERE u.trial_used_at IS NOT NULL`), [{ started: 0, active: 0, converted: 0, expired: 0 }]),
             safe(store.query(`SELECT plan, stripe_price_id, COUNT(*) n FROM subscriptions
                 WHERE status='active' AND cancel_at_period_end=0 GROUP BY plan, stripe_price_id`), []),
-            safe(store.query(`SELECT plan, subscription_id, COUNT(*) n FROM play_subscriptions
-                WHERE status IN ('active','in_grace_period') AND auto_renewing=1
-                AND (expiry_ms IS NULL OR expiry_ms > ?) GROUP BY plan, subscription_id`, [now]), []),
+            safe(store.query(`SELECT plan, subscription_id, auto_renewing, COUNT(*) n FROM play_subscriptions
+                WHERE status IN ('active','in_grace_period','canceled')
+                AND (expiry_ms IS NULL OR expiry_ms > ?) GROUP BY plan, subscription_id, auto_renewing`, [now]), []),
             safe(store.query(`SELECT platform, COUNT(DISTINCT user_id) n FROM devices
                 WHERE user_id IS NOT NULL AND last_seen_at >= ? GROUP BY platform`, [ago(30)]), []),
         ]);
@@ -120,9 +167,9 @@ router.get('/metrics', async (_req, res) => {
         const w = usage[0] || {};
         const t = trials[0] || {};
         const settled = Number(t.started || 0) - Number(t.active || 0);
-        const revenue = calculateRevenue(stripeSubs, playSubs);
+        const revenue = await collectLiveRevenue(stripe, playSubs);
         const activeBySource = [
-            ...stripeSubs.map(row => ({ source: 'stripe', plan: row.plan, interval: intervalForSubscription(row), n: Number(row.n) })),
+            ...(revenue.providers.stripe.active ? [{ source:'stripe', plan:'paid', interval:'live', n:revenue.providers.stripe.active }] : []),
             ...playSubs.map(row => ({ source: 'play', plan: row.plan, interval: /annual|year/i.test(row.subscription_id || '') ? 'year' : 'month', n: Number(row.n) })),
         ];
         res.json({
@@ -131,7 +178,7 @@ router.get('/metrics', async (_req, res) => {
             signupsByDay: signups.map(r => ({ day: ago(30) + Number(r.day) * DAY_MS, n: Number(r.n) })),
             activeBySource,
             engagement: { dau: Number(a.dau || 0), wau: Number(a.wau || 0), mau: Number(a.mau || 0), totalMs: Number(w.total_seconds || 0) * 1000, totalSessions: Number(w.total_sessions || 0) },
-            revenue: { ...revenue, note: 'Estimated gross MRR from active auto-renewing Stripe and Google Play subscriptions. Institutional contracts are excluded.' },
+            revenue: { ...revenue, note:`${revenue.complete ? '' : 'Partial: '}live Stripe pricing and verified Google Play subscription state. Next committed MRR is $${revenue.nextMrr.toFixed(2)}; cancellations are excluded from next month.` },
             errorsByDay: errors.map(r => ({ day: ago(14) + Number(r.day) * DAY_MS, n: Number(r.n) })),
             churn30d: Number(churn[0]?.n || 0),
             trial: { started: Number(t.started || 0), active: Number(t.active || 0), converted: Number(t.converted || 0), expired: Number(t.expired || 0), conversionPct: settled > 0 ? Number((Number(t.converted || 0) / settled * 100).toFixed(1)) : null },
@@ -305,12 +352,16 @@ router.patch('/feature-flags/:key', notConfigured); router.post('/promo-codes', 
 router.post('/announcements', notConfigured); router.patch('/announcements/:id', notConfigured); router.delete('/announcements/:id', notConfigured);
 
 router.get('/revenue', async (_req, res) => {
-    const metrics = await Promise.all([
-        store.query(`SELECT plan,stripe_price_id,COUNT(*) n FROM subscriptions WHERE status='active' AND cancel_at_period_end=0 GROUP BY plan,stripe_price_id`).catch(() => []),
-        store.query(`SELECT plan,subscription_id,COUNT(*) n FROM play_subscriptions WHERE status IN ('active','in_grace_period') AND auto_renewing=1 GROUP BY plan,subscription_id`).catch(() => []),
-    ]);
-    const r = calculateRevenue(metrics[0], metrics[1]);
-    res.json({ mrr:r.mrrApprox, arr:r.arrApprox, breakdown:r.bySource, note:'Estimated gross recurring revenue; lifetime collections are shown separately.' });
+    const playRows = await store.query(`SELECT plan,subscription_id,auto_renewing,COUNT(*) n FROM play_subscriptions
+        WHERE status IN ('active','in_grace_period','canceled') AND (expiry_ms IS NULL OR expiry_ms > ?)
+        GROUP BY plan,subscription_id,auto_renewing`, [Date.now()]).catch(() => []);
+    const r = await collectLiveRevenue(stripe, playRows);
+    const breakdown = Object.fromEntries(Object.entries(r.providers).map(([source, provider]) => [source, {
+        count:provider.active, mrr:provider.verified ? provider.current : null,
+        nextMrr:provider.verified ? provider.next : null, verified:provider.verified,
+    }]));
+    res.json({ mrr:r.mrrApprox, nextMrr:r.nextMrr, arr:r.arrApprox, breakdown, complete:r.complete,
+        note:`${r.complete ? '' : 'Partial: '}live provider revenue. Cancellations remain in current MRR through paid access and are excluded from next MRR.` });
 });
 
 let revenueCache = null;
@@ -319,15 +370,17 @@ router.get('/revenue/history', async (_req, res) => {
     if (!stripe) return res.json({ lifetimeGrossRevenue:null, quarters:[], complete:false, providers:{stripe:{available:false,grossRevenue:null},play:{available:false,grossRevenue:null}}, note:'Stripe is not configured; Google Play does not expose lifetime transaction history to this backend.' });
     try {
         const totals = new Map(); let lifetime = 0; let invoices = 0;
-        for await (const charge of stripe.charges.list({ limit:100 })) {
-            if (!charge.paid || charge.status !== 'succeeded') continue;
-            const cents = Math.max(0, Number(charge.amount || 0) - Number(charge.amount_refunded || 0));
-            const date = new Date(Number(charge.created) * 1000); const key = `${date.getUTCFullYear()} Q${Math.floor(date.getUTCMonth()/3)+1}`;
+        for await (const invoice of stripe.invoices.list({ status:'paid', limit:100 })) {
+            if (invoice.livemode === false || String(invoice.currency).toLowerCase() !== 'usd') continue;
+            const cents = Number(invoice.amount_paid || 0);
+            const date = new Date(Number(invoice.status_transitions?.paid_at || invoice.created) * 1000); const key = `${date.getUTCFullYear()} Q${Math.floor(date.getUTCMonth()/3)+1}`;
             const row = totals.get(key) || { quarter:key, revenue:0, invoices:0, sort:Date.UTC(date.getUTCFullYear(),Math.floor(date.getUTCMonth()/3)*3) };
             row.revenue += cents / 100; row.invoices++; totals.set(key,row); lifetime += cents / 100; invoices++;
         }
         const quarters = [...totals.values()].sort((a,b)=>a.sort-b.sort).map(({sort,...r})=>({...r,revenue:Number(r.revenue.toFixed(2))}));
-        const value = { lifetimeGrossRevenue:Number(lifetime.toFixed(2)), quarters, complete:false, providers:{stripe:{available:true,grossRevenue:Number(lifetime.toFixed(2)),invoiceCount:invoices},play:{available:false,grossRevenue:null}}, note:'Stripe collected charges net of refunds are included. Google Play lifetime transaction history is unavailable, so totals are partial.' };
+        const playCount = Number((await store.queryOne('SELECT COUNT(*) n FROM play_subscriptions').catch(() => ({n:0})))?.n || 0);
+        const complete = playCount === 0;
+        const value = { lifetimeGrossRevenue:Number(lifetime.toFixed(2)), quarters, complete, providers:{stripe:{available:true,grossRevenue:Number(lifetime.toFixed(2)),invoiceCount:invoices},play:{available:complete,grossRevenue:complete?0:null,transactionCount:complete?0:null}}, note:complete?'Paid Stripe invoices are included; Google Play has no recorded subscriptions.':'Paid Stripe invoices are included. Google Play historical orders are unavailable, so totals are partial.' };
         revenueCache = { at:Date.now(), value }; res.json(value);
     } catch (err) { console.error('/admin/revenue/history', err); res.status(502).json({ error:'revenue_provider_unavailable' }); }
 });
@@ -441,4 +494,4 @@ router.delete('/sky-events/:id', async (req, res) => {
 });
 
 module.exports = router;
-module.exports._metrics = { intervalForSubscription, monthlyValue, calculateRevenue };
+module.exports._metrics = { intervalForSubscription, monthlyValue, calculateRevenue, collectLiveRevenue };
